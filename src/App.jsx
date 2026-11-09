@@ -4,13 +4,13 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import Sidebar from "./components/Sidebar";
 import { fetchNgInspectionCount } from "./services/api";
 import TopNav from "./components/TopNav";
-import SettingsModal from "./components/SettingsModal";
 import DashboardPage from "./pages/DashboardPage";
 import FactoriesPage from "./pages/FactoriesPage";
 import FactoryDetailPage from "./pages/FactoryDetailPage";
 import SensorDetailPage from "./pages/SensorDetailPage";
 import SensorsPage from "./pages/SensorsPage";
 import DevicesPage from "./pages/DevicesPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import MasterDBPage from "./pages/MasterDBPage";
 import PlannerPage from "./pages/PlannerPage";
@@ -21,7 +21,15 @@ import FactoryStatusPage from "./pages/FactoryStatusPage";
 import FactoryStatusLogsPage from "./pages/FactoryStatusLogsPage";
 import MaintenancePage from "./pages/MaintenancePage";
 import ChecklistSubmissionsPage from "./pages/ChecklistSubmissionsPage";
+import EquipmentHistoryPage from "./pages/EquipmentHistoryPage";
 import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
+import PrototypePage from "./pages/PrototypePage";
+import PrototypeRequestPage from "./pages/PrototypeRequestPage";
+import FirstFactoryPage from "./pages/FirstFactoryPage";
+import StopCallPage from "./pages/StopCallPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ScnaPage from "./pages/ScnaPage";
+import FinancialsPage from "./pages/FinancialsPage";
 import LoginPage from "./pages/LoginPage";
 import VideoManualPage from "./pages/VideoManualPage";
 import VideoManualProjectEditorPage from "./pages/VideoManualProjectEditorPage";
@@ -34,12 +42,7 @@ import {
 
 const placeholderPages = [
   "notifications",
-  "analytics",
-  "financials",
-  "userManagement",
   "customerManagement",
-  "equipment",
-  "scna",
 ];
 
 const SHELL_INTRO_DURATION_MS = 900;
@@ -53,10 +56,9 @@ function App() {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
     if (saved) return saved === "dark";
-    return true;
+    return false;
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [badges, setBadges] = useState({ approvals: 12 });
   const [shellIntro, setShellIntro] = useState(false);
   const location = useLocation();
@@ -191,14 +193,6 @@ function App() {
 
   return (
     <div className="overflow-hidden">
-      {isDark && (
-        <div className="aurora-bg" aria-hidden="true">
-          <div className="aurora-blob aurora-blob-1" />
-          <div className="aurora-blob aurora-blob-2" />
-          <div className="aurora-blob aurora-blob-3" />
-          <div className="aurora-blob aurora-blob-4" />
-        </div>
-      )}
       {isLoginRoute ? (
         <LoginPage
           isDark={isDark}
@@ -215,43 +209,54 @@ function App() {
             onClose={() => setMobileNavOpen(false)}
             onLogout={handleLogout}
             onNavigate={(page) => navigate(`/${page}`)}
-            onOpenSettings={() => setSettingsOpen(true)}
+          />
+          <TopNav
+            authUser={authUser}
+            isDark={isDark}
+            onLogout={handleLogout}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
           />
           <main
-            className={`app-main-shell ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
+            className={`app-main-shell ml-0 min-h-screen min-w-0 bg-background relative overflow-x-hidden md:ml-16 md:w-[calc(100vw-4rem)] md:max-w-[calc(100vw-4rem)] ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${shellIntro && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
             style={{ zIndex: 1 }}
           >
-            <TopNav
-              authUser={authUser}
-              isDark={isDark}
-              onLogout={handleLogout}
-              onOpenMobileNav={() => setMobileNavOpen(true)}
-              onOpenSettings={() => setSettingsOpen(true)}
-              onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
-            />
-            <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/firstFactory" element={<FirstFactoryPage />} />
+              <Route path="/firstFactory/:tab" element={<FirstFactoryPage />} />
               <Route path="/planner" element={<PlannerPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />
+              <Route path="/scna" element={<ScnaPage />} />
+              <Route path="/scna/:tab" element={<ScnaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/financials" element={<FinancialsPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
-              <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
+              <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
+              <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />
+              <Route path="/analytics/:tab" element={<AnalyticsPage />} />
+              <Route path="/analytics/:tab/:process" element={<AnalyticsPage />} />
               <Route path="/videoManual" element={<VideoManualPage />} />
               <Route path="/videoManual/project/:projectId" element={<VideoManualProjectEditorPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}
+              <Route path="/equipment" element={<EquipmentHistoryPage />} />
               <Route path="/maintenance" element={<MaintenancePage />} />
               <Route path="/maintenance/submissions" element={<ChecklistSubmissionsPage />} />
               <Route path="/maintenance/submissions/tickets" element={<TicketSubmissionsPage />} />
+              <Route path="/userManagement" element={<UserManagementPage />} />
               <Route path="/masterDB" element={<MasterDBPage />} />
+              <Route path="/prototype" element={<PrototypePage />} />
+              <Route path="/prototype/request" element={<PrototypeRequestPage />} />
+              <Route path="/prototype/request/:shisakuId" element={<PrototypeRequestPage />} />
               <Route path="/factories" element={<FactoriesPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/devices" element={<DevicesPage />} />
               <Route path="/factory/overview" element={<FactoryDetailPage combined />} />
+              <Route path="/factory/stopCall" element={<StopCallPage />} />
               <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
               <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

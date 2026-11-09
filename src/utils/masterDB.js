@@ -1,10 +1,14 @@
 export const MASTER_TABS = [
-  { key: "masterDB", label: "内装品 DB", description: "Interior product records", ready: true },
-  { key: "materialDB", label: "材料 DB", description: "Material master records", ready: true },
-  { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Product PDF library", ready: true },
-  { key: "furyoKanri", label: "不良管理", description: "Defect definition management", ready: true },
-  { key: "factoryDB", label: "工場", description: "Factory master list", ready: true },
-  { key: "setsubiDB", label: "設備", description: "Equipment by factory", ready: true },
+  { key: "masterDB", label: "内装品 DB", labelJa: "内装品 DB", labelEn: "Interior Products DB", description: "Interior product records", descriptionJa: "内装品製品レコード", ready: true },
+  { key: "materialDB", label: "材料 DB", labelJa: "材料 DB", labelEn: "Materials DB", description: "Material master records", descriptionJa: "材料マスターレコード", ready: true },
+  { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", labelJa: "梱包 / 検査基準 / 3点照合", labelEn: "Packaging / Inspection / 3-Point Check", description: "Product PDF library", descriptionJa: "製品PDFライブラリ", ready: true },
+  { key: "materialPDFs", label: "作業条件表 (PSA)", labelJa: "作業条件表 (PSA)", labelEn: "Work Conditions (PSA)", description: "Material PDF library", descriptionJa: "材料PDFライブラリ", ready: true },
+  { key: "furyoKanri", label: "不良管理", labelJa: "不良管理", labelEn: "Defect Management", description: "Defect definition management", descriptionJa: "不良項目の定義と管理", ready: true },
+  { key: "factoryDB", label: "工場", labelJa: "工場", labelEn: "Factories", description: "Factory master list", descriptionJa: "工場マスター一覧", ready: true },
+  { key: "setsubiDB", label: "設備", labelJa: "設備", labelEn: "Equipment", description: "Equipment by factory", descriptionJa: "工場別設備一覧", ready: true },
+  { key: "processDB", label: "工程 DB (Process)", labelJa: "工程 DB", labelEn: "Process DB", description: "Process master records", descriptionJa: "工程マスターレコード", ready: true },
+  { key: "bomDB", label: "BOM DB", labelJa: "BOM DB", labelEn: "BOM DB", description: "Bill of materials builder", descriptionJa: "部品構成表 (BOM)", ready: true },
+  { key: "pceFiles", label: "pce ファイル", labelJa: "pce ファイル", labelEn: "PCE Files", description: "PCE file upload utility", descriptionJa: "PCEファイルアップロード管理", ready: true },
 ];
 
 export const MASTER_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -18,14 +22,14 @@ const MATERIAL_PRIORITY_COLUMNS = [
   { key: "品番", label: "品番" },
   { key: "品名", label: "品名" },
   { key: "ラベル品番", label: "ラベル品番" },
-  { key: "NMOJI_色コード", label: "色" },
-  { key: "梱包数", label: "梱包数" },
   { key: "仕様", label: "仕様" },
   { key: "型番", label: "型番" },
+  { key: "梱包数", label: "梱包数" },
   { key: "ロール温度", label: "ロール温度" },
+  { key: "ライン形態", label: "ライン形態" },
+  { key: "出荷先名", label: "出荷先名" },
+  { key: "工程コード", label: "工程コード" },
   { key: "imageURL", label: "画像" },
-  { key: "NMOJI_ユーザー", label: "次工程" },
-  { key: "原材料品番", label: "原材料品番" },
 ];
 
 const MATERIAL_DEFAULT_FIELDS = MATERIAL_PRIORITY_COLUMNS
@@ -35,19 +39,25 @@ const MATERIAL_DEFAULT_FIELDS = MATERIAL_PRIORITY_COLUMNS
 const MASTER_TAB_UI = {
   masterDB: {
     processFilterLabel: "Equipment",
+    processFilterLabelJa: "設備",
     processAllLabel: "All Equipment",
+    processAllLabelJa: "すべての設備",
     recordLabel: "Master Record",
+    recordLabelJa: "内装品マスターレコード",
     previewFields: ["品番", "品名", "モデル", "背番号", "加工設備", "工場"],
     identityTitleFields: ["品番", "品名", "材料品番"],
     identitySubtitleFields: ["モデル", "背番号"],
   },
   materialDB: {
     processFilterLabel: "Material",
+    processFilterLabelJa: "材料",
     processAllLabel: "All Material",
+    processAllLabelJa: "すべての材料",
     recordLabel: "Material Record",
-    previewFields: ["品番", "品名", "ラベル品番", "NMOJI_色コード", "NMOJI_ユーザー", "原材料品番"],
-    identityTitleFields: ["品番", "品名", "ラベル品番", "原材料品番"],
-    identitySubtitleFields: ["型番", "NMOJI_色コード", "NMOJI_ユーザー"],
+    recordLabelJa: "材料マスターレコード",
+    previewFields: ["品番", "品名", "ラベル品番", "仕様", "型番", "梱包数"],
+    identityTitleFields: ["品番", "品名", "ラベル品番"],
+    identitySubtitleFields: ["型番", "仕様", "工程コード"],
   },
 };
 
@@ -72,6 +82,7 @@ export const MASTER_DEFAULT_FIELDS = [
   "秒数(1pcs何秒)",
   "離型紙上/下",
   "送りピッチ",
+  "刃物",
   "SRS",
   "SLIT",
   "boardData",
@@ -154,13 +165,28 @@ const DATE_FIELD_PATTERN = /(^date$|日付|年月日)/i;
 const TIME_FIELD_PATTERN = /(time|時刻|時間)/i;
 const TEXTAREA_FIELD_PATTERN = /(備考|note|boardData|説明|comment)/i;
 
-const OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+export const OPERATOR_LABELS = {
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
+};
+
+export const OPERATOR_LABELS_JA = {
+  equals: "等しい",
+  not_equals: "等しくない",
+  contains: "含む",
+  in: "リストに含まれる",
+  exists: "値が存在する",
+  not_exists: "値が存在しない",
+  greater: "より大きい",
+  less: "より小さい",
+  range: "範囲指定",
 };
 
 let filterRowCount = 0;
@@ -274,12 +300,12 @@ export function buildMasterFieldDefinitions(schemaFields = [], records = [], tab
   return getMasterFieldOrder(schemaFields, records, tabKey).map((field) => {
     const type = inferMasterFieldType(field);
     const operators = type === "date"
-      ? ["equals", "range"]
+      ? ["equals", "not_equals", "range", "exists", "not_exists"]
       : type === "number"
-        ? ["equals", "greater", "less", "range"]
+        ? ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"]
         : type === "time"
-          ? ["equals", "greater", "less"]
-          : ["equals", "contains", "in"];
+          ? ["equals", "not_equals", "greater", "less", "exists", "not_exists"]
+          : ["equals", "not_equals", "contains", "in", "exists", "not_exists"];
 
     return {
       field,
@@ -291,10 +317,30 @@ export function buildMasterFieldDefinitions(schemaFields = [], records = [], tab
   });
 }
 
-export function buildSearchFields(fieldDefinitions = []) {
-  return fieldDefinitions
+export function buildSearchFields(fieldDefinitions = [], tabKey = "masterDB") {
+  const fields = fieldDefinitions
     .filter((field) => ["text", "textarea", "time"].includes(field.type))
     .map((field) => field.field);
+
+  if (tabKey === "materialDB") {
+    const extraMaterialFields = [
+      "品番",
+      "品名",
+      "仕様",
+      "型番",
+      "ラベル品番",
+      "品目マスタ.品番",
+      "品目マスタ.品名",
+      "品目マスタ.仕様",
+      "品目マスタ.型番",
+      "品目マスタ.ラベル品番",
+    ];
+    extraMaterialFields.forEach((f) => {
+      if (!fields.includes(f)) fields.push(f);
+    });
+  }
+
+  return fields;
 }
 
 export function getMasterTableColumns(records = [], schemaFields = [], tabKey = "masterDB") {
@@ -336,7 +382,11 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
 
     let clause = null;
 
-    if (row.operator === "range") {
+    if (row.operator === "exists") {
+      clause = { [row.field]: { $exists: true, $nin: ["", null] } };
+    } else if (row.operator === "not_exists") {
+      clause = { $or: [{ [row.field]: { $exists: false } }, { [row.field]: null }, { [row.field]: "" }] };
+    } else if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return;
       clause = {
         [row.field]: {
@@ -344,9 +394,7 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
           $lte: coerceFilterValue(row.valueTo, fieldDefinition),
         },
       };
-    }
-
-    if (row.operator === "in" && !clause) {
+    } else if (row.operator === "in") {
       const values = Array.isArray(row.value)
         ? row.value.filter(Boolean)
         : String(row.value || "")
@@ -357,16 +405,22 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
       clause = {
         [row.field]: { $in: values.map((value) => coerceFilterValue(value, fieldDefinition)) },
       };
-    }
-
-    if (!clause) {
+    } else if (row.operator === "not_equals") {
       if (row.value === "" || row.value == null) return;
-
       const value = coerceFilterValue(row.value, fieldDefinition);
-      if (row.operator === "equals") clause = { [row.field]: value };
-      if (row.operator === "contains") clause = { [row.field]: { $regex: row.value, $options: "i" } };
-      if (row.operator === "greater") clause = { [row.field]: { $gt: value } };
-      if (row.operator === "less") clause = { [row.field]: { $lt: value } };
+      clause = { [row.field]: { $ne: value } };
+    } else if (row.operator === "equals") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: coerceFilterValue(row.value, fieldDefinition) };
+    } else if (row.operator === "contains") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $regex: row.value, $options: "i" } };
+    } else if (row.operator === "greater") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $gt: coerceFilterValue(row.value, fieldDefinition) } };
+    } else if (row.operator === "less") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $lt: coerceFilterValue(row.value, fieldDefinition) } };
     }
 
     if (!clause) return;
@@ -389,20 +443,36 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
   return { $and: clauses };
 }
 
-export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = []) {
+export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [], isJa = false) {
   const fieldMap = Object.fromEntries(fieldDefinitions.map((field) => [field.field, field]));
+  const labels = isJa ? OPERATOR_LABELS_JA : OPERATOR_LABELS;
 
   return rows.flatMap((row) => {
-    if (!row.field || !row.operator) return [];
     const fieldDefinition = fieldMap[row.field];
-    if (!fieldDefinition) return [];
+    if (!row.field || !row.operator || !fieldDefinition) return [];
+
+    if (row.operator === "exists" || row.operator === "not_exists") {
+      return [{
+        id: row.id,
+        label: fieldDefinition.label,
+        operator: labels[row.operator] || row.operator,
+        value: "",
+      }];
+    }
 
     let renderedValue = "";
+
     if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return [];
       renderedValue = `${row.valueFrom} - ${row.valueTo}`;
     } else if (row.operator === "in") {
-      const values = Array.isArray(row.value) ? row.value : [];
+      const values = Array.isArray(row.value)
+        ? row.value.filter(Boolean)
+        : String(row.value || "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+
       if (!values.length) return [];
       renderedValue = values.join(", ");
     } else {
@@ -412,9 +482,8 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
 
     return [{
       id: row.id,
-      field: row.field,
       label: fieldDefinition.label,
-      operator: OPERATOR_LABELS[row.operator] || row.operator,
+      operator: labels[row.operator] || row.operator,
       value: renderedValue,
     }];
   });
@@ -422,10 +491,30 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
 
 export function formatMasterValue(value) {
   if (value == null || value === "") return "—";
-  if (Array.isArray(value)) return value.join(", ");
+  if (Array.isArray(value)) {
+    return value.map(v => typeof v === "object" ? formatMasterValue(v) : v).join(", ");
+  }
   if (typeof value === "object") {
+    // Handle standard code/name resolved objects
+    if (value.code !== undefined && value.name !== undefined) {
+      return `${value.code} - ${value.name}`;
+    }
+    
+    // Format other objects as key-value pairs
     try {
-      return JSON.stringify(value);
+      return Object.entries(value)
+        .map(([k, v]) => {
+          let strV = v;
+          if (typeof v === "object" && v !== null) {
+            if (v.code !== undefined && v.name !== undefined) {
+              strV = `${v.code} - ${v.name}`;
+            } else {
+              strV = JSON.stringify(v); // Fallback for deeper nesting
+            }
+          }
+          return `${k}: ${strV}`;
+        })
+        .join("\n");
     } catch {
       return String(value);
     }

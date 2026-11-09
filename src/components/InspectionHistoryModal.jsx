@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { fetchCheckFormTemplates, fetchSetsubiDBRecords, fetchCheckFormRecords } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function normalizeId(id) {
   if (!id) return "";
@@ -131,8 +132,14 @@ function Cell({ status, onClick, hasNG }) {
 }
 
 function RecordDetailModal({ record, form, onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const fields = (form?.fields ?? []).filter(f => f.type !== "name");
   const responses = record?.responses ?? {};
+
+  const formName = isJa
+    ? (form?.name_ja || form?.name || form?.name_en)
+    : (form?.name_en || form?.name || form?.name_ja);
 
   function formatValue(field) {
     const val = responses[field.id];
@@ -151,22 +158,28 @@ function RecordDetailModal({ record, form, onClose }) {
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl dashboard-section overflow-hidden">
 
         {/* Header */}
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
-            <h3 className="mt-0.5 truncate text-lg font-black text-on-surface">{form?.name}</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+              {isJa ? "点検記録" : "Inspection Record"}
+            </p>
+            <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{formName}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
               {form?.工場 && <span>{form.工場}</span>}
-              {form?.schedule && <span className="capitalize">{form.schedule}</span>}
+              {form?.schedule && (
+                <span className="capitalize">
+                  {form.schedule === "daily" ? (isJa ? "日次" : "daily") : form.schedule === "weekly" ? (isJa ? "週次" : "weekly") : form.schedule === "monthly" ? (isJa ? "月次" : "monthly") : form.schedule}
+                </span>
+              )}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
+          <button type="button" onClick={onClose} aria-label={isJa ? "閉じる" : "Close"} className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
         {/* Meta */}
-        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/30 px-6 py-4">
+        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/40 px-6 py-4">
           <div className="flex items-center gap-2 text-sm">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
             <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
@@ -175,7 +188,7 @@ function RecordDetailModal({ record, form, onClose }) {
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>schedule</span>
             <span className="text-on-surface">
               {record?.completedAt
-                ? new Date(record.completedAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                ? new Date(record.completedAt).toLocaleString(isJa ? "ja-JP" : "en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                 : "—"}
             </span>
           </div>
@@ -192,32 +205,39 @@ function RecordDetailModal({ record, form, onClose }) {
             </div>
           )}
           {record?.deviceId === "simulator" && (
-            <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-outline">Simulator</span>
+            <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-outline">Simulator</span>
           )}
         </div>
 
         {/* Field responses */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-3">
-          {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
+          {fields.length === 0 && <p className="text-sm text-outline">{isJa ? "記録された項目はありません。" : "No fields recorded."}</p>}
           {fields.map(field => {
             const photo = responses[`${field.id}_photo`];
             const value = formatValue(field);
             const isOK = field.type === "toggle" && responses[field.id] === "ok";
             const isNG = field.type === "toggle" && responses[field.id] === "ng";
+            const fieldLabel = isJa
+              ? (field.label_ja || field.label || field.label_en)
+              : (field.label_en || field.label || field.label_ja);
+            const fieldDescription = isJa
+              ? (field.description_ja || field.description || field.description_en)
+              : (field.description_en || field.description || field.description_ja);
+
             return (
               <div key={field.id} className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm text-on-surface truncate">{field.label || <span className="italic text-outline">Untitled</span>}</p>
-                    {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
+                    <p className="font-semibold text-sm text-on-surface truncate">{fieldLabel || <span className="italic text-outline">{isJa ? "無題" : "Untitled"}</span>}</p>
+                    {fieldDescription && <p className="mt-0.5 text-xs text-outline whitespace-pre-line">{fieldDescription}</p>}
                   </div>
-                  <span className={`flex-shrink-0 text-sm font-bold ${isOK ? "text-emerald-500" : isNG ? "text-error" : "text-on-surface"}`}>
+                  <span className={`flex-shrink-0 text-sm font-semibold ${isOK ? "text-emerald-500" : isNG ? "text-error" : "text-on-surface"}`}>
                     {value}
                   </span>
                 </div>
                 {photo && (
                   <div className="mt-2">
-                    <img src={photo} alt="添付画像" className="h-32 rounded-xl object-cover border border-separator/40" />
+                    <img src={photo} alt={isJa ? "添付画像" : "Attached photo"} className="h-32 rounded-xl object-cover border border-separator/40" />
                   </div>
                 )}
               </div>
@@ -233,6 +253,8 @@ function RecordDetailModal({ record, form, onClose }) {
 const RANGES = [30, 60];
 
 export default function InspectionHistoryModal({ onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [templates, setTemplates] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
   const [records, setRecords] = useState([]);
@@ -323,7 +345,7 @@ export default function InspectionHistoryModal({ onClose }) {
   const monthGroups = useMemo(() => {
     const groups = [];
     for (const d of dates) {
-      const label = d.toLocaleDateString("en", { month: "short" });
+      const label = isJa ? `${d.getMonth() + 1}月` : d.toLocaleDateString("en", { month: "short" });
       if (!groups.length || groups[groups.length - 1].label !== label) {
         groups.push({ label, count: 1 });
       } else {
@@ -331,29 +353,29 @@ export default function InspectionHistoryModal({ onClose }) {
       }
     }
     return groups;
-  }, [dates]);
+  }, [dates, isJa]);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const modal = (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/35 px-6 py-4">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/40 px-6 py-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
-          <h2 className="mt-0.5 text-xl font-black text-on-surface">Inspection History</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "メンテナンス" : "Maintenance"}</p>
+          <h2 className="mt-0.5 text-xl font-semibold text-on-surface">{isJa ? "点検履歴" : "Inspection History"}</h2>
         </div>
         <div className="flex items-center gap-3">
           {/* Legend */}
           <div className="hidden items-center gap-4 text-xs text-outline sm:flex">
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-emerald-500" />Completed
+              <span className="h-3 w-3 rounded-full bg-emerald-500" />{isJa ? "完了" : "Completed"}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-error" />Missed
+              <span className="h-3 w-3 rounded-full bg-error" />{isJa ? "未実施" : "Missed"}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-amber-500" />Due
+              <span className="h-3 w-3 rounded-full bg-amber-500" />{isJa ? "期日" : "Due"}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="relative h-3 w-3 flex-shrink-0">
@@ -370,7 +392,7 @@ export default function InspectionHistoryModal({ onClose }) {
               onChange={e => setFactoryFilter(e.target.value)}
               className="rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary/40"
             >
-              <option value="all">All factories</option>
+              <option value="all">{isJa ? "すべての工場" : "All factories"}</option>
               {factories.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           )}
@@ -381,19 +403,20 @@ export default function InspectionHistoryModal({ onClose }) {
                 key={r}
                 type="button"
                 onClick={() => setDays(r)}
-                className={`px-3 py-2 text-xs font-bold transition ${
+                className={`px-3 py-2 text-xs font-semibold transition ${
                   days === r
                     ? "bg-primary text-on-primary"
                     : "bg-surface text-outline hover:bg-surface-container"
                 }`}
               >
-                {r}d
+                {r}{isJa ? "日" : "d"}
               </button>
             ))}
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={isJa ? "閉じる" : "Close"}
             className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
@@ -406,14 +429,14 @@ export default function InspectionHistoryModal({ onClose }) {
         {loading && (
           <div className="flex items-center justify-center gap-3 py-24 text-outline">
             <span className="material-symbols-outlined animate-spin">progress_activity</span>
-            Loading…
+            {isJa ? "読み込み中..." : "Loading…"}
           </div>
         )}
 
         {!loading && filteredMachines.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-24 text-outline">
             <span className="material-symbols-outlined" style={{ fontSize: 40 }}>precision_manufacturing</span>
-            <p className="text-sm">No machines found on active forms.</p>
+            <p className="text-sm">{isJa ? "有効なフォームに設備が見つかりません。" : "No machines found on active forms."}</p>
           </div>
         )}
 
@@ -427,7 +450,7 @@ export default function InspectionHistoryModal({ onClose }) {
                   <th
                     key={`${label}-${i}`}
                     colSpan={count}
-                    className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-black uppercase tracking-widest text-outline"
+                    className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
                   >
                     {label}
                   </th>
@@ -435,15 +458,15 @@ export default function InspectionHistoryModal({ onClose }) {
               </tr>
               {/* Day row */}
               <tr>
-                <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-outline">
-                  Machine
+                <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                  {isJa ? "設備" : "Machine"}
                 </th>
                 {dates.map(date => {
                   const isToday = date.getTime() === today.getTime();
                   return (
                     <th
                       key={date.toISOString()}
-                      className={`w-11 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-bold ${
+                      className={`w-11 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-semibold ${
                         isToday ? "bg-primary/10 text-primary" : "bg-surface text-outline"
                       }`}
                     >

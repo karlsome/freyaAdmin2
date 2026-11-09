@@ -1,16 +1,21 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+
 export default function PlannerScheduleDetailCard({ schedule = {} }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const rows = [
-    ["背番号", schedule.serial],
-    ["設備名", schedule.equipment],
-    ["品番", schedule.partNumber],
-    ["品名", schedule.productName],
-    ["材料名", schedule.materialName],
-    ["材料背番号", schedule.materialSerial],
-    ["収容数", schedule.capacity],
-    ["時間", schedule.timeRange],
-    ["数量", schedule.quantity != null ? `${schedule.quantity} pcs` : null],
-    ["通い箱", schedule.boxes != null ? `${schedule.boxes} 箱` : null],
-    ["備考", schedule.note],
+    [isJa ? "背番号" : "Control No.", schedule.serial],
+    [isJa ? "設備名" : "Equipment", schedule.equipment],
+    [isJa ? "品番" : "Part Number", schedule.partNumber],
+    [isJa ? "品名" : "Product Name", schedule.productName],
+    [isJa ? "材料名" : "Material Name", schedule.materialName],
+    [isJa ? "材料背番号" : "Material Control No.", schedule.materialSerial],
+    [isJa ? "収容数" : "Capacity", schedule.capacity],
+    [isJa ? "時間" : "Time", schedule.timeRange],
+    [isJa ? "数量" : "Quantity", schedule.quantity != null ? `${schedule.quantity} ${isJa ? "個" : "pcs"}` : null],
+    [isJa ? "通い箱" : "Box / Container", schedule.boxes != null ? `${schedule.boxes} ${isJa ? "箱" : "boxes"}` : null],
+    [isJa ? "備考" : "Notes", schedule.note],
   ];
 
   return (
@@ -19,7 +24,7 @@ export default function PlannerScheduleDetailCard({ schedule = {} }) {
         <div className="planner-schedule-detail-image-wrap">
           <img
             src={schedule.imageUrl}
-            alt={schedule.serial || schedule.partNumber || "Schedule detail"}
+            alt={schedule.serial || schedule.partNumber || (isJa ? "計画詳細" : "Schedule detail")}
             className="planner-schedule-detail-image"
           />
         </div>

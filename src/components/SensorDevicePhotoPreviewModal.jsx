@@ -1,5 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { BASE_URL } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
+
+function isVideoUrl(url) {
+  return /\.(mp4|mov)$/i.test(url.split("?")[0]);
+}
+
+function isPdfUrl(url) {
+  return /\.pdf$/i.test(url.split("?")[0]);
+}
 
 function clampPreviewIndex(index, total) {
   if (!total) return 0;
@@ -17,7 +27,11 @@ function buildImageDownloadName(url, label) {
   try {
     const pathname = new URL(url).pathname;
     const fileName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() ?? "");
-    if (fileName) return fileName;
+    if (fileName) {
+      // Ensure file has extension
+      if (fileName.includes(".")) return fileName;
+      return `${fileName}.jpg`;
+    }
   } catch {
     // Fall back to a generated file name when the URL cannot be parsed.
   }
@@ -25,23 +39,62 @@ function buildImageDownloadName(url, label) {
   return `${safeLabel}.jpg`;
 }
 
-export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate }) {
+export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate, zIndex = "z-[9999]" }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const [isDownloading, setIsDownloading] = useState(false);
   const images = Array.isArray(preview?.images) ? preview.images.filter((image) => image?.url) : [];
   const activeIndex = clampPreviewIndex(preview?.activeIndex, images.length);
   const activeImage = images[activeIndex] || null;
   const hasMultipleImages = images.length > 1;
   const canGoPrevious = activeIndex > 0;
   const canGoNext = activeIndex < images.length - 1;
-  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || "Photos";
-  const eyebrow = String(preview?.eyebrow ?? "").trim() || "Photos";
+  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || (isJa ? "写真" : "Photos");
+  const eyebrow = String(preview?.eyebrow ?? "").trim() || (isJa ? "写真" : "Photos");
   const customSubtitle = String(preview?.subtitle ?? "").trim();
+  const photoCounter = isJa
+    ? `${images.length} 枚中 ${activeIndex + 1} 枚目`
+    : `Photo ${activeIndex + 1} of ${images.length}`;
   const subtitleParts = customSubtitle
-    ? [customSubtitle, hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : ""].filter(Boolean)
+    ? [customSubtitle, hasMultipleImages ? photoCounter : ""].filter(Boolean)
     : [
         preview?.displayName ? String(preview?.deviceId ?? "").trim() : "",
         String(preview?.factoryName ?? "").trim(),
-        hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : "",
+        hasMultipleImages ? photoCounter : "",
       ].filter(Boolean);
+
+  const handleDownload = async () => {
+    if (!activeImage?.url || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const filename = buildImageDownloadName(activeImage.url, activeImage.label || title);
+      const proxyUrl = `${BASE_URL}api/download-proxy?url=${encodeURIComponent(activeImage.url)}&filename=${encodeURIComponent(filename)}`;
+
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error("Proxy download failed");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    } catch (error) {
+      console.warn("Blob download failed, falling back to direct proxy anchor:", error);
+      const filename = buildImageDownloadName(activeImage.url, activeImage.label || title);
+      const proxyUrl = `${BASE_URL}api/download-proxy?url=${encodeURIComponent(activeImage.url)}&filename=${encodeURIComponent(filename)}`;
+      const link = document.createElement("a");
+      link.href = proxyUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeImage?.url) return undefined;
@@ -72,7 +125,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -80,37 +133,52 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Photos for ${title}`}
+        aria-label={isJa ? `${title} の写真` : `Photos for ${title}`}
         onMouseDown={(event) => event.stopPropagation()}
-        className="dashboard-section flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl"
+        className="freya-card flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-2xl border-b border-separator/40 bg-surface/90 px-6 py-5 backdrop-blur-md">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface-raised)] px-6 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">{eyebrow}</p>
-            <h2 className="mt-1 truncate text-xl font-black text-on-surface">{title}</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{eyebrow}</p>
+            <h2 className="mt-0.5 truncate text-base font-semibold text-[var(--text-primary)]">{title}</h2>
             {subtitleParts.length > 0 ? (
-              <p className="mt-1 text-sm text-on-surface-variant">{subtitleParts.join(" • ")}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{subtitleParts.join(" • ")}</p>
             ) : null}
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-on-surface"
-            aria-label="Close photo preview"
+            className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label={isJa ? "プレビューを閉じる" : "Close photo preview"}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="relative overflow-hidden rounded-2xl border border-separator/30 bg-surface-container">
-            <div className="flex min-h-[52vh] items-center justify-center bg-surface-container px-4 py-4">
-              <img
-                src={activeImage.url}
-                alt={activeImage.label || title}
-                className="max-h-[70vh] max-w-full object-contain"
-              />
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-3.5">
+          <div className="relative overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)]">
+            <div className="flex min-h-[52vh] items-center justify-center bg-[var(--surface-subtle)] px-4 py-4 w-full h-full overflow-hidden">
+              {isVideoUrl(activeImage.url) ? (
+                <video
+                  src={activeImage.url}
+                  controls
+                  autoPlay
+                  className="max-h-[70vh] max-w-full rounded-[8px] object-contain shadow-md"
+                />
+              ) : isPdfUrl(activeImage.url) ? (
+                <iframe 
+                  src={activeImage.url} 
+                  className="w-full h-[70vh] rounded-[8px] shadow-md bg-white" 
+                  title={activeImage.label || title || "PDF Preview"} 
+                />
+              ) : (
+                <img
+                  src={activeImage.url}
+                  alt={activeImage.label || title}
+                  className="max-h-[70vh] max-w-full object-contain"
+                />
+              )}
             </div>
 
             {hasMultipleImages ? (
@@ -119,8 +187,8 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   type="button"
                   onClick={() => onNavigate(-1)}
                   disabled={!canGoPrevious}
-                  aria-label="Show previous image"
-                  className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-separator/40 bg-surface/90 p-2 text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={isJa ? "前のファイルを表示" : "Show previous image"}
+                  className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
                 </button>
@@ -129,8 +197,8 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   type="button"
                   onClick={() => onNavigate(1)}
                   disabled={!canGoNext}
-                  aria-label="Show next image"
-                  className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-separator/40 bg-surface/90 p-2 text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={isJa ? "次のファイルを表示" : "Show next image"}
+                  className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
                 </button>
@@ -138,37 +206,41 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Current Photo</p>
-                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `Photo ${activeIndex + 1}`}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  {isJa ? "表示中のファイル" : "Current File"}
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                  {activeImage.label || (isJa ? `ファイル ${activeIndex + 1}` : `File ${activeIndex + 1}`)}
+                </p>
               </div>
-              <p className="text-[11px] text-outline">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 {hasMultipleImages
-                  ? `Use the left and right arrow keys to browse all ${images.length} photos.`
-                  : "Press Escape to close this preview."}
+                  ? (isJa ? `左右の矢印キーで全 ${images.length} 件のファイルを切り替えられます。` : `Use the left and right arrow keys to browse all ${images.length} files.`)
+                  : (isJa ? "Escキーでプレビューを閉じます。" : "Press Escape to close this preview.")}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11px] text-outline">
+        <div className="flex flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface-raised)] px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[11px] font-mono text-[var(--text-muted)]">
             {hasMultipleImages
-              ? `Photo ${activeIndex + 1} of ${images.length}`
-              : "Single photo attached"}
+              ? (isJa ? `${images.length} 件中 ${activeIndex + 1} 件目` : `File ${activeIndex + 1} of ${images.length}`)
+              : (isJa ? "ファイルが1件添付されています" : "Single file attached")}
           </p>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
             {hasMultipleImages ? (
               <button
                 type="button"
                 onClick={() => onNavigate(-1)}
                 disabled={!canGoPrevious}
-                className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Previous
+                {isJa ? "前へ" : "Previous"}
               </button>
             ) : null}
 
@@ -177,9 +249,9 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 type="button"
                 onClick={() => onNavigate(1)}
                 disabled={!canGoNext}
-                className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Next
+                {isJa ? "次へ" : "Next"}
               </button>
             ) : null}
 
@@ -187,18 +259,24 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               href={activeImage.url}
               target="_blank"
               rel="noreferrer"
-              className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
             >
-              Open Photo
+              {isJa ? "ファイルを開く" : "Open File"}
             </a>
 
-            <a
-              href={activeImage.url}
-              download={buildImageDownloadName(activeImage.url, activeImage.label)}
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] shadow-xs transition-colors disabled:opacity-50"
             >
-              Download Photo
-            </a>
+              {isDownloading && (
+                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 14 }}>
+                  progress_activity
+                </span>
+              )}
+              <span>{isDownloading ? (isJa ? "ダウンロード中…" : "Downloading…") : (isJa ? "ファイルをダウンロード" : "Download File")}</span>
+            </button>
           </div>
         </div>
       </div>

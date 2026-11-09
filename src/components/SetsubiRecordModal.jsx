@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useLanguage } from "../contexts/LanguageContext";
 import { uploadEquipmentEventImage } from "../services/api";
 import FormField from "./FormField";
 import ModalShell from "./ModalShell";
@@ -15,28 +15,35 @@ function toBase64(file) {
 
 function buildInitialDraft(record) {
   if (!record) {
-    return { name: "", 工場: "", installationDate: "", imageURL: "" };
+    return {
+      name: "", 工場: "", installationDate: "", imageURL: "",
+      model: "", size: "", serialNo: "", manufactureDate: "",
+      voltage: "", manufacturer: "", contactVia: "",
+      noOfHead: "", tableLength: "",
+    };
   }
   return {
     name: record.name || "",
     工場: record["工場"] || "",
     installationDate: record.installationDate || "",
     imageURL: record.imageURL || "",
+    model: record.model || "",
+    size: record.size || "",
+    serialNo: record.serialNo || "",
+    manufactureDate: record.manufactureDate || "",
+    voltage: record.voltage || "",
+    manufacturer: record.manufacturer || "",
+    contactVia: record.contactVia || "",
+    noOfHead: record.noOfHead != null ? String(record.noOfHead) : "",
+    tableLength: record.tableLength != null ? String(record.tableLength) : "",
   };
 }
 
-/**
- * Reusable modal for creating and editing equipment (設備) records.
- *
- * Props:
- *   open            — boolean, controls visibility
- *   record          — existing record object for edit mode, or null for create
- *   submitting      — boolean, disables submit while saving
- *   factories       — string[], list of factory names for the dropdown
- *   defaultFactory  — string, pre-select a factory when opening in create mode
- *   onClose         — () => void
- *   onSubmit        — (draft: { name, 工場, installationDate }) => void
- */
+const FORM_ID = "setsubi-record-form";
+
+const inputCls =
+  "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]";
+
 export default function SetsubiRecordModal({
   open,
   record,
@@ -48,6 +55,9 @@ export default function SetsubiRecordModal({
   onSubmit,
   onArchive,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [draft, setDraft] = useState(() => buildInitialDraft(record));
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -61,10 +71,7 @@ export default function SetsubiRecordModal({
     setUploadError("");
   }, [open, record, defaultFactory]);
 
-  const hasData = useMemo(
-    () => draft.name.trim() !== "",
-    [draft]
-  );
+  const hasData = useMemo(() => draft.name.trim() !== "", [draft]);
 
   function set(field, value) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -87,153 +94,278 @@ export default function SetsubiRecordModal({
       set("imageURL", result.imageURL);
     } catch (err) {
       const raw = err?.message || "";
-      setUploadError(raw.startsWith("<") ? "Upload failed — server error. Check that the server is running." : raw || "Upload failed.");
+      setUploadError(
+        raw.startsWith("<")
+          ? (isJa ? "アップロード失敗 — サーバーエラーです。サーバー稼働状況を確認してください。" : "Upload failed — server error. Check that the server is running.")
+          : raw || (isJa ? "アップロードに失敗しました。" : "Upload failed.")
+      );
     } finally {
       setUploading(false);
     }
   }
 
-  if (!open) return null;
-
   const isEdit = Boolean(record);
 
-  return createPortal(
+  const footer = (
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        {isEdit && onArchive ? (
+          <button
+            type="button"
+            onClick={onArchive}
+            disabled={submitting}
+            className="rounded-[6px] border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--status-warning)] hover:bg-[var(--status-warning)]/20 active:scale-[0.98] transition-all shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isJa ? "アーカイブ" : "Archive"}
+          </button>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)]">
+            {isJa ? "保存する前に設備名の入力が必要です。" : "Equipment name is required before saving."}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+        >
+          {isJa ? "キャンセル" : "Cancel"}
+        </button>
+        <button
+          type="submit"
+          form={FORM_ID}
+          disabled={!hasData || submitting}
+          className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {submitting
+            ? (isJa ? "保存中…" : "Saving…")
+            : isEdit
+            ? (isJa ? "変更を保存" : "Save Changes")
+            : (isJa ? "設備を追加" : "Add Equipment")}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow={isEdit ? "Edit Equipment" : "Add Equipment"}
-      title={isEdit ? "Edit Equipment Record" : "Add Equipment Record"}
-      subtitle={isEdit ? "Update the selected equipment details." : "Create a new equipment entry in setsubiDB."}
-      maxWidth="max-w-lg"
+      eyebrow={isEdit ? (isJa ? "設備を編集" : "Edit Equipment") : (isJa ? "設備を追加" : "Add Equipment")}
+      title={isEdit ? (isJa ? "設備レコードの編集" : "Edit Equipment Record") : (isJa ? "設備レコードの追加" : "Add Equipment Record")}
+      subtitle={isEdit
+        ? (isJa ? "選択した設備の詳細情報を更新します。" : "Update the selected equipment details.")
+        : (isJa ? "setsubiDBに新規設備を登録します。" : "Create a new equipment entry in setsubiDB.")}
+      maxWidth="max-w-3xl"
       align="start"
+      footer={footer}
+      footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
     >
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!hasData) return;
-              onSubmit(draft);
-            }}
-            className="max-h-[82vh] overflow-y-auto px-6 py-6 scrollbar-hide"
-          >
-            <div className="grid gap-4">
+      <form
+        id={FORM_ID}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!hasData) return;
+          onSubmit(draft);
+        }}
+        className="overflow-y-auto px-6 py-5 scrollbar-hide"
+        style={{ maxHeight: "calc(92vh - 180px)" }}
+      >
+        <div className="grid gap-3">
 
-              <FormField label="設備名" variant="form" required>
-                <input
-                  type="text"
-                  value={draft.name}
-                  onChange={(e) => set("name", e.target.value)}
-                  placeholder="e.g. プレス機 #1"
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                  required
+          <FormField label={isJa ? "設備名" : "Equipment Name"} variant="form" required>
+            <input
+              type="text"
+              value={draft.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder={isJa ? "例: プレス機 #1" : "e.g. Press #1"}
+              className={inputCls}
+              required
+            />
+          </FormField>
+
+          <FormField label={isJa ? "工場 (設置場所)" : "Factory (Location)"} variant="form">
+            {factories.length > 0 ? (
+              <select
+                value={draft["工場"]}
+                onChange={(e) => set("工場", e.target.value)}
+                className={inputCls}
+              >
+                <option value="">{isJa ? "— 工場を選択 —" : "— Select factory —"}</option>
+                {factories.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={draft["工場"]}
+                onChange={(e) => set("工場", e.target.value)}
+                placeholder={isJa ? "工場名" : "Factory name"}
+                className={inputCls}
+              />
+            )}
+          </FormField>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label={isJa ? "設置日" : "Installation Date"} variant="form">
+              <input
+                type="date"
+                value={draft.installationDate}
+                onChange={(e) => set("installationDate", e.target.value)}
+                className={inputCls}
+              />
+            </FormField>
+
+            <FormField label={isJa ? "製造日" : "Manufacture Date"} variant="form">
+              <input
+                type="date"
+                value={draft.manufactureDate}
+                onChange={(e) => set("manufactureDate", e.target.value)}
+                className={inputCls}
+              />
+            </FormField>
+          </div>
+
+          <FormField label={isJa ? "型式" : "Model"} variant="form">
+            <input
+              type="text"
+              value={draft.model}
+              onChange={(e) => set("model", e.target.value)}
+              placeholder={isJa ? "例: XR-500" : "e.g. XR-500"}
+              className={inputCls}
+            />
+          </FormField>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label={isJa ? "サイズ" : "Size"} variant="form">
+              <input
+                type="text"
+                value={draft.size}
+                onChange={(e) => set("size", e.target.value)}
+                placeholder={isJa ? "例: 1200×800mm" : "e.g. 1200×800mm"}
+                className={inputCls}
+              />
+            </FormField>
+
+            <FormField label={isJa ? "電圧" : "Voltage"} variant="form">
+              <input
+                type="text"
+                value={draft.voltage}
+                onChange={(e) => set("voltage", e.target.value)}
+                placeholder={isJa ? "例: 200V / 3φ" : "e.g. 200V / 3φ"}
+                className={inputCls}
+              />
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label={isJa ? "ヘッド数" : "Number of Heads"} variant="form">
+              <select
+                value={draft.noOfHead}
+                onChange={(e) => set("noOfHead", e.target.value)}
+                className={inputCls}
+              >
+                <option value="">{isJa ? "— 選択 —" : "— Select —"}</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </FormField>
+
+            <FormField label={isJa ? "長さ (mm)" : "Length (mm)"} variant="form">
+              <input
+                type="number"
+                value={draft.tableLength}
+                onChange={(e) => set("tableLength", e.target.value)}
+                placeholder={isJa ? "例: 3500" : "e.g. 3500"}
+                min="0"
+                className={inputCls}
+              />
+            </FormField>
+          </div>
+
+          <FormField label={isJa ? "シリアル番号" : "Serial No."} variant="form">
+            <input
+              type="text"
+              value={draft.serialNo}
+              onChange={(e) => set("serialNo", e.target.value)}
+              placeholder={isJa ? "例: SN-20240001" : "e.g. SN-20240001"}
+              className={inputCls}
+            />
+          </FormField>
+
+          <FormField label={isJa ? "メーカー" : "Manufacturer"} variant="form">
+            <input
+              type="text"
+              value={draft.manufacturer}
+              onChange={(e) => set("manufacturer", e.target.value)}
+              placeholder={isJa ? "例: 山田機械株式会社" : "e.g. Yamada Machinery Co."}
+              className={inputCls}
+            />
+          </FormField>
+
+          <FormField label={isJa ? "連絡窓口" : "Contact Via"} variant="form">
+            <input
+              type="text"
+              value={draft.contactVia}
+              onChange={(e) => set("contactVia", e.target.value)}
+              placeholder={isJa ? "例: sales@yamada.co.jp / 03-1234-5678" : "e.g. sales@yamada.co.jp / 03-1234-5678"}
+              className={inputCls}
+            />
+          </FormField>
+
+          <FormField label={isJa ? "画像" : "Image"} variant="form">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] active:scale-[0.98] transition-all shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploading ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                  {isJa ? "アップロード中…" : "Uploading…"}
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
+                  {draft.imageURL ? (isJa ? "画像を変更" : "Change Image") : (isJa ? "画像を添付" : "Attach Image")}
+                </>
+              )}
+            </button>
+
+            {uploadError && (
+              <p className="mt-2 text-xs text-[var(--status-danger)]">{uploadError}</p>
+            )}
+
+            {draft.imageURL && (
+              <div className="mt-3 group relative inline-block">
+                <img
+                  src={draft.imageURL}
+                  alt="equipment"
+                  className="h-16 w-16 rounded-[8px] object-cover border border-[var(--border)]"
                 />
-              </FormField>
-
-              <FormField label="工場 (Location)" variant="form">
-                {factories.length > 0 ? (
-                  <select
-                    value={draft["工場"]}
-                    onChange={(e) => set("工場", e.target.value)}
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                  >
-                    <option value="">— Select factory —</option>
-                    {factories.map((f) => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={draft["工場"]}
-                    onChange={(e) => set("工場", e.target.value)}
-                    placeholder="Factory name"
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                  />
-                )}
-              </FormField>
-
-              <FormField label="Installation Date" variant="form">
-                <input
-                  type="date"
-                  value={draft.installationDate}
-                  onChange={(e) => set("installationDate", e.target.value)}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                />
-              </FormField>
-
-              <FormField label="Image" variant="form">
-
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-
-                <button type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50">
-                  {uploading ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
-                      アップロード中…
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
-                      {draft.imageURL ? "画像を変更" : "画像を添付"}
-                    </>
-                  )}
-                </button>
-
-                {uploadError && (
-                  <p className="mt-2 text-xs text-error">{uploadError}</p>
-                )}
-
-                {draft.imageURL && (
-                  <div className="mt-3 group relative inline-block">
-                    <img src={draft.imageURL} alt="equipment"
-                      className="h-16 w-16 rounded-xl object-cover border border-separator/40" />
-                    <button type="button"
-                      onClick={() => set("imageURL", "")}
-                      className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
-                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
-                    </button>
-                  </div>
-                )}
-              </FormField>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
-              <div>
-                {isEdit && onArchive ? (
-                  <button
-                    type="button"
-                    onClick={onArchive}
-                    disabled={submitting}
-                    className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Archive
-                  </button>
-                ) : (
-                  <p className="text-sm text-on-surface-variant">設備名 is required before saving.</p>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  onClick={() => set("imageURL", "")}
+                  className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-[var(--status-danger)] text-white group-hover:flex"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!hasData || submitting}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Equipment"}
+                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
                 </button>
               </div>
-            </div>
-          </form>
+            )}
+          </FormField>
 
-    </ModalShell>,
-    document.body
+        </div>
+      </form>
+    </ModalShell>
   );
 }

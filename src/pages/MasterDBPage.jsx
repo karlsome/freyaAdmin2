@@ -1,11 +1,16 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
+import { useLanguage } from "../contexts/LanguageContext";
 import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
+import MaterialDetailModal from "../components/MaterialDetailModal";
+import MasterProductDetailModal from "../components/MasterProductDetailModal";
 import MasterFilterPanel from "../components/MasterFilterPanel";
 import PageHeader from "../components/PageHeader";
 import MasterRecordModal from "../components/MasterRecordModal";
+import MasterProductEditModal from "../components/MasterProductEditModal";
 import MasterStatsStrip from "../components/MasterStatsStrip";
 import MasterTable from "../components/MasterTable";
 import MasterTabNav from "../components/MasterTabNav";
@@ -18,6 +23,7 @@ import {
   fetchMasterRecordIds,
   fetchMasterSchema,
   getMasterCollectionConfig,
+  query,
   updateMasterRecord,
   uploadMasterImage,
 } from "../services/api";
@@ -37,11 +43,14 @@ import {
 } from "../utils/masterDB";
 
 const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
+const MaterialPDFsWorkspace = lazy(() => import("../components/MaterialPDFsWorkspace"));
 const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
 const FactoryDBWorkspace = lazy(() => import("../components/FactoryDBWorkspace"));
 const SetsubiDBWorkspace = lazy(() => import("../components/SetsubiDBWorkspace"));
+const PceFilesWorkspace = lazy(() => import("../components/PceFilesWorkspace"));
+const BomWorkspace = lazy(() => import("../components/BomWorkspace"));
 
-function FlashBanner({ flash, onClose }) {
+function FlashBanner({ flash, onClose, isJa }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
@@ -51,14 +60,16 @@ function FlashBanner({ flash, onClose }) {
       : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20";
 
   return (
-    <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
+    <div className={`mb-6 rounded-[8px] border px-4 py-3 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em]">Status</div>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">
+            {isJa ? "ステータス" : "Status"}
+          </div>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
         </button>
       </div>
     </div>
@@ -78,7 +89,18 @@ function toBase64(file) {
 }
 
 export default function MasterDBPage() {
-  const [activeTab, setActiveTab] = useState("masterDB");
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const searchFromUrl = searchParams.get("search");
+  const detailFromUrl = searchParams.get("detail");
+  const createHinbanFromUrl = searchParams.get("createHinban");
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
+  });
   const [records, setRecords] = useState([]);
   const [schemaFields, setSchemaFields] = useState([]);
   const [filterOptions, setFilterOptions] = useState({ factories: [], rl: [], colors: [], processes: [] });
@@ -115,10 +137,13 @@ export default function MasterDBPage() {
   const activeTabMeta = getMasterTabMeta(activeTab);
   const activeTabUI = getMasterTabUI(activeTab);
   const isProductPDFTab = activeTab === "productPDFs";
+  const isMaterialPDFTab = activeTab === "materialPDFs";
   const isFuryoKanriTab = activeTab === "furyoKanri";
   const isFactoryTab = activeTab === "factoryDB";
   const isSetsubiTab = activeTab === "setsubiDB";
-  const isSpecialTab = isProductPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab;
+  const isPceFilesTab = activeTab === "pceFiles";
+  const isBomDBTab = activeTab === "bomDB";
+  const isSpecialTab = isProductPDFTab || isMaterialPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab || isPceFilesTab || isBomDBTab;
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -186,7 +211,7 @@ export default function MasterDBPage() {
           simpleFilters,
           advancedFilters: advancedQuery,
           searchTags,
-          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab)),
+          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab), activeTab),
           searchLogicMode,
         });
 
@@ -250,14 +275,97 @@ export default function MasterDBPage() {
     distinctCacheRef.current.clear();
   }
 
+  const effectiveTab = tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
+
+  useEffect(() => {
+    if (effectiveTab !== activeTab) {
+      resetFirstTabState(effectiveTab);
+    }
+  }, [effectiveTab, activeTab]);
+
+  // Synchronize detail query param with selectedRecord modal state
+  useEffect(() => {
+    if (!detailFromUrl || isSpecialTab) {
+      if (!detailFromUrl && selectedRecord) {
+        setSelectedRecord(null);
+      }
+      return;
+    }
+
+    const currentId = extractRecordId(selectedRecord);
+    const currentHinban = selectedRecord?.["品番"];
+    if (selectedRecord && (currentId === detailFromUrl || currentHinban === detailFromUrl)) {
+      return;
+    }
+
+    const found = records.find(
+      (r) => r["品番"] === detailFromUrl || extractRecordId(r) === detailFromUrl
+    );
+    if (found) {
+      setSelectedRecord(found);
+      return;
+    }
+
+    const { collectionName } = getMasterCollectionConfig(activeTab);
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(detailFromUrl);
+    const queryFilter = isObjectId
+      ? { $or: [{ _id: detailFromUrl }, { "品番": detailFromUrl }] }
+      : { "品番": detailFromUrl };
+
+    query("Sasaki_Coating_MasterDB", collectionName, queryFilter)
+      .then((res) => {
+        const item = Array.isArray(res) ? res[0] : res?.data?.[0];
+        if (item) setSelectedRecord(item);
+      })
+      .catch(console.error);
+  }, [detailFromUrl, activeTab, records, isSpecialTab]);
+
+  function handleSelectRecord(record) {
+    setSelectedRecord(record);
+    const detailKey = record ? (record["品番"] || extractRecordId(record) || "") : "";
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (detailKey) {
+        next.set("detail", detailKey);
+      } else {
+        next.delete("detail");
+      }
+      return next;
+    });
+  }
+
+  function handleCloseDetailModal() {
+    setSelectedRecord(null);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete("detail");
+      return next;
+    });
+  }
+
   function handleTabSelect(tab) {
     if (!tab.ready) {
-      const liveTabs = MASTER_TABS.filter((item) => item.ready).map((item) => item.label).join(" / ");
-      setFlash({ type: "warning", message: `${tab.label} is queued for the next migration pass. Live tabs: ${liveTabs}.` });
+      const tabTitle = isJa ? (tab.labelJa || tab.label) : tab.label;
+      const liveTabs = MASTER_TABS.filter((item) => item.ready)
+        .map((item) => (isJa ? item.labelJa || item.label : item.label))
+        .join(" / ");
+      setFlash({
+        type: "warning",
+        message: isJa
+          ? `${tabTitle} は次期移行フェーズで対応予定です。利用可能なタブ: ${liveTabs}`
+          : `${tab.label} is queued for the next migration pass. Live tabs: ${liveTabs}.`,
+      });
       return;
     }
 
     if (tab.key !== activeTab) {
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.set("tab", tab.key);
+        next.delete("search");
+        next.delete("detail");
+        return next;
+      });
       resetFirstTabState(tab.key);
     }
   }
@@ -350,14 +458,20 @@ export default function MasterDBPage() {
       const parsedRows = cleanMasterRecords(Array.isArray(parsed.data) ? parsed.data : []);
 
       if (!parsedRows.length) {
-        throw new Error("The selected CSV did not produce any rows.");
+        throw new Error(isJa ? "選択したCSVにデータ行が含まれていません。" : "The selected CSV did not produce any rows.");
       }
 
       setCsvRows(parsedRows);
-      setFlash({ type: "success", message: `${parsedRows.length} CSV rows parsed successfully.` });
+      setFlash({
+        type: "success",
+        message: isJa ? `${parsedRows.length} 件のCSV行を正常に読み込みました。` : `${parsedRows.length} CSV rows parsed successfully.`,
+      });
     } catch (parseError) {
       setCsvRows([]);
-      setFlash({ type: "error", message: parseError.message || "Failed to parse the selected CSV file." });
+      setFlash({
+        type: "error",
+        message: parseError.message || (isJa ? "CSVファイルの読み込みに失敗しました。" : "Failed to parse the selected CSV file."),
+      });
     } finally {
       setCsvParsing(false);
     }
@@ -365,7 +479,8 @@ export default function MasterDBPage() {
 
   async function handleCsvImport() {
     if (!csvRows.length) return;
-    if (!window.confirm(`Insert ${csvRows.length} CSV records into ${activeTabMeta.label}?`)) return;
+    const tabTitle = isJa ? (activeTabMeta.labelJa || activeTabMeta.label) : activeTabMeta.label;
+    if (!window.confirm(isJa ? `${csvRows.length} 件のCSVレコードを ${tabTitle} に登録しますか？` : `Insert ${csvRows.length} CSV records into ${activeTabMeta.label}?`)) return;
 
     setCsvImporting(true);
     const authUser = getAuthUser();
@@ -391,7 +506,9 @@ export default function MasterDBPage() {
     setCsvImporting(false);
     setFlash({
       type: failCount ? "warning" : "success",
-      message: `CSV import finished. Inserted ${successCount} record${successCount === 1 ? "" : "s"}, failed ${failCount}.`,
+      message: isJa
+        ? `CSVインポートが完了しました。成功: ${successCount} 件、失敗: ${failCount} 件。`
+        : `CSV import finished. Inserted ${successCount} record${successCount === 1 ? "" : "s"}, failed ${failCount}.`,
     });
     setCsvFileName("");
     setCsvRows([]);
@@ -411,7 +528,7 @@ export default function MasterDBPage() {
       });
 
       if (!result?.insertedId) {
-        throw new Error("Record creation did not return a new ID.");
+        throw new Error(isJa ? "レコード作成で新しいIDが返されませんでした。" : "Record creation did not return a new ID.");
       }
 
       if (imageFile) {
@@ -425,10 +542,10 @@ export default function MasterDBPage() {
       }
 
       setAddModalOpen(false);
-      setFlash({ type: "success", message: "New master record created successfully." });
+      setFlash({ type: "success", message: isJa ? "新規マスターレコードを作成しました。" : "New master record created successfully." });
       setRefreshNonce((current) => current + 1);
     } catch (createError) {
-      setFlash({ type: "error", message: createError.message || "Failed to create the new master record." });
+      setFlash({ type: "error", message: createError.message || (isJa ? "新規マスターレコードの作成に失敗しました。" : "Failed to create the new master record.") });
     } finally {
       setAddSubmitting(false);
     }
@@ -438,7 +555,7 @@ export default function MasterDBPage() {
     if (!selectedRecord) return;
     const recordId = extractRecordId(selectedRecord);
     if (!recordId) {
-      setFlash({ type: "error", message: "This record is missing an ID and cannot be updated." });
+      setFlash({ type: "error", message: isJa ? "レコードIDが見つからないため更新できません。" : "This record is missing an ID and cannot be updated." });
       return;
     }
 
@@ -454,11 +571,11 @@ export default function MasterDBPage() {
         tabKey: activeTab,
       });
 
-      setSelectedRecord(null);
-      setFlash({ type: "success", message: "Master record updated successfully." });
+      handleCloseDetailModal();
+      setFlash({ type: "success", message: isJa ? "マスターレコードを更新しました。" : "Master record updated successfully." });
       setRefreshNonce((current) => current + 1);
     } catch (saveError) {
-      setFlash({ type: "error", message: saveError.message || "Failed to update the selected record." });
+      setFlash({ type: "error", message: saveError.message || (isJa ? "レコードの更新に失敗しました。" : "Failed to update the selected record.") });
     } finally {
       setDrawerSaving(false);
     }
@@ -468,7 +585,7 @@ export default function MasterDBPage() {
     if (!selectedRecord) return;
     const recordId = extractRecordId(selectedRecord);
     if (!recordId) {
-      setFlash({ type: "error", message: "This record is missing an ID and cannot accept an image upload." });
+      setFlash({ type: "error", message: isJa ? "レコードIDが見つからないため画像をアップロードできません。" : "This record is missing an ID and cannot accept an image upload." });
       return;
     }
 
@@ -485,10 +602,11 @@ export default function MasterDBPage() {
       });
 
       setSelectedRecord((current) => current ? { ...current, imageURL: result.imageURL } : current);
-      setFlash({ type: "success", message: "Master image uploaded successfully." });
+      setFlash({ type: "success", message: isJa ? "画像をアップロードしました。" : "Master image uploaded successfully." });
       setRefreshNonce((current) => current + 1);
+      return result;
     } catch (uploadError) {
-      setFlash({ type: "error", message: uploadError.message || "Failed to upload the master image." });
+      setFlash({ type: "error", message: uploadError.message || (isJa ? "画像のアップロードに失敗しました。" : "Failed to upload the master image.") });
     } finally {
       setDrawerUploading(false);
     }
@@ -496,7 +614,7 @@ export default function MasterDBPage() {
 
   async function handleOpenBatchEdit() {
     if (!batchEditEnabled) {
-      setFlash({ type: "warning", message: "Apply at least one advanced filter before using batch edit." });
+      setFlash({ type: "warning", message: isJa ? "一括編集を行う前に詳細フィルターを1つ以上適用してください。" : "Apply at least one advanced filter before using batch edit." });
       return;
     }
 
@@ -509,7 +627,7 @@ export default function MasterDBPage() {
       setBatchRecordIds(ids);
       setBatchModalOpen(true);
     } catch (batchError) {
-      setFlash({ type: "error", message: batchError.message || "Failed to prepare the batch edit session." });
+      setFlash({ type: "error", message: batchError.message || (isJa ? "一括編集セッションの準備に失敗しました。" : "Failed to prepare the batch edit session.") });
     } finally {
       setBatchPreparing(false);
     }
@@ -519,7 +637,9 @@ export default function MasterDBPage() {
     const entries = Object.entries(changes);
     if (!entries.length) return;
 
-    if (!window.confirm(`Apply ${entries.length} change${entries.length === 1 ? "" : "s"} to ${stats.filteredCount} records?`)) {
+    if (!window.confirm(isJa
+      ? `${stats.filteredCount} 件のレコードに ${entries.length} 件の変更を適用しますか？`
+      : `Apply ${entries.length} change${entries.length === 1 ? "" : "s"} to ${stats.filteredCount} records?`)) {
       return;
     }
 
@@ -540,72 +660,84 @@ export default function MasterDBPage() {
       setBatchRecordIds([]);
       setFlash({
         type: "success",
-        message: `Batch edit completed. Updated ${result?.modifiedCount ?? recordIds.length} record${recordIds.length === 1 ? "" : "s"}.`,
+        message: isJa
+          ? `一括編集が完了しました。${result?.modifiedCount ?? recordIds.length} 件のレコードを更新しました。`
+          : `Batch edit completed. Updated ${result?.modifiedCount ?? recordIds.length} record${recordIds.length === 1 ? "" : "s"}.`,
       });
       setRefreshNonce((current) => current + 1);
     } catch (batchError) {
-      setFlash({ type: "error", message: batchError.message || "Failed to update the filtered records." });
+      setFlash({ type: "error", message: batchError.message || (isJa ? "対象レコードの一括更新に失敗しました。" : "Failed to update the filtered records.") });
     } finally {
       setBatchSubmitting(false);
     }
   }
 
   return (
-    <section className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
-        title="Master Product Management"
-        className="mb-8 md:flex-row md:items-end md:justify-between"
+        title={isJa ? "マスター製品管理" : "Master Product Management"}
+        className="mb-6 md:flex-row md:items-end md:justify-between"
         actionsClassName="self-start md:self-auto md:justify-end"
         actions={(
-          <>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleRefresh}
-              className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface-variant transition-all hover:bg-surface-container-high hover:text-primary"
+              className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] shadow-2xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-              Refresh
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
+              {isJa ? "更新" : "Refresh"}
             </button>
 
             {!isSpecialTab && (
               <button
                 type="button"
                 onClick={() => setAddModalOpen(true)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90"
+                className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--freya-blue-hover)] shadow-xs"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-                Add New Record
+                {isJa ? "新規レコード追加" : "Add New Record"}
               </button>
             )}
-          </>
+          </div>
         )}
       />
 
-      <FlashBanner flash={flash} onClose={() => setFlash(null)} />
+      <FlashBanner flash={flash} onClose={() => setFlash(null)} isJa={isJa} />
 
       <MasterTabNav tabs={MASTER_TABS} activeTab={activeTab} onSelect={handleTabSelect} />
 
       {!isSpecialTab && batchPreparing && (
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-on-surface shadow-sm">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-xs">
           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-          Preparing batch edit…
+          {isJa ? "一括編集を準備中…" : "Preparing batch edit…"}
         </div>
       )}
 
       {isSpecialTab ? (
         <Suspense
           fallback={(
-            <div className="dashboard-section rounded-2xl px-6 py-10 text-sm font-medium text-on-surface-variant">
-              Loading workspace…
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-6 py-10 text-sm font-medium text-[var(--text-muted)]">
+              {isJa ? "ワークスペースを読み込み中…" : "Loading workspace…"}
             </div>
           )}
         >
           {isProductPDFTab ? (
             <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : isMaterialPDFTab ? (
+            <MaterialPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFuryoKanriTab ? (
             <FuryoKanriWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFactoryTab ? (
             <FactoryDBWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : isPceFilesTab ? (
+            <PceFilesWorkspace onFlash={setFlash} />
+          ) : isBomDBTab ? (
+            <BomWorkspace
+              initialSearch={searchFromUrl || ""}
+              initialCreateHinban={createHinbanFromUrl || ""}
+              onFlash={setFlash}
+            />
           ) : (
             <SetsubiDBWorkspace refreshToken={refreshNonce} />
           )}
@@ -668,36 +800,52 @@ export default function MasterDBPage() {
               setPage(1);
               setPageSize(nextPageSize);
             }}
-            onRowClick={(record) => setSelectedRecord(record)}
+            onRowClick={handleSelectRecord}
           />
         </>
       )}
 
       {!isSpecialTab && selectedRecord && (
-        <MasterDetailDrawer
-          key={extractRecordId(selectedRecord) || "master-detail"}
-          open={!!selectedRecord}
-          record={selectedRecord}
-          tabKey={activeTab}
-          fieldDefinitions={fieldDefinitions}
-          saving={drawerSaving}
-          uploading={drawerUploading}
-          onClose={() => setSelectedRecord(null)}
-          onSave={handleSaveRecord}
-          onUploadImage={handleUploadImage}
-        />
+        activeTab === "materialDB" ? (
+          <MaterialDetailModal
+            key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "material-detail"}
+            modalData={selectedRecord}
+            onClose={handleCloseDetailModal}
+          />
+        ) : (
+          <MasterProductDetailModal
+            key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "product-detail"}
+            open={!!selectedRecord}
+            record={selectedRecord}
+            saving={drawerSaving}
+            uploading={drawerUploading}
+            onClose={handleCloseDetailModal}
+            onSave={handleSaveRecord}
+            onUploadImage={handleUploadImage}
+          />
+        )
       )}
 
       {!isSpecialTab && addModalOpen && (
-        <MasterRecordModal
-          open={addModalOpen}
-          fieldDefinitions={fieldDefinitions}
-          tabLabel={activeTabMeta.label}
-          recordLabel={activeTabUI.recordLabel}
-          submitting={addSubmitting}
-          onClose={() => setAddModalOpen(false)}
-          onSubmit={handleCreateRecord}
-        />
+        activeTab === "masterDB" ? (
+          <MasterProductEditModal
+            open={addModalOpen}
+            isNew={true}
+            submitting={addSubmitting}
+            onClose={() => setAddModalOpen(false)}
+            onSubmit={(draft) => handleCreateRecord(draft)}
+          />
+        ) : (
+          <MasterRecordModal
+            open={addModalOpen}
+            fieldDefinitions={fieldDefinitions}
+            tabLabel={isJa ? (activeTabMeta.labelJa || activeTabMeta.label) : activeTabMeta.label}
+            recordLabel={isJa ? (activeTabUI.recordLabelJa || activeTabUI.recordLabel) : activeTabUI.recordLabel}
+            submitting={addSubmitting}
+            onClose={() => setAddModalOpen(false)}
+            onSubmit={handleCreateRecord}
+          />
+        )
       )}
 
       {!isSpecialTab && batchModalOpen && (
@@ -713,6 +861,6 @@ export default function MasterDBPage() {
           loadDistinctOptions={loadDistinctOptions}
         />
       )}
-    </section>
+    </div>
   );
 }

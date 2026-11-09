@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { formatProductPDFTitle } from "../utils/productPDFs";
 import IconButton from "./IconButton";
 
 export default function ProductPDFPreviewModal({ item, onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -29,38 +32,42 @@ export default function ProductPDFPreviewModal({ item, onClose }) {
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div ref={modalRef} className="flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-slate-950/95 text-white shadow-2xl">
-          <div className="flex items-start justify-between gap-4 border-b border-separator/30 px-5 py-4">
+        <div ref={modalRef} className="freya-card flex w-full max-w-5xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl">
+          <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">Preview</div>
-              <h3 className="mt-1 text-lg font-bold">{formatProductPDFTitle(item)}</h3>
-              <p className="mt-1 text-sm text-white/60">{item.fileName || "Untitled file"}</p>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                {isJa ? "プレビュー" : "Preview"}
+              </div>
+              <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">{formatProductPDFTitle(item)}</h3>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                {item.fileName || (isJa ? "名称未設定ファイル" : "Untitled file")}
+              </p>
             </div>
 
-            <IconButton icon="close" onClick={onClose} variant="light" ariaLabel="Close dialog" />
+            <IconButton icon="close" onClick={onClose} size="md" ariaLabel={isJa ? "閉じる" : "Close dialog"} />
           </div>
 
-          <div className="flex min-h-[60vh] items-center justify-center bg-black/30 p-4">
+          <div className="flex min-h-[50vh] items-center justify-center bg-[var(--surface-subtle)] p-4">
             {item.imageURL ? (
-              <img src={item.imageURL} alt={item.fileName} className="max-h-[72vh] max-w-full rounded-2xl object-contain shadow-2xl" />
+              <img src={item.imageURL} alt={item.fileName} className="max-h-[68vh] max-w-full rounded-[6px] border border-[var(--border)] object-contain shadow-md" />
             ) : (
-              <div className="rounded-2xl border border-separator/35 bg-white/5 px-6 py-10 text-center text-white/70">
-                Preview image not available for this file.
+              <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-6 py-10 text-center text-xs text-[var(--text-muted)]">
+                {isJa ? "このファイルのプレビュー画像はありません。" : "Preview image not available for this file."}
               </div>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-separator/30 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3.5">
             {item.imageURL && (
               <a
                 href={item.imageURL}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/10"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Open Preview Image
+                {isJa ? "プレビュー画像を開く" : "Open Preview Image"}
               </a>
             )}
             {item.pdfURL && (
@@ -68,9 +75,9 @@ export default function ProductPDFPreviewModal({ item, onClose }) {
                 href={item.pdfURL}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+                className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
               >
-                Open Original PDF
+                {isJa ? "PDF原本を開く" : "Open Original PDF"}
               </a>
             )}
           </div>

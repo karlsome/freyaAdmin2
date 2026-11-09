@@ -6,18 +6,28 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:factory3d": "vite build --config vite.factory3d.config.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
     "@shotstack/shotstack-studio": "file:../shotstack-studio-sdk",
+    "chart.js": "^4.5.1",
+    "hls.js": "^1.6.16",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "konva": "^10.3.0",
+    "mediabunny": "^1.54.0",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^5.6.205",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-konva": "^19.2.4",
-    "react-router-dom": "^7.13.2"
+    "react-router-dom": "^7.13.2",
+    "three": "^0.186.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

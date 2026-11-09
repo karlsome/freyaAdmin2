@@ -47,12 +47,12 @@
   --c-on-surface:               17 17 22;
   --c-on-surface-variant:       54 54 66;
   --c-on-background:            17 17 22;
-  --c-primary:                  73 75 214;
-  --c-primary-container:        128 131 255;
+  --c-primary:                  37 99 235;
+  --c-primary-container:        219 234 254;
   --c-on-primary:               255 255 255;
-  --c-on-primary-container:     0 0 110;
-  --c-secondary:                99 86 143;
-  --c-secondary-container:      232 221 255;
+  --c-on-primary-container:     30 58 138;
+  --c-secondary:                51 65 85;
+  --c-secondary-container:      241 245 249;
   --c-tertiary:                 0 104 123;
   --c-error:                    186 26 26;
   --c-error-container:          255 218 214;
@@ -66,11 +66,11 @@
   --c-form-control-bg-hover:    248 249 250;
   --c-form-control-text:        27 27 31;
   --c-form-control-placeholder: 118 118 128;
-  --table-data-font-size:       0.75rem;
-  --table-data-line-height:     1rem;
-  --table-heading-font-size:    10px;
-  --table-heading-line-height:  0.875rem;
-  --table-heading-letter-space: 0.08em;
+  --table-data-font-size:       0.8125rem;
+  --table-data-line-height:     1.125rem;
+  --table-heading-font-size:    12px;
+  --table-heading-line-height:  1rem;
+  --table-heading-letter-space: 0.04em;
 }
 
 /* ─── Dark mode ─────────────────────────────────────────────────────────────── */
@@ -85,12 +85,12 @@
   --c-on-surface:               232 233 242;
   --c-on-surface-variant:       192 190 210;
   --c-on-background:            232 233 242;
-  --c-primary:                  192 193 255;
-  --c-primary-container:        128 131 255;
-  --c-on-primary:               16 0 169;
-  --c-on-primary-container:     13 0 150;
-  --c-secondary:                206 189 255;
-  --c-secondary-container:      90 1 223;
+  --c-primary:                  59 130 246;
+  --c-primary-container:        30 58 138;
+  --c-on-primary:               255 255 255;
+  --c-on-primary-container:     219 234 254;
+  --c-secondary:                203 213 225;
+  --c-secondary-container:      30 41 59;
   --c-tertiary:                 76 214 255;
   --c-error:                    255 180 171;
   --c-error-container:          147 0 10;
@@ -106,35 +106,6 @@
   --c-form-control-placeholder: 144 143 160;
 }
 
-/* ─── Lava lamp animation (dark mode only) ──────────────────────────────────── */
-@keyframes lava-1 {
-  0%        { transform: translateY(60vh) translateX(0)    scale(1.0);  border-radius: 55% 45% 60% 40% / 50% 55% 45% 50%; }
-  20%       { transform: translateY(30vh) translateX(4vw)  scale(1.15); border-radius: 40% 60% 45% 55% / 60% 40% 55% 45%; }
-  45%       { transform: translateY(-5vh) translateX(-3vw) scale(0.9);  border-radius: 65% 35% 55% 45% / 45% 60% 40% 55%; }
-  65%       { transform: translateY(10vh) translateX(6vw)  scale(1.1);  border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; }
-  85%       { transform: translateY(45vh) translateX(-5vw) scale(0.95); border-radius: 60% 40% 50% 50% / 40% 60% 50% 50%; }
-  100%      { transform: translateY(60vh) translateX(0)    scale(1.0);  border-radius: 55% 45% 60% 40% / 50% 55% 45% 50%; }
-}
-@keyframes lava-2 {
-  0%        { transform: translateY(-10vh) translateX(0)    scale(1.0);  border-radius: 50% 50% 55% 45% / 60% 40% 55% 45%; }
-  25%       { transform: translateY(25vh)  translateX(-6vw) scale(1.2);  border-radius: 60% 40% 45% 55% / 45% 55% 40% 60%; }
-  50%       { transform: translateY(65vh)  translateX(4vw)  scale(0.85); border-radius: 40% 60% 60% 40% / 55% 45% 50% 50%; }
-  75%       { transform: translateY(35vh)  translateX(-4vw) scale(1.05); border-radius: 55% 45% 40% 60% / 40% 60% 60% 40%; }
-  100%      { transform: translateY(-10vh) translateX(0)    scale(1.0);  border-radius: 50% 50% 55% 45% / 60% 40% 55% 45%; }
-}
-@keyframes lava-3 {
-  0%        { transform: translateY(80vh)  translateX(0)    scale(0.9);  border-radius: 45% 55% 50% 50% / 55% 45% 60% 40%; }
-  30%       { transform: translateY(40vh)  translateX(7vw)  scale(1.1);  border-radius: 60% 40% 55% 45% / 40% 60% 45% 55%; }
-  55%       { transform: translateY(5vh)   translateX(-5vw) scale(1.2);  border-radius: 50% 50% 40% 60% / 60% 40% 50% 50%; }
-  80%       { transform: translateY(55vh)  translateX(3vw)  scale(0.95); border-radius: 40% 60% 60% 40% / 45% 55% 55% 45%; }
-  100%      { transform: translateY(80vh)  translateX(0)    scale(0.9);  border-radius: 45% 55% 50% 50% / 55% 45% 60% 40%; }
-}
-@keyframes lava-4 {
-  0%        { transform: translateY(20vh)  translateX(0)    scale(1.05); border-radius: 50% 50% 45% 55% / 50% 50% 55% 45%; }
-  35%       { transform: translateY(-15vh) translateX(-7vw) scale(0.9);  border-radius: 55% 45% 60% 40% / 45% 55% 40% 60%; }
-  60%       { transform: translateY(50vh)  translateX(5vw)  scale(1.15); border-radius: 40% 60% 50% 50% / 60% 40% 55% 45%; }
-  100%      { transform: translateY(20vh)  translateX(0)    scale(1.05); border-radius: 50% 50% 45% 55% / 50% 50% 55% 45%; }
-}
 
 @keyframes pagination-liquid-morph {
   0% {
@@ -282,7 +253,11 @@
 body {
   background-color: rgb(var(--c-background));
   color: rgb(var(--c-on-surface));
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
   overflow: hidden;
   background-image: radial-gradient(circle, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
   background-size: 24px 24px;
@@ -338,122 +313,64 @@ select:-webkit-autofill:focus {
   background-color: rgb(var(--c-form-control-bg-hover)) !important;
 }
 
-/* Dark mode lava lamp background */
+/* Dark mode background */
 .dark {
-  background-color: rgb(6, 4, 16);
+  background-color: rgb(var(--c-background));
 }
 .dark body {
-  background: transparent;
+  background-color: rgb(var(--c-background));
   background-image: none;
 }
 
-/* Lava lamp container */
-.aurora-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  background: rgb(6, 4, 16);
-}
-.aurora-blob {
-  position: absolute;
-  filter: blur(55px);
-  will-change: transform, border-radius;
-}
-.aurora-blob-1 {
-  width: 38vw;
-  height: 42vh;
-  left: 10vw;
-  top: 10vh;
-  background: rgba(35, 6, 75, 0.95);
-  animation: lava-1 22s ease-in-out infinite;
-}
-.aurora-blob-2 {
-  width: 30vw;
-  height: 36vh;
-  left: 55vw;
-  top: 5vh;
-  background: rgba(45, 8, 90, 0.92);
-  animation: lava-2 28s ease-in-out infinite;
-}
-.aurora-blob-3 {
-  width: 34vw;
-  height: 38vh;
-  left: 30vw;
-  top: 15vh;
-  background: rgba(28, 5, 62, 0.95);
-  animation: lava-3 18s ease-in-out infinite;
-}
-.aurora-blob-4 {
-  width: 26vw;
-  height: 30vh;
-  left: 65vw;
-  top: 30vh;
-  background: rgba(50, 10, 100, 0.90);
-  animation: lava-4 32s ease-in-out infinite;
-}
-
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
+/* Snow-style: flat, calm surface with a hairline border and a single soft       */
+/* shadow. No multi-layer glass stacking, no inset highlight.                    */
 .glass-card {
-  background: rgba(252, 253, 253, 0.90);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid rgba(205, 207, 216, 0.60);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.03),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(205, 207, 216, 0.50);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .dark .glass-card {
-  background: rgba(22, 18, 42, 0.60);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid rgba(78, 76, 96, 0.50);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.38),
-    0 1px 4px rgba(0, 0, 0, 0.22),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+  background: rgba(29, 32, 38, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(76, 75, 92, 0.45);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 /* ─── Dashboard section (elevated major card) ───────────────────────────────── */
 .dashboard-section {
-  background: rgba(252, 253, 253, 0.94);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid rgba(198, 200, 214, 0.70);
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.04),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(205, 207, 216, 0.55);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .dark .dashboard-section {
-  background: rgba(24, 20, 44, 0.68);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid rgba(84, 82, 102, 0.55);
-  box-shadow:
-    0 6px 28px rgba(0, 0, 0, 0.44),
-    0 2px 8px rgba(0, 0, 0, 0.28),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+  background: rgba(29, 32, 38, 0.80);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(76, 75, 92, 0.50);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
 }
 
 /* ─── Hover elevation for interactive cards ─────────────────────────────────── */
+/* Gentle 2px lift + hairline-strengthen — calm, not bouncy.                     */
 .card-hover-lift {
-  transition: transform 160ms cubic-bezier(0.34, 1.4, 0.64, 1),
+  transition: transform 160ms ease,
               box-shadow 160ms ease,
               border-color 160ms ease;
 }
 .card-hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.10),
-    0 3px 8px rgba(0, 0, 0, 0.06);
+  border-color: rgba(73, 75, 214, 0.30);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
 }
 .dark .card-hover-lift:hover {
-  box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.48),
-    0 3px 10px rgba(0, 0, 0, 0.32);
+  border-color: rgba(192, 193, 255, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.34);
 }
 
 /* ─── Fade-in-up entrance animation ────────────────────────────────────────── */
@@ -634,7 +551,7 @@ select:-webkit-autofill:focus {
 
 /* ─── Material Icons ────────────────────────────────────────────────────────── */
 .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   font-size: 20px;
 }
 
@@ -746,8 +663,24 @@ select:-webkit-autofill:focus {
   animation: pagination-liquid-morph 460ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* ─── Segmented control: raised pill with primary accent (clearly "selected") ── */
+/* Keeps the morph motion but reads as a selected tab — an outlined/raised pill   */
+/* with accent text — distinct from a solid-purple primary action button.         */
+.pagination-liquid-blob.is-segmented {
+  background: rgb(var(--c-surface));
+  box-shadow:
+    0 0 0 1.5px rgb(var(--c-primary) / 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.14);
+}
+.dark .pagination-liquid-blob.is-segmented {
+  background: rgb(var(--c-surface-container-highest));
+  box-shadow:
+    0 0 0 1.5px rgb(var(--c-primary) / 0.55),
+    0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
 .ui-table-data {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-data-font-size);
   line-height: var(--table-data-line-height);
   font-variant-numeric: tabular-nums lining-nums;
@@ -755,15 +688,17 @@ select:-webkit-autofill:focus {
 }
 
 .ui-table-heading {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-heading-font-size);
   line-height: var(--table-heading-line-height);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: var(--table-heading-letter-space);
+  text-transform: uppercase;
+  color: var(--text-muted, #64748B);
 }
 
 .planner-data-text {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-data-font-size);
   line-height: var(--table-data-line-height);
   font-variant-numeric: tabular-nums lining-nums;
@@ -771,10 +706,10 @@ select:-webkit-autofill:focus {
 }
 
 .planner-data-label {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-heading-font-size);
   line-height: var(--table-heading-line-height);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: var(--table-heading-letter-space);
   text-transform: uppercase;
 }

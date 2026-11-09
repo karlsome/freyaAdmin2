@@ -1,0 +1,2131 @@
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import "./AnalyticsPage.css";
+import PageHeader from "../components/PageHeader";
+import MasterTabNav from "../components/MasterTabNav";
+import RecordDetailModal from "../components/RecordDetailModal";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
+import FormField from "../components/FormField";
+import StatSummaryCard from "../components/StatSummaryCard";
+import { useRecordModal } from "../hooks/useRecordModal";
+import { useLanguage } from "../contexts/LanguageContext";
+import { fetchMaterialLotAnalytics } from "../services/api";
+import ProductionAnalyticsView from "../components/analytics/ProductionAnalyticsView";
+import QualityAnalyticsView from "../components/analytics/QualityAnalyticsView";
+import MachinePerformanceView from "../components/analytics/MachinePerformanceView";
+import PartBenchmarkingView from "../components/analytics/PartBenchmarkingView";
+import TagInput from "../components/TagInput";
+import AdvancedFilterSection from "../components/AdvancedFilterSection";
+import ProductSelectorModal from "../components/analytics/ProductSelectorModal";
+import {
+  ANALYTICS_FILTER_SCHEMA,
+  OPERATOR_LABELS,
+  OPERATOR_LABELS_JA,
+  createNewFilterRow,
+  buildAnalyticsFilterClauses,
+} from "../components/analytics/analyticsFilterUtils";
+import { fetchDistinctValues } from "../services/api";
+
+function formatNumber(val) {
+  if (val === undefined || val === null || Number.isNaN(Number(val))) return "0";
+  return Number(val).toLocaleString();
+}
+
+function fmtMeters(val) {
+  if (val === undefined || val === null || Number.isNaN(Number(val))) return "0.0";
+  return Number(val).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+// ─── Date Range Utilities ───────────────────────────────────────────────────
+function fmtDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function todayStr() {
+  return fmtDate(new Date());
+}
+
+function getPastDaysRange(days = 7) {
+  const today = new Date();
+  const past = new Date(today);
+  past.setDate(today.getDate() - (days - 1));
+  return { from: fmtDate(past), to: fmtDate(today) };
+}
+
+function getWeekRange() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const diffToMon = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMon);
+  return { from: fmtDate(monday), to: todayStr() };
+}
+
+function getYesterdayRange() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const s = fmtDate(d);
+  return { from: s, to: s };
+}
+
+function getLastWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMon = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMon - 7);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return { from: fmtDate(monday), to: fmtDate(sunday) };
+}
+
+function getMonthRange() {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { from: fmtDate(first), to: fmtDate(last) };
+}
+
+function getLastMonthRange() {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const last = new Date(now.getFullYear(), now.getMonth(), 0);
+  return { from: fmtDate(first), to: fmtDate(last) };
+}
+
+function formatShortDate(dateStr, timeStr, isJa) {
+  if (!dateStr) return "—";
+  try {
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const datePart = isJa ? `${m}月${d}日` : `${months[m - 1] || parts[1]} ${d}`;
+      return timeStr ? `${datePart} ${timeStr}` : datePart;
+    }
+  } catch {
+    // fallback
+  }
+  return timeStr ? `${dateStr} ${timeStr}` : dateStr;
+}
+
+function joinClasses(...classes) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function TraceBadge({ children, icon, tone = "neutral", title }) {
+  const toneClasses = {
+    neutral: "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)]",
+    blue: "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    rose: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  };
+
+  return (
+    <span
+      title={title}
+      className={joinClasses(
+        "inline-flex h-6 items-center gap-1 rounded-[4px] border px-2 text-xs font-semibold",
+        toneClasses[tone] || toneClasses.neutral
+      )}
+    >
+      {icon ? <span className="material-symbols-outlined text-[13px]">{icon}</span> : null}
+      {children}
+    </span>
+  );
+}
+
+function EvidencePills({ labelImages: labels, defectImages: defects, scannedQR, lotNumber, isJa, onPreview, showLabels = false }) {
+  const labelImages = labels || [];
+  const defectImages = defects || [];
+  const groups = [
+    { type: "label", images: labelImages, icon: "photo_camera", label: isJa ? "材料ラベル" : "Label photos" },
+    { type: "defect", images: defectImages, icon: "report_problem", label: isJa ? "不良写真" : "QC photos" },
+  ];
+
+  const handleOpenGroup = (type, images, label) => {
+    if (!images || images.length === 0 || !onPreview) return;
+    const isDefect = type === "defect";
+    onPreview({
+      eyebrow: isJa ? (isDefect ? "品質・不良写真" : "材料証拠写真") : (isDefect ? "QC Defect Photos" : "Material Evidence"),
+      displayName: `${lotNumber}`,
+      subtitle: `${label} (${images.length})`,
+      images: images.map((url, i) => ({
+        url,
+        label: isJa
+          ? `${label} ${i + 1}`
+          : `${isDefect ? "QC Defect Photo" : "Material Label"} ${i + 1}`,
+      })),
+      activeIndex: 0,
+    });
+  };
+
+  return (
+    <div className="analytics-evidence flex flex-wrap items-center justify-start gap-1" onClick={(event) => event.stopPropagation()}>
+      {scannedQR && <TraceBadge icon="qr_code" title={scannedQR}>QR</TraceBadge>}
+      {groups.map(({ type, images, icon, label }) => images.length > 0 && (
+        <button
+          key={type}
+          type="button"
+          className={joinClasses("analytics-evidence-button", type === "defect" && "analytics-evidence-button--defect")}
+          title={`${label} (${images.length})`}
+          aria-label={`${lotNumber}: ${label} (${images.length})`}
+          onClick={() => handleOpenGroup(type, images, label)}
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>
+          {showLabels && <span>{showLabels === "compact" ? (type === "label" ? (isJa ? "ラベル" : "Label") : "QC") : label}</span>}
+          <span className="tabular-nums">{images.length}</span>
+        </button>
+      ))}
+      {!scannedQR && labelImages.length === 0 && defectImages.length === 0 && (
+        <span className="text-xs text-[var(--text-muted)]">{showLabels ? (isJa ? "写真なし" : "No photos") : "—"}</span>
+      )}
+    </div>
+  );
+}
+
+function MaterialLotCard({ lot, onOpenHistory, onPreview, isJa }) {
+  const material = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
+  const products = [...new Set((lot.products || []).map((product) => product.seiban || product.hinban).filter(Boolean))];
+
+  return (
+    <article
+      onClick={() => onOpenHistory(lot)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenHistory(lot);
+        }
+      }}
+      aria-label={`${lot.lotNumber} - ${isJa ? "使用履歴を表示" : "View usage history"}`}
+      className="analytics-lot-card group cursor-pointer transition-all duration-150 hover:border-[var(--freya-blue)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--freya-blue)] select-none"
+    >
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <TraceBadge icon="category">{material || (isJa ? "材料未登録" : "Material unavailable")}</TraceBadge>
+              <span className="text-xs text-[var(--text-muted)]">{isJa ? "材料ロット" : "Material lot"}</span>
+            </div>
+            <h3 className="break-words text-base font-bold text-[var(--text-primary)] transition-colors group-hover:text-[var(--freya-blue)]">
+              {lot.lotNumber}
+            </h3>
+            <p className="mt-1 break-words text-sm text-[var(--text-secondary)]">{lot.materialName || "—"}</p>
+          </div>
+          {(lot.defectImages || []).length > 0 && (
+            <span className="analytics-qc-marker" title={isJa ? "不良写真あり" : "QC evidence available"}>
+              <span className="material-symbols-outlined text-base" aria-hidden="true">report_problem</span>
+              QC
+            </span>
+          )}
+        </div>
+
+        <dl className="analytics-card-metrics mt-4 grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+          <div>
+            <dt>{isJa ? "使用量" : "Used"}</dt>
+            <dd className="text-xl font-bold text-[var(--text-primary)] tabular-nums">{fmtMeters(lot.totalMeters)} <span className="text-sm font-medium text-[var(--text-muted)]">m</span></dd>
+          </div>
+          <div className="text-right">
+            <dt>{isJa ? "生産数" : "Pieces"}</dt>
+            <dd className="text-base font-semibold text-[var(--text-primary)] tabular-nums">{formatNumber(lot.totalPieces)}</dd>
+          </div>
+          <div className="text-right">
+            <dt>{isJa ? "実績" : "Runs"}</dt>
+            <dd className="text-base font-semibold text-[var(--text-primary)] tabular-nums">{formatNumber(lot.runsCount)}</dd>
+          </div>
+        </dl>
+
+        <dl className="analytics-card-details mt-4 space-y-2.5 text-sm">
+          <div><dt>{isJa ? "設備" : "Machines"}</dt><dd className="font-semibold text-[var(--text-primary)]">{(lot.machines || []).join(", ") || "—"}</dd></div>
+          <div><dt>{isJa ? "製品 / 背番号" : "Product / Seiban"}</dt><dd className="flex flex-wrap gap-1">{products.length ? products.map((product) => <TraceBadge key={product}>{product}</TraceBadge>) : "—"}</dd></div>
+          <div><dt>{isJa ? "最終使用" : "Last used"}</dt><dd className="tabular-nums">{formatShortDate(lot.latestDate, lot.runs[0]?.timeStart, isJa)}</dd></div>
+        </dl>
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface-subtle)]/60 px-4 py-3 sm:px-5">
+        <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+          <EvidencePills labelImages={lot.labelImages} defectImages={lot.defectImages} lotNumber={lot.lotNumber} isJa={isJa} onPreview={onPreview} showLabels />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[var(--text-muted)] transition-colors group-hover:text-[var(--freya-blue)]">
+          <span>{lot.runs?.length || 0} {isJa ? "履歴" : "runs"}</span>
+          <span className="material-symbols-outlined text-base transition-transform group-hover:translate-x-0.5" aria-hidden="true">arrow_forward</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function LotUsageHistoryModal({ lot, onClose, onPreview, onOpenRecord, isJa }) {
+  if (!lot) return null;
+
+  const material = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
+  const products = [...new Set((lot.products || []).map((product) => product.seiban || product.hinban).filter(Boolean))];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lot-usage-modal-title"
+      onClick={onClose}
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/65 p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-[fadeIn_0.15s_ease-out]"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex max-h-[92vh] w-[96vw] max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
+      >
+        {/* Modal Header */}
+        <div className="flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-4">
+          <div className="min-w-0 pr-4">
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+              <TraceBadge icon="category">{material || (isJa ? "材料未登録" : "Material unavailable")}</TraceBadge>
+              <span className="text-xs font-medium text-[var(--text-muted)]">{isJa ? "材料ロット使用履歴" : "Material Lot Usage History"}</span>
+              {(lot.defectImages || []).length > 0 && (
+                <span className="analytics-qc-marker ml-1" title={isJa ? "不良写真あり" : "QC evidence available"}>
+                  <span className="material-symbols-outlined text-base" aria-hidden="true">report_problem</span>
+                  QC
+                </span>
+              )}
+            </div>
+            <h3 id="lot-usage-modal-title" className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+              {lot.lotNumber}
+            </h3>
+            {lot.materialName ? (
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{lot.materialName}</p>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={isJa ? "閉じる" : "Close"}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        {/* Modal Summary Ribbon */}
+        <div className="border-b border-[var(--border)] bg-[var(--surface)] px-6 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <TraceBadge icon="precision_manufacturing" title={(lot.machines || []).join(", ")}>
+                {(lot.machines || []).join(", ") || "—"}
+              </TraceBadge>
+              <TraceBadge icon="person">
+                {(lot.workers || []).join(", ") || "—"}
+              </TraceBadge>
+              <TraceBadge icon="factory">
+                {(lot.factories || []).join(", ") || "—"}
+              </TraceBadge>
+              {products.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[var(--text-muted)]">{isJa ? "製品:" : "Products:"}</span>
+                  {products.map((p) => (
+                    <TraceBadge key={p}>{p}</TraceBadge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 text-right">
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1">
+                <div className="text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "使用量" : "Used"}</div>
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{fmtMeters(lot.totalMeters)} m</div>
+              </div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1">
+                <div className="text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{formatNumber(lot.totalPieces)}</div>
+              </div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1">
+                <div className="text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{formatNumber(lot.totalShots)}</div>
+              </div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1">
+                <div className="text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "実績数" : "Runs"}</div>
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{formatNumber(lot.runsCount)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              {isJa ? "加工実績レコード" : "Processing Run Records"} ({lot.runs?.length || 0})
+            </h4>
+            {(lot.labelImages?.length > 0 || lot.defectImages?.length > 0) && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">{isJa ? "ロット全体写真:" : "Lot Evidence:"}</span>
+                <EvidencePills
+                  labelImages={lot.labelImages}
+                  defectImages={lot.defectImages}
+                  lotNumber={lot.lotNumber}
+                  isJa={isJa}
+                  onPreview={onPreview}
+                  showLabels="compact"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Desktop & Tablet: Full Detailed Run Table */}
+          <div className="hidden sm:block overflow-x-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
+            <table className="analytics-run-table w-full min-w-[960px] xl:min-w-full border-collapse text-left text-sm">
+              <thead className="border-b border-[var(--border)] bg-slate-100/70 dark:bg-slate-800/60 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                <tr>
+                  <th className="px-3 py-2.5 whitespace-nowrap">{isJa ? "加工日時" : "Date / Time"}</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">{isJa ? "設備" : "Machine"}</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">{isJa ? "品番" : "Product"}</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">{isJa ? "背番号" : "Seiban"}</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap">{isJa ? "使用量" : "Used"}</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap">{isJa ? "ショット" : "Shots"}</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap">{isJa ? "生産数" : "Pieces"}</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">{isJa ? "送り / 取り数" : "Pitch / Cycle"}</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap">{isJa ? "作業者" : "Worker"}</th>
+                  <th className="px-3 py-2.5 text-left whitespace-nowrap">{isJa ? "トレース" : "Trace"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {(lot.runs || []).map((r, rIdx) => {
+                  const runDefectImages = r.defectImages || [];
+                  const runLabelImage = r.labelImage || (r.materialLabelImages || [])[0];
+
+                  return (
+                    <tr
+                      key={rIdx}
+                      onClick={() => onOpenRecord?.(r)}
+                      title={isJa ? "クリックしてプレス加工実績詳細を表示" : "Click to view Press Process Record Details"}
+                      className="group/run cursor-pointer transition-colors hover:bg-blue-50/60 dark:hover:bg-blue-950/25"
+                    >
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-primary)] freya-tabular tabular-nums">
+                        {formatShortDate(r.date, r.timeStart, isJa)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
+                        {r.machine || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)] group-hover/run:text-[var(--text-primary)]">
+                        <span className="inline-flex items-center gap-1 group-hover/run:underline decoration-[var(--freya-blue)] underline-offset-2">
+                          {r.hinban || "—"}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
+                        <span className="inline-flex items-center gap-1 text-[var(--text-primary)] group-hover/run:text-[var(--freya-blue)]">
+                          {r.seiban || "—"}
+                          <span
+                            className="material-symbols-outlined text-[13px] opacity-0 group-hover/run:opacity-100 text-[var(--freya-blue)] transition-opacity"
+                            aria-hidden="true"
+                          >
+                            open_in_new
+                          </span>
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-semibold text-[var(--text-primary)] freya-tabular tabular-nums">
+                        {fmtMeters(r.meters)} m
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                        {formatNumber(r.shots)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                        {formatNumber(r.pieces)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-secondary)] freya-tabular tabular-nums">
+                        {r.feedPitch ? `${formatNumber(r.feedPitch)}mm` : "—"} / {r.pcPerCycle ? `${formatNumber(r.pcPerCycle)}pc` : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 font-sans text-sm font-medium text-[var(--text-secondary)]">
+                        {r.worker || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-left" onClick={(e) => e.stopPropagation()}>
+                        <EvidencePills
+                          labelImages={runLabelImage ? [runLabelImage] : []}
+                          defectImages={runDefectImages}
+                          scannedQR={r.scannedQR}
+                          lotNumber={r.lotNumber || lot.lotNumber}
+                          isJa={isJa}
+                          onPreview={onPreview}
+                          showLabels="compact"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)] text-sm font-semibold">
+                <tr>
+                  <td colSpan={4} className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                    {isJa ? "合計" : "Total"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-semibold text-[var(--text-primary)] freya-tabular tabular-nums">
+                    {fmtMeters(lot.totalMeters)} m
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-[var(--text-secondary)] freya-tabular tabular-nums">
+                    {formatNumber(lot.totalShots)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-[var(--text-secondary)] freya-tabular tabular-nums">
+                    {formatNumber(lot.totalPieces)}
+                  </td>
+                  <td colSpan={3}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Mobile Stacked Cards */}
+          <div className="space-y-3 sm:hidden">
+            {(lot.runs || []).map((run, index) => {
+              const labelImage = run.labelImage || (run.materialLabelImages || [])[0];
+              return (
+                <div
+                  key={index}
+                  onClick={() => onOpenRecord?.(run)}
+                  title={isJa ? "タップしてプレス加工実績詳細を表示" : "Tap to view Press Process Record Details"}
+                  className="group/run cursor-pointer rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xs transition-colors hover:border-[var(--freya-blue)] hover:bg-blue-50/30 dark:hover:bg-blue-950/20"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                    <span className="font-medium tabular-nums">{formatShortDate(run.date, run.timeStart, isJa)}</span>
+                    <span className="font-semibold tabular-nums text-[var(--text-primary)]">{fmtMeters(run.meters)} m</span>
+                  </div>
+                  <dl className="analytics-card-details mt-2 space-y-1.5 text-sm">
+                    <div><dt>{isJa ? "設備" : "Machine"}</dt><dd className="font-medium text-[var(--text-primary)]">{run.machine || "—"}</dd></div>
+                    <div>
+                      <dt>{isJa ? "製品 / 背番号" : "Product / Seiban"}</dt>
+                      <dd className="flex items-center gap-1.5 text-[var(--text-primary)] group-hover/run:text-[var(--freya-blue)]">
+                        <span>{run.hinban || "—"} / {run.seiban || "—"}</span>
+                        <span className="material-symbols-outlined text-[13px]" aria-hidden="true">open_in_new</span>
+                      </dd>
+                    </div>
+                    <div><dt>{isJa ? "生産数" : "Pieces"}</dt><dd className="tabular-nums">{formatNumber(run.pieces)}</dd></div>
+                    <div><dt>{isJa ? "作業者" : "Worker"}</dt><dd>{run.worker || "—"}</dd></div>
+                  </dl>
+                  <div className="mt-3 border-t border-[var(--border)] pt-2.5" onClick={(e) => e.stopPropagation()}>
+                    <EvidencePills
+                      labelImages={labelImage ? [labelImage] : []}
+                      defectImages={run.defectImages}
+                      scannedQR={run.scannedQR}
+                      lotNumber={run.lotNumber || lot.lotNumber}
+                      isJa={isJa}
+                      onPreview={onPreview}
+                      showLabels
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3">
+          <span className="text-xs text-[var(--text-muted)]">
+            {isJa ? `合計 ${lot.runs?.length || 0} 件の実績レコード` : `${lot.runs?.length || 0} total run records`}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 text-xs sm:text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
+          >
+            {isJa ? "閉じる" : "Close"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AnalyticsPage() {
+  const { language, t } = useLanguage();
+  const isJa = language === "ja";
+
+  // ── Top-Level Analytics Module Tabs (Route-Driven: /analytics/:tab/:process?) ───────
+  const { tab: routeTab, process: routeProcess } = useParams();
+  const navigate = useNavigate();
+
+  const VALID_TABS = ["material", "production", "quality", "machines", "parts"];
+  const VALID_PROCESSES = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
+  const normalizedRouteTab = routeTab === "materialLots" ? "material" : routeTab;
+  const activeTab = VALID_TABS.includes(normalizedRouteTab) ? normalizedRouteTab : "material";
+  const activeProcess = VALID_PROCESSES.includes(routeProcess) ? routeProcess : "kensaDB";
+
+  // Redirect if URL tab is missing, invalid, or obsolete key (e.g. /analytics -> /analytics/material)
+  useEffect(() => {
+    if (!routeTab || routeTab === "materialLots" || !VALID_TABS.includes(routeTab)) {
+      navigate("/analytics/material", { replace: true });
+      return;
+    }
+
+    if (activeTab === "production" || activeTab === "quality") {
+      if (!routeProcess || !VALID_PROCESSES.includes(routeProcess)) {
+        navigate(`/analytics/${activeTab}/kensaDB`, { replace: true });
+      }
+    } else if ((activeTab === "material" || activeTab === "machines" || activeTab === "parts") && routeProcess) {
+      navigate(`/analytics/${activeTab}`, { replace: true });
+    }
+  }, [routeTab, routeProcess, activeTab, navigate]);
+
+  const handleTabChange = (newTab) => {
+    if (newTab === "production" || newTab === "quality") {
+      const proc = VALID_PROCESSES.includes(routeProcess) ? routeProcess : "kensaDB";
+      navigate(`/analytics/${newTab}/${proc}`);
+    } else {
+      navigate(`/analytics/${newTab}`);
+    }
+  };
+
+  const handleProcessChange = (newProcess) => {
+    navigate(`/analytics/${activeTab}/${newProcess}`);
+  };
+
+  // ── Production & Quality Product Filters & Advanced Filters ───────────────
+  const [partNumbers, setPartNumbers] = useState([]);
+  const [serialNumbers, setSerialNumbers] = useState([]);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedRows, setAdvancedRows] = useState(() => [createNewFilterRow()]);
+  const [appliedPartNumbers, setAppliedPartNumbers] = useState([]);
+  const [appliedSerialNumbers, setAppliedSerialNumbers] = useState([]);
+  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
+
+  const activeAdvancedCount = useMemo(() => {
+    return advancedRows.filter(
+      (r) =>
+        r.field &&
+        r.operator &&
+        (Array.isArray(r.value)
+          ? r.value.length > 0
+          : r.value !== "" && r.value !== undefined && r.value !== null)
+    ).length;
+  }, [advancedRows]);
+
+  const activeFilterSchema = useMemo(() => {
+    return ANALYTICS_FILTER_SCHEMA.map((f) => ({
+      ...f,
+      label: isJa && f.labelJa ? f.labelJa : f.label,
+      group: isJa && f.groupJa ? f.groupJa : f.group,
+    }));
+  }, [isJa]);
+
+  const handleAddAdvancedRow = () => {
+    setAdvancedRows((prev) => [...prev, createNewFilterRow()]);
+  };
+
+  const handleRemoveAdvancedRow = (id) => {
+    setAdvancedRows((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      return next.length > 0 ? next : [createNewFilterRow()];
+    });
+  };
+
+  const handleClearAdvancedRows = () => {
+    setAdvancedRows([createNewFilterRow()]);
+    setAppliedAdvancedFilters([]);
+  };
+
+  const handleUpdateAdvancedRow = (id, patch) => {
+    setAdvancedRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        const next = { ...row, ...patch };
+        if ("field" in patch && patch.field !== row.field) {
+          const def = ANALYTICS_FILTER_SCHEMA.find((s) => s.field === patch.field);
+          next.operator = def?.operators?.[0] || "equals";
+          next.value = next.operator === "in" ? [] : "";
+        }
+        if ("operator" in patch && patch.operator !== row.operator) {
+          next.value = patch.operator === "in" ? [] : "";
+        }
+        if ("value" in patch && row.operator === "in" && !Array.isArray(patch.value)) {
+          next.value = patch.value ? [patch.value] : [];
+        }
+        return next;
+      })
+    );
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedPartNumbers(partNumbers);
+    setAppliedSerialNumbers(serialNumbers);
+    const clauses = buildAnalyticsFilterClauses(advancedRows, ANALYTICS_FILTER_SCHEMA);
+    setAppliedAdvancedFilters(clauses);
+  };
+
+  const handleProductModalConfirm = (newBans, selectedProducts) => {
+    setSerialNumbers(newBans);
+    const associatedHinbans = selectedProducts.map((p) => p.品番).filter(Boolean);
+    const nextPartNumbers = Array.from(new Set([...partNumbers, ...associatedHinbans]));
+    setPartNumbers(nextPartNumbers);
+    setAppliedSerialNumbers(newBans);
+    setAppliedPartNumbers(nextPartNumbers);
+  };
+
+  // ── Inner View Mode: 'table' (DEFAULT per spec) vs 'cards' ────────────────
+  const [viewMode, setViewMode] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "cards" : "table");
+
+  // ── Loading & Data State ──────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    summary: {
+      totalDistinctLots: 0,
+      totalMeters: 0,
+      totalShots: 0,
+      totalPieces: 0,
+      totalPressRuns: 0,
+      totalImagesCount: 0,
+      totalDefectImagesCount: 0,
+    },
+    lots: [],
+    runs: [],
+    filterOptions: {
+      materialSeibans: [],
+      materialHinbans: [],
+      materialNames: [],
+      factories: [],
+      machines: [],
+      hinbanList: [],
+      seibanList: [],
+      workers: [],
+      lotNumbers: [],
+    },
+  });
+
+  // ── Date Preset & Filter States (Default: 1 Week / "thisWeek") ────────────
+  const [rangePreset, setRangePreset] = useState("thisWeek");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [factory, setFactory] = useState("");
+  const [machine, setMachine] = useState("");
+  const [materialSeiban, setMaterialSeiban] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Reusable Photo Preview Modal (matching Factory Overview -> Product Details photo preview)
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  const handlePhotoNavigate = (direction) => {
+    setPhotoPreview((current) => {
+      if (!current) return current;
+      const total = current.images?.length || 0;
+      if (!total) return current;
+      const nextIndex = Math.min(Math.max((current.activeIndex || 0) + direction, 0), total - 1);
+      return { ...current, activeIndex: nextIndex };
+    });
+  };
+
+  const handleOpenPhotoPreview = (previewData) => {
+    if (!previewData) return;
+    if (Array.isArray(previewData.images) && previewData.images.length > 0) {
+      setPhotoPreview(previewData);
+      return;
+    }
+    if (previewData.url) {
+      setPhotoPreview({
+        eyebrow: isJa ? "証拠写真" : "Record Photos",
+        displayName: previewData.title || (isJa ? "写真" : "Photo"),
+        subtitle: previewData.title,
+        images: [{ url: previewData.url, label: previewData.title || (isJa ? "写真 1" : "Photo 1") }],
+        activeIndex: 0,
+      });
+    }
+  };
+
+  // Modal for Viewing Full Usage History of a Material Lot (Card View)
+  const [historyModalLot, setHistoryModalLot] = useState(null);
+
+  // Expanded Lots in Table
+  const [expandedLots, setExpandedLots] = useState(new Set());
+
+  // Record Detail Modal (Press Process)
+  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
+
+  const handleOpenRecordDetail = (r) => {
+    if (!r) return;
+    const raw = r.rawRecord || {};
+    const record = {
+      ...raw,
+      _id: r.pressId || raw._id || r._id,
+      _source: "pressDB",
+      _process: "Press",
+      "品番": r.hinban || raw["品番"] || "",
+      "背番号": r.seiban || raw["背番号"] || "",
+      "設備": r.machine || raw["設備"] || "",
+      "Worker_Name": r.worker || raw.Worker_Name || "",
+      "工場": r.factory || raw["工場"] || "",
+      "Date": r.date || raw.Date || "",
+      "Time_start": r.timeStart || raw.Time_start || "",
+      "Time_end": r.timeEnd || raw.Time_end || "",
+      "Process_Quantity": r.pieces ?? raw.Process_Quantity ?? raw.Total ?? 0,
+      "Total": r.pieces ?? raw.Total ?? raw.Process_Quantity ?? 0,
+      "ショット数": r.shots ?? raw["ショット数"] ?? 0,
+      "Cycle_Time": raw.Cycle_Time || 0,
+      "Total_NG": r.totalNg ?? raw.Total_NG ?? 0,
+      "Comment": r.comment || raw.Comment || "",
+      "材料ロット": r.lotNumber || raw["材料ロット"] || "",
+      materialLabelImages: r.materialLabelImages || (r.labelImage ? [r.labelImage] : []) || (raw.materialLabelImages || []),
+      "初物チェック画像": r.firstCheckImage || raw["初物チェック画像"] || null,
+      "終物チェック画像": r.lastCheckImage || raw["終物チェック画像"] || null,
+    };
+    openRecord(record, "Press");
+  };
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (photoPreview) {
+          setPhotoPreview(null);
+        } else if (modalRecord) {
+          closeRecord();
+        } else if (historyModalLot) {
+          setHistoryModalLot(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [photoPreview, modalRecord, historyModalLot, closeRecord]);
+
+  // Lock body scroll when any modal is open
+  useEffect(() => {
+    if (historyModalLot || photoPreview || modalRecord) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [historyModalLot, photoPreview, modalRecord]);
+
+  // Sorting state for table
+  const [sortField, setSortField] = useState("latestDate");
+  const [sortDir, setSortDir] = useState("desc");
+
+  // Compute Active Date Range from Preset
+  const dateRange = useMemo(() => {
+    if (rangePreset === "today") {
+      const d = todayStr();
+      return { from: d, to: d };
+    }
+    if (rangePreset === "yesterday") return getYesterdayRange();
+    if (rangePreset === "thisWeek") return getWeekRange();
+    if (rangePreset === "last7Days") return getPastDaysRange(7);
+    if (rangePreset === "thisMonth") return getMonthRange();
+    if (rangePreset === "lastWeek") return getLastWeekRange();
+    if (rangePreset === "lastMonth") return getLastMonthRange();
+    // custom
+    return { from: customFrom || getPastDaysRange(7).from, to: customTo || todayStr() };
+  }, [rangePreset, customFrom, customTo]);
+
+  // ── Fetch Data ────────────────────────────────────────────────────────────
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchMaterialLotAnalytics({
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        factory: factory || undefined,
+        machine: machine || undefined,
+        materialSeiban: materialSeiban || undefined,
+        search: search.trim() || undefined,
+      });
+      if (res && res.success) {
+        setData(res);
+      }
+    } catch (err) {
+      console.error("Failed to load material lots analytics:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "material") {
+      loadData();
+    }
+  }, [dateRange.from, dateRange.to, factory, machine, materialSeiban, activeTab]);
+
+  const handleSearchSubmit = (e) => {
+    e?.preventDefault();
+    loadData();
+  };
+
+  const handleResetFilters = () => {
+    setRangePreset("thisWeek");
+    setCustomFrom("");
+    setCustomTo("");
+    setFactory("");
+    setMachine("");
+    setMaterialSeiban("");
+    setSearch("");
+    setPartNumbers([]);
+    setSerialNumbers([]);
+    setAdvancedRows([createNewFilterRow()]);
+    setAppliedPartNumbers([]);
+    setAppliedSerialNumbers([]);
+    setAppliedAdvancedFilters([]);
+  };
+
+  // Toggle Lot Expansion in Table / Card
+  const toggleLotExpand = (lotKey) => {
+    setExpandedLots((prev) => {
+      const next = new Set(prev);
+      if (next.has(lotKey)) {
+        next.delete(lotKey);
+      } else {
+        next.add(lotKey);
+      }
+      return next;
+    });
+  };
+
+  // Sort Column Handler
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  // ── Filtered & Sorted Lots ────────────────────────────────────────────────
+  const filteredLots = useMemo(() => {
+    let list = data.lots || [];
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((lot) => {
+        return (
+          (lot.displayTitle && lot.displayTitle.toLowerCase().includes(q)) ||
+          lot.lotNumber.toLowerCase().includes(q) ||
+          (lot.materialSeiban && lot.materialSeiban.toLowerCase().includes(q)) ||
+          (lot.materialHinban && lot.materialHinban.toLowerCase().includes(q)) ||
+          (lot.materialName && lot.materialName.toLowerCase().includes(q)) ||
+          lot.machines.some((m) => m.toLowerCase().includes(q)) ||
+          (lot.products || []).some(
+            (p) =>
+              p.seiban?.toLowerCase().includes(q) ||
+              p.hinban?.toLowerCase().includes(q) ||
+              p.productName?.toLowerCase().includes(q)
+          ) ||
+          lot.workers.some((w) => w.toLowerCase().includes(q)) ||
+          lot.factories.some((f) => f.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "latestDate") {
+        cmp = (b.latestDate || "").localeCompare(a.latestDate || "");
+        if (cmp === 0) cmp = (b.totalMeters || 0) - (a.totalMeters || 0);
+      } else if (sortField === "meters") {
+        cmp = (b.totalMeters || 0) - (a.totalMeters || 0);
+      } else if (sortField === "pieces") {
+        cmp = (b.totalPieces || 0) - (a.totalPieces || 0);
+      } else if (sortField === "runs") {
+        cmp = (b.runsCount || 0) - (a.runsCount || 0);
+      } else if (sortField === "lot") {
+        cmp = (a.lotNumber || "").localeCompare(b.lotNumber || "");
+      } else if (sortField === "material") {
+        cmp = (a.materialSeiban || "").localeCompare(b.materialSeiban || "");
+      }
+      return sortDir === "asc" ? -cmp : cmp;
+    });
+  }, [data.lots, search, sortField, sortDir]);
+
+  // Aggregate Totals of current filtered lots
+  const filteredSummary = useMemo(() => {
+    let meters = 0;
+    let pieces = 0;
+    let shots = 0;
+    let runs = 0;
+    const machines = new Set();
+    const products = new Set();
+    let defects = 0;
+
+    filteredLots.forEach((l) => {
+      meters += l.totalMeters || 0;
+      pieces += l.totalPieces || 0;
+      shots += l.totalShots || 0;
+      runs += l.runsCount || 0;
+      (l.machines || []).forEach((m) => machines.add(m));
+      (l.products || []).forEach((p) => {
+        if (p.hinban) products.add(p.hinban);
+        else if (p.seiban) products.add(p.seiban);
+      });
+      defects += (l.defectImages || []).length;
+    });
+
+    return {
+      lotsCount: filteredLots.length,
+      meters: Number(meters.toFixed(1)),
+      pieces,
+      shots,
+      runs,
+      machinesCount: machines.size,
+      productsCount: products.size,
+      defectsCount: defects,
+    };
+  }, [filteredLots]);
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = [
+      isJa ? "材料背番号" : "Material Code",
+      isJa ? "材料ロット番号" : "Lot Number",
+      isJa ? "消費メーター数 (m)" : "Meters Used (m)",
+      isJa ? "生産個数" : "Pieces",
+      isJa ? "加工回数" : "Runs",
+      isJa ? "加工設備" : "Machines",
+      isJa ? "製品背番号" : "Product Seiban",
+      isJa ? "製品品番" : "Product Hinban",
+      isJa ? "品名" : "Product Name",
+      isJa ? "最終使用日時" : "Last Used",
+      isJa ? "作業者" : "Workers",
+      isJa ? "ラベル写真数" : "Label Photos",
+      isJa ? "不良写真数" : "Defect Photos",
+    ];
+
+    const rows = filteredLots.map((l) => [
+      `"${l.materialSeiban || ""}"`,
+      `"${l.lotNumber || ""}"`,
+      l.totalMeters || 0,
+      l.totalPieces || 0,
+      l.runsCount || 0,
+      `"${l.machines.join(", ")}"`,
+      `"${l.products.map((p) => p.seiban).filter(Boolean).join(", ")}"`,
+      `"${l.products.map((p) => p.hinban).filter(Boolean).join(", ")}"`,
+      `"${l.materialName || ""}"`,
+      `"${l.latestDate || ""}"`,
+      `"${l.workers.join(", ")}"`,
+      (l.labelImages || []).length,
+      (l.defectImages || []).length,
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `material_usage_ledger_${dateRange.from}_to_${dateRange.to}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className="material-analytics w-full h-screen overflow-y-auto space-y-6 bg-background text-[var(--text-primary)] pt-20 px-4 sm:px-6 md:px-8 pb-16">
+      {/* ── Page Header ──────────────────────────────────────────────────────── */}
+      <PageHeader
+        eyebrow="ANALYTICS"
+        eyebrowClassName="text-xs tracking-[0.04em]"
+        title={
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]">
+              analytics
+            </span>
+            <span>
+              {isJa ? "アナリティクス" : "Analytics"}
+            </span>
+          </div>
+        }
+        subtitle={`${dateRange.from} 〜 ${dateRange.to}`}
+        className="mb-1 md:flex-row md:items-center md:justify-between"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {activeTab === "material" && (
+              <button
+                type="button"
+                onClick={exportToCSV}
+                className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+              >
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>file_export</span>
+                {isJa ? "CSV出力" : "Export CSV"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={loadData}
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
+              {isJa ? "更新" : "Refresh"}
+            </button>
+          </div>
+        }
+      />
+
+      {/* ── Top-Level Analytics Module Tabs (First Factory Folder Tab Style) ──── */}
+      <MasterTabNav
+        tabs={[
+          {
+            key: "material",
+            label: t("materialAnalytics"),
+            icon: "inventory_2",
+            badge: filteredLots.length > 0 ? filteredLots.length : undefined,
+            ready: true,
+          },
+          {
+            key: "production",
+            label: t("productionAnalytics"),
+            icon: "precision_manufacturing",
+            ready: true,
+          },
+          {
+            key: "quality",
+            label: t("qualityAnalytics"),
+            icon: "fact_check",
+            ready: true,
+          },
+          {
+            key: "machines",
+            label: isJa ? "設備稼働・ショット数" : "Machine Performance",
+            icon: "speed",
+            ready: true,
+          },
+          {
+            key: "parts",
+            label: isJa ? "品番・設備比較" : "Part Benchmarking",
+            icon: "category",
+            ready: true,
+          },
+        ]}
+        activeTab={activeTab}
+        onSelect={(tab) => handleTabChange(tab.key)}
+      />
+
+      {/* ── Filters Bar for Production & Quality ───────────────────────────────── */}
+      {(activeTab === "production" || activeTab === "quality") && (
+        <div className="analytics-filters freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            {/* Date Preset Dropdown */}
+            <FormField label={t("date")}>
+              <div className="relative">
+                <select
+                  id="analytics-global-date"
+                  value={rangePreset}
+                  onChange={(e) => setRangePreset(e.target.value)}
+                  className="freya-input h-10 min-w-[140px] appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                >
+                  <option value="today">{t("todayLabel")}</option>
+                  <option value="yesterday">{t("yesterday")}</option>
+                  <option value="thisWeek">{t("thisWeek")}</option>
+                  <option value="last7Days">{t("last7Days")}</option>
+                  <option value="thisMonth">{t("thisMonth")}</option>
+                  <option value="lastWeek">{t("lastWeek")}</option>
+                  <option value="lastMonth">{t("lastMonth")}</option>
+                  <option value="custom">{t("custom")}</option>
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                  expand_more
+                </span>
+              </div>
+            </FormField>
+
+            {/* Custom Date Pickers */}
+            {rangePreset === "custom" && (
+              <>
+                <FormField label={isJa ? "開始日" : "From"}>
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="freya-input h-10 text-sm text-[var(--text-primary)]"
+                  />
+                </FormField>
+                <FormField label={isJa ? "終了日" : "To"}>
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="freya-input h-10 text-sm text-[var(--text-primary)]"
+                  />
+                </FormField>
+              </>
+            )}
+
+            {/* Factory Filter */}
+            <FormField label={t("factory")} className="min-w-[130px]">
+              <div className="relative">
+                <select
+                  id="analytics-global-factory"
+                  value={factory}
+                  onChange={(e) => setFactory(e.target.value)}
+                  className="freya-input h-10 w-full appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                >
+                  <option value="">{isJa ? "全工場" : "All Factories"}</option>
+                  {["第二工場", "肥田瀬", "小瀬", "天徳", "倉知"].map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                  expand_more
+                </span>
+              </div>
+            </FormField>
+
+            {/* Part Number (品番) Filter */}
+            <FormField label={isJa ? "品番 (Part No.)" : "Part Number"}>
+              <TagInput
+                tags={partNumbers}
+                onAdd={(t) => {
+                  setPartNumbers((prev) => [...prev, t]);
+                  setAppliedPartNumbers((prev) => [...prev, t]);
+                }}
+                onRemove={(t) => {
+                  setPartNumbers((prev) => prev.filter((x) => x !== t));
+                  setAppliedPartNumbers((prev) => prev.filter((x) => x !== t));
+                }}
+                placeholder={isJa ? "入力してEnter…" : "Enter part no…"}
+                uppercase
+              />
+            </FormField>
+
+            {/* Serial Number (背番号) Filter */}
+            <FormField label={isJa ? "背番号 (Serial No.)" : "Serial Number"}>
+              <TagInput
+                tags={serialNumbers}
+                onAdd={(t) => {
+                  setSerialNumbers((prev) => [...prev, t]);
+                  setAppliedSerialNumbers((prev) => [...prev, t]);
+                }}
+                onRemove={(t) => {
+                  setSerialNumbers((prev) => prev.filter((x) => x !== t));
+                  setAppliedSerialNumbers((prev) => prev.filter((x) => x !== t));
+                }}
+                placeholder={isJa ? "入力してEnter…" : "Enter serial no…"}
+                uppercase
+              />
+            </FormField>
+          </div>
+
+          {/* Action Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border)]">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Product Selector Modal Button */}
+              <button
+                type="button"
+                onClick={() => setIsProductModalOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
+              >
+                <span className="material-symbols-outlined text-[17px] text-[var(--freya-blue)]">
+                  inventory_2
+                </span>
+                <span>{isJa ? "製品マスタから選択" : "Select from Products"}</span>
+                {serialNumbers.length > 0 && (
+                  <span className="ml-1 rounded-full bg-[var(--freya-blue)] px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {serialNumbers.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Advanced Filter Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                className={`inline-flex h-9 items-center gap-1.5 rounded-[6px] border px-3 text-xs font-semibold transition ${
+                  showAdvancedFilters || activeAdvancedCount > 0
+                    ? "border-[var(--freya-blue)]/50 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+                    : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[17px]">
+                  {showAdvancedFilters ? "tune" : "filter_list"}
+                </span>
+                <span>{isJa ? "詳細フィルター" : "Advanced Filters"}</span>
+                {activeAdvancedCount > 0 && (
+                  <span className="ml-1 rounded-full bg-[var(--freya-blue)] px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {activeAdvancedCount}
+                  </span>
+                )}
+                <span className="material-symbols-outlined text-[16px]">
+                  {showAdvancedFilters ? "expand_less" : "expand_more"}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white hover:opacity-90 transition shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">filter_alt</span>
+                <span>{isJa ? "フィルター適用" : "Apply Filters"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition"
+              >
+                <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>{isJa ? "リセット" : "Reset"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Advanced Filters Section */}
+          {showAdvancedFilters && (
+            <div className="pt-3 border-t border-[var(--border)]">
+              <AdvancedFilterSection
+                rows={advancedRows}
+                fieldDefinitions={activeFilterSchema}
+                onUpdateRow={handleUpdateAdvancedRow}
+                onAddRow={handleAddAdvancedRow}
+                onRemoveRow={handleRemoveAdvancedRow}
+                onClearRows={handleClearAdvancedRows}
+                loadDistinctOptions={(field) => fetchDistinctValues(factory, field)}
+                shouldLoadOptions={(def) => def.type === "select"}
+                operatorLabels={isJa ? OPERATOR_LABELS_JA : OPERATOR_LABELS}
+                useOperatorLabelsInSelect
+                optionsCacheKey={factory || "all"}
+                title={isJa ? "詳細フィルター条件" : "Advanced Filter Rules"}
+                addRowLabel={isJa ? "条件追加" : "Add Condition"}
+                selectFieldLabel={isJa ? "項目を選択" : "Select field"}
+                selectOperatorLabel={isJa ? "条件を選択" : "Select operator"}
+                variant="compact"
+                framed={false}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Product Selector Modal */}
+      <ProductSelectorModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        selectedBans={serialNumbers}
+        onConfirm={handleProductModalConfirm}
+      />
+
+      {/* ── Production & Lines Content ────────────────────────────────────────── */}
+      {activeTab === "production" && (
+        <ProductionAnalyticsView
+          dateRange={dateRange}
+          factory={factory}
+          activeProcess={activeProcess}
+          onProcessChange={handleProcessChange}
+          bans={appliedSerialNumbers}
+          partNumbers={appliedPartNumbers}
+          advancedFilters={appliedAdvancedFilters}
+        />
+      )}
+
+      {/* ── Defects & Quality Content ─────────────────────────────────────────── */}
+      {activeTab === "quality" && (
+        <QualityAnalyticsView
+          dateRange={dateRange}
+          factory={factory}
+          activeProcess={activeProcess}
+          onProcessChange={handleProcessChange}
+          bans={appliedSerialNumbers}
+          partNumbers={appliedPartNumbers}
+          advancedFilters={appliedAdvancedFilters}
+        />
+      )}
+
+      {/* ── Machine Performance & Equipment Management ────────────────────── */}
+      {activeTab === "machines" && <MachinePerformanceView />}
+
+      {/* ── Part Benchmarking (Cross-Machine Fleet Performance) ─────────────── */}
+      {activeTab === "parts" && <PartBenchmarkingView isJa={isJa} />}
+
+      {/* ── Material Usage Ledger Content ─────────────────────────────────────── */}
+      {activeTab === "material" && (
+        <div className="space-y-6">
+          {/* ── 1. Material Ledger Summary ───────────────────────────────────── */}
+          <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+            <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
+                      <span className="material-symbols-outlined text-[16px]">inventory_2</span>
+                    </span>
+                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                      {isJa ? "材料使用サマリー" : "Material Usage Summary"}
+                    </h2>
+                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--text-muted)]">
+                      <span className="tabular-nums">{dateRange.from}</span> <span aria-hidden="true">~</span>{" "}
+                      <span className="tabular-nums">{dateRange.to}</span>
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <TraceBadge icon="category">
+                      {isJa ? "材料" : "Material"}:{" "}
+                      <span className="font-semibold tabular-nums text-[var(--text-primary)]">
+                        {materialSeiban || (isJa ? `全種別 ${data.filterOptions.materialSeibans?.length || 0}` : `All ${data.filterOptions.materialSeibans?.length || 0}`)}
+                      </span>
+                    </TraceBadge>
+                    <TraceBadge icon="precision_manufacturing">
+                      {isJa ? "設備" : "Machines"}: <span className="font-semibold tabular-nums text-[var(--text-primary)]">{filteredSummary.machinesCount}</span>
+                    </TraceBadge>
+                    <TraceBadge icon="deployed_code">
+                      {isJa ? "製品" : "Products"}: <span className="font-semibold tabular-nums text-[var(--text-primary)]">{filteredSummary.productsCount}</span>
+                    </TraceBadge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
+                  <span className="material-symbols-outlined text-[15px]">database</span>
+                  <span>{isJa ? "選択期間の使用実績" : "Usage in the selected period"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 xl:grid-cols-6">
+              <StatSummaryCard
+                variant="freya"
+                label={isJa ? "総使用量" : "Total Used"}
+                value={<>{fmtMeters(filteredSummary.meters)} <span className="text-sm font-normal text-[var(--text-muted)]">m</span></>}
+                icon="straighten"
+                subtitle={isJa ? "材料使用実績" : "Material consumed"}
+              />
+              <StatSummaryCard
+                variant="freya"
+                label={isJa ? "ロット" : "Lots"}
+                value={formatNumber(filteredSummary.lotsCount)}
+                icon="qr_code_2"
+                subtitle={isJa ? "対象ロット数" : "Active lots"}
+              />
+              <StatSummaryCard
+                variant="freya"
+                label={isJa ? "生産数" : "Pieces"}
+                value={formatNumber(filteredSummary.pieces)}
+                icon="tag"
+                subtitle={isJa ? "良品数" : "Finished pieces"}
+              />
+              <StatSummaryCard
+                variant="freya"
+                label={isJa ? "実績" : "Runs"}
+                value={formatNumber(filteredSummary.runs)}
+                icon="history"
+                subtitle={isJa ? "総工程数" : "Processing runs"}
+              />
+              <StatSummaryCard
+                variant="freya"
+                label={isJa ? "ショット" : "Shots"}
+                value={formatNumber(filteredSummary.shots)}
+                icon="bolt"
+                subtitle={isJa ? "プレス打数" : "Machine strokes"}
+              />
+              <StatSummaryCard
+                variant="freya"
+                label={isJa ? "不良写真" : "QC Evidence"}
+                value={formatNumber(filteredSummary.defectsCount)}
+                icon={filteredSummary.defectsCount > 0 ? "report_problem" : "verified"}
+                statusDot={filteredSummary.defectsCount > 0 ? "defect" : "complete"}
+                subtitle={filteredSummary.defectsCount > 0 ? (isJa ? "品質確認が必要" : "Requires inspection") : (isJa ? "不良なし" : "All cleared")}
+              />
+            </div>
+          </div>
+
+          {/* ── 2. Compact Filter Bar (Harmonized with FREYA FormField) ───────────── */}
+          <div className="analytics-filters freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              {/* Left Filters */}
+              <div className="flex flex-wrap items-end gap-3 flex-1">
+                {/* Date Preset Dropdown */}
+                <FormField label={t("date")}>
+                  <div className="relative">
+                    <select
+                      id="analytics-date"
+                      value={rangePreset}
+                      onChange={(e) => setRangePreset(e.target.value)}
+                      className="freya-input h-10 min-w-[130px] appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                    >
+                      <option value="today">{t("todayLabel")}</option>
+                      <option value="yesterday">{t("yesterday")}</option>
+                      <option value="thisWeek">{t("thisWeek")}</option>
+                      <option value="last7Days">{t("last7Days")}</option>
+                      <option value="thisMonth">{t("thisMonth")}</option>
+                      <option value="lastWeek">{t("lastWeek")}</option>
+                      <option value="lastMonth">{t("lastMonth")}</option>
+                      <option value="custom">{t("custom")}</option>
+                    </select>
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                      expand_more
+                    </span>
+                  </div>
+                </FormField>
+
+                {/* Custom Date Pickers */}
+                {rangePreset === "custom" && (
+                  <>
+                    <FormField label={isJa ? "開始日" : "From"}>
+                      <input
+                        type="date"
+                        id="analytics-from"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                        className="freya-input h-10 text-sm text-[var(--text-primary)]"
+                      />
+                    </FormField>
+                    <FormField label={isJa ? "終了日" : "To"}>
+                      <input
+                        type="date"
+                        id="analytics-to"
+                        value={customTo}
+                        onChange={(e) => setCustomTo(e.target.value)}
+                        className="freya-input h-10 text-sm text-[var(--text-primary)]"
+                      />
+                    </FormField>
+                  </>
+                )}
+
+                {/* Material Code Filter */}
+                <FormField label={isJa ? "材料背番号" : "Material"} className="min-w-[130px]">
+                  <div className="relative">
+                    <select
+                      id="analytics-material"
+                      value={materialSeiban}
+                      onChange={(e) => setMaterialSeiban(e.target.value)}
+                      className="freya-input h-10 w-full appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                    >
+                      <option value="">{isJa ? "すべての材料" : "All Materials"}</option>
+                      {(data.filterOptions.materialSeibans || []).map((ms) => (
+                        <option key={ms} value={ms}>{ms}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                      expand_more
+                    </span>
+                  </div>
+                </FormField>
+
+                {/* Machine Filter */}
+                <FormField label={isJa ? "設備" : "Machine"} className="min-w-[110px]">
+                  <div className="relative">
+                    <select
+                      id="analytics-machine"
+                      value={machine}
+                      onChange={(e) => setMachine(e.target.value)}
+                      className="freya-input h-10 w-full appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                    >
+                      <option value="">{isJa ? "すべての設備" : "All Machines"}</option>
+                      {(data.filterOptions.machines || []).map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                      expand_more
+                    </span>
+                  </div>
+                </FormField>
+
+                {/* Factory Filter */}
+                <FormField label={t("factory")} className="min-w-[100px]">
+                  <div className="relative">
+                    <select
+                      id="analytics-factory"
+                      value={factory}
+                      onChange={(e) => setFactory(e.target.value)}
+                      className="freya-input h-10 w-full appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                    >
+                      <option value="">{t("all")}</option>
+                      {(data.filterOptions.factories || []).map((f) => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                      expand_more
+                    </span>
+                  </div>
+                </FormField>
+
+                {/* Search Box */}
+                <FormField label={isJa ? "検索" : "Search"} className="min-w-[190px] flex-1">
+                  <div className="relative">
+                    <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      id="analytics-search"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
+                      placeholder={isJa ? "ロット番号・品番・QRコード..." : "Lot #, Code, Hinban, QR..."}
+                      className="freya-input h-10 w-full pl-8 pr-7 text-sm font-normal text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                    />
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        aria-label={isJa ? "検索をクリア" : "Clear search"}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      >
+                        <span className="material-symbols-outlined text-[13px]">close</span>
+                      </button>
+                    )}
+                  </div>
+                </FormField>
+
+                {/* Reset */}
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors inline-flex items-center gap-1.5 shrink-0"
+                  title={isJa ? "リセット" : "Reset"}
+                >
+                  <span className="material-symbols-outlined text-[15px]">restart_alt</span>
+                  <span>{t("reset")}</span>
+                </button>
+              </div>
+
+              {/* Right: View Mode Toggle (Table Default vs Cards) */}
+              <div className="self-end shrink-0">
+                <div className="inline-flex rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("table")}
+                    aria-pressed={viewMode === "table"}
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-[4px] px-3 py-2 text-sm font-semibold transition ${
+                      viewMode === "table"
+                        ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-xs"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">table_rows</span>
+                    <span>{t("listView")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("cards")}
+                    aria-pressed={viewMode === "cards"}
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-[4px] px-3 py-2 text-sm font-semibold transition ${
+                      viewMode === "cards"
+                        ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-xs"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">grid_view</span>
+                    <span>{t("cardView")}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 3. Main Content: Ledger Table or Cards ────────────────────────── */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-28 text-[var(--text-muted)]">
+              <span className="material-symbols-outlined animate-spin text-[var(--freya-blue)]" style={{ fontSize: 36 }}>
+                progress_activity
+              </span>
+              <span className="text-sm font-semibold">
+                {isJa ? "材料使用データを読込・集計中…" : "Loading material usage ledger…"}
+              </span>
+            </div>
+          ) : filteredLots.length === 0 ? (
+            <div className="freya-card flex flex-col items-center justify-center gap-3 py-20 text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-[8px]">
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 36 }}>
+                find_in_page
+              </span>
+              <p className="text-sm font-bold text-[var(--text-primary)]">
+                {isJa ? "該当する材料ロット実績が見つかりませんでした" : "No material lot records found"}
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                {isJa ? "日付範囲または検索条件を変更してください。" : "Adjust your date range or search filters."}
+              </p>
+            </div>
+          ) : viewMode === "table" ? (
+            /* =========================================================================
+               MATERIAL LOT USAGE LEDGER TABLE (STRICT TABLE-FIXED WITH COLGROUP)
+               ========================================================================= */
+            <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="analytics-ledger w-full table-fixed border-collapse text-left text-sm min-w-[1440px]">
+                  <colgroup>
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "26%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "9%" }} />
+                  </colgroup>
+
+                  {/* Table Header */}
+                  <thead className="sticky top-0 z-10 select-none border-b border-[var(--border)] bg-slate-50/80 dark:bg-slate-900/60 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                    <tr>
+                      {/* Material */}
+                      <th
+                        onClick={() => handleSort("material")}
+                        className="px-4 py-2.5 text-left cursor-pointer hover:text-[var(--text-primary)] transition"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "材料" : "MATERIAL"}</span>
+                          {sortField === "material" && (
+                            <span className="material-symbols-outlined text-[13px]">
+                              {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* Lot */}
+                      <th
+                        onClick={() => handleSort("lot")}
+                        className="px-4 py-2.5 text-left cursor-pointer hover:text-[var(--text-primary)] transition"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "ロット番号" : "LOT"}</span>
+                          {sortField === "lot" && (
+                            <span className="material-symbols-outlined text-[13px]">
+                              {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* USED (Right-aligned, primary metric per Section 4 & 5) */}
+                      <th
+                        onClick={() => handleSort("meters")}
+                        className="px-4 py-2.5 text-right cursor-pointer hover:text-[var(--text-primary)] transition font-semibold"
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{isJa ? "使用量 (m)" : "USED"}</span>
+                          {sortField === "meters" && (
+                            <span className="material-symbols-outlined text-[13px]">
+                              {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* PRODUCT / SEIBAN */}
+                      <th className="px-4 py-2.5 text-left">{isJa ? "製品 / 背番号" : "PRODUCT / SEIBAN"}</th>
+
+                      {/* RUNS (Right-aligned per Section 4) */}
+                      <th
+                        onClick={() => handleSort("runs")}
+                        className="px-4 py-2.5 text-right cursor-pointer hover:text-[var(--text-primary)] transition"
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{isJa ? "実績" : "RUNS"}</span>
+                          {sortField === "runs" && (
+                            <span className="material-symbols-outlined text-[13px]">
+                              {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* MACHINES */}
+                      <th className="px-4 py-2.5 text-left">{isJa ? "設備" : "MACHINES"}</th>
+
+                      {/* PIECES (Right-aligned per Section 4) */}
+                      <th
+                        onClick={() => handleSort("pieces")}
+                        className="px-4 py-2.5 text-right cursor-pointer hover:text-[var(--text-primary)] transition"
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{isJa ? "生産数" : "PIECES"}</span>
+                          {sortField === "pieces" && (
+                            <span className="material-symbols-outlined text-[13px]">
+                              {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* LAST USED */}
+                      <th
+                        onClick={() => handleSort("latestDate")}
+                        className="px-4 py-2.5 text-left cursor-pointer hover:text-[var(--text-primary)] transition"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "最終使用" : "LAST USED"}</span>
+                          {sortField === "latestDate" && (
+                            <span className="material-symbols-outlined text-[13px]">
+                              {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* EVIDENCE */}
+                      <th className="px-4 py-2.5 text-left">{isJa ? "証拠" : "EVIDENCE"}</th>
+                    </tr>
+                  </thead>
+
+                  {/* Table Body */}
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {filteredLots.map((lot, lotIdx) => {
+                      const lotKey = lot.key || lot.lotNumber;
+                      const isExpanded = expandedLots.has(lotKey);
+                      const matSeiban = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
+                      const labelImgs = lot.labelImages || [];
+                      const defectImgs = lot.defectImages || [];
+
+                      // Clean Product Display (Section 6: C74 · C76 · C75 +2)
+                      const distinctSeibans = Array.from(
+                        new Set(
+                          (lot.products || [])
+                            .map((p) => p.seiban)
+                            .filter(Boolean)
+                        )
+                      );
+                      const visibleSeibans = distinctSeibans.slice(0, 3);
+                      const extraCount = distinctSeibans.length - 3;
+                      const fullProductsTooltip = (lot.products || [])
+                        .map((p) => `${p.seiban || ""}${p.hinban ? ` (${p.hinban})` : ""}`)
+                        .filter(Boolean)
+                        .join(", ");
+
+                      return (
+                        <Fragment key={lotKey}>
+                          <tr
+                            onClick={() => toggleLotExpand(lotKey)}
+                            className={joinClasses(
+                              "group cursor-pointer select-none transition-colors border-b border-[var(--border)]",
+                              isExpanded
+                                ? "bg-[var(--freya-blue-subtle)]"
+                                : "hover:bg-slate-50/75 dark:hover:bg-slate-800/40"
+                            )}
+                          >
+                            {/* 1. Material */}
+                            <td className="px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)]" title={lot.materialName || matSeiban}>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span
+                                  className={joinClasses(
+                                    "material-symbols-outlined text-[16px] text-[var(--text-muted)] transition-transform group-hover:text-[var(--freya-blue)]",
+                                    isExpanded ? "rotate-90 text-[var(--freya-blue)]" : ""
+                                  )}
+                                >
+                                  chevron_right
+                                </span>
+                                <button
+                                  type="button"
+                                  className="truncate text-left font-semibold text-sm"
+                                  aria-expanded={isExpanded}
+                                  aria-label={`${isJa ? "ロット詳細" : "Lot details"}: ${lot.lotNumber}`}
+                                  onClick={(event) => { event.stopPropagation(); toggleLotExpand(lotKey); }}
+                                >
+                                  {matSeiban || <span className="font-normal text-[var(--text-muted)]">—</span>}
+                                </button>
+                              </div>
+                            </td>
+
+                            {/* 2. Lot Number (+ future physical ID support) */}
+                            <td className="px-4 py-2.5 text-sm text-[var(--text-primary)]">
+                              <div className="flex min-w-0 flex-col gap-0.5">
+                                <span className="truncate font-semibold text-sm text-[var(--text-primary)]">{lot.lotNumber}</span>
+                                {lot.materialName ? (
+                                  <span className="truncate text-xs font-normal text-[var(--text-muted)]">{lot.materialName}</span>
+                                ) : null}
+                              </div>
+                            </td>
+
+                            {/* 3. Used (Meters): Primary Metric Emphasis, Right-Aligned, 1 Decimal */}
+                            <td className="px-4 py-2.5 text-right text-sm font-semibold text-[var(--text-primary)] whitespace-nowrap freya-tabular tabular-nums">
+                              {fmtMeters(lot.totalMeters)} <span className="text-xs font-normal text-[var(--text-muted)]">m</span>
+                            </td>
+
+                            {/* 4. Product / Seiban (Section 6: Clean C74 · C76 format with tooltip) */}
+                            <td className="px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] truncate" title={fullProductsTooltip}>
+                              {visibleSeibans.length > 0 ? (
+                                <div className="flex items-center gap-1.5 truncate">
+                                  {visibleSeibans.map((seiban) => (
+                                    <span
+                                      key={seiban}
+                                      className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-xs font-semibold text-[var(--text-primary)]"
+                                    >
+                                      {seiban}
+                                    </span>
+                                  ))}
+                                  {extraCount > 0 && (
+                                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
+                                      +{extraCount}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[var(--text-muted)]">—</span>
+                              )}
+                            </td>
+
+                            {/* 5. Runs (Right-Aligned per Section 4) */}
+                            <td className="px-4 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                              {lot.runsCount}
+                            </td>
+
+                            {/* 6. Machines */}
+                            <td className="px-4 py-2.5 text-sm text-[var(--text-secondary)] truncate" title={lot.machines.join(", ")}>
+                              <span className="font-medium text-sm text-[var(--text-primary)]">{lot.machines.join(", ") || "—"}</span>
+                            </td>
+
+                            {/* 7. Pieces (Right-Aligned, Comma Formatted per Section 4) */}
+                            <td className="px-4 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                              {formatNumber(lot.totalPieces)}
+                            </td>
+
+                            {/* 8. Last Used */}
+                            <td className="px-4 py-2.5 text-sm font-normal text-[var(--text-muted)] whitespace-nowrap freya-tabular tabular-nums">
+                              {formatShortDate(lot.latestDate, lot.runs[0]?.timeStart, isJa)}
+                            </td>
+
+                            {/* 9. Evidence Action Pills (Section 12: Compact indicators) */}
+                            <td className="px-4 py-2.5 text-left">
+                              <EvidencePills labelImages={labelImgs} defectImages={defectImgs} lotNumber={lot.lotNumber} isJa={isJa} onPreview={handleOpenPhotoPreview} />
+                            </td>
+                          </tr>
+
+                          {/* ── Sub-Row: Lot_Details Usage History ───────────── */}
+                          {isExpanded && (
+                            <tr className="bg-slate-50/70 dark:bg-slate-900/40">
+                              <td colSpan={9} className="border-t border-[var(--border)] p-0">
+                                <div className="py-4 pl-8 pr-4 sm:py-5 sm:pl-14 sm:pr-8 xl:pl-16 xl:pr-10">
+                                  <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-4">
+                                    {/* Nested Child Indicator */}
+                                    <div className="flex items-center gap-2 pb-2 text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border)]">
+                                      <span className="material-symbols-outlined text-[16px] text-[var(--freya-blue)]">
+                                        subdirectory_arrow_right
+                                      </span>
+                                      <span className="uppercase tracking-[0.04em]">
+                                        {isJa ? "材料ロット使用内訳・加工履歴" : "Lot Usage Breakdown & History"}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-start lg:justify-between">
+                                      <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="text-base font-bold text-[var(--text-primary)]">
+                                            {lot.lotNumber}
+                                          </span>
+                                          <TraceBadge icon="category" tone="blue">
+                                            {lot.materialSeiban || "—"}
+                                          </TraceBadge>
+                                          {lot.materialName ? (
+                                            <span className="truncate text-xs font-normal text-[var(--text-muted)]">
+                                              {lot.materialName}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                          <TraceBadge icon="precision_manufacturing" title={(lot.machines || []).join(", ")}>
+                                            {(lot.machines || []).join(", ") || "—"}
+                                          </TraceBadge>
+                                          <TraceBadge icon="person">
+                                            {(lot.workers || []).join(", ") || "—"}
+                                          </TraceBadge>
+                                          <TraceBadge icon="factory">
+                                            {(lot.factories || []).join(", ") || "—"}
+                                          </TraceBadge>
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-right">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "使用量" : "Used"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{fmtMeters(lot.totalMeters)} m</div>
+                                        </div>
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-right">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{formatNumber(lot.totalPieces)}</div>
+                                        </div>
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-right">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{formatNumber(lot.totalShots)}</div>
+                                        </div>
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-right">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular tabular-nums">{formatNumber(lot.runsCount)}</div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
+                                      <table className="analytics-run-table w-full min-w-[1100px] border-collapse text-left text-sm">
+                                        <thead className="border-b border-[var(--border)] bg-slate-100/70 dark:bg-slate-800/60 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                        <tr>
+                                          <th className="px-3 py-2">{isJa ? "加工日時" : "Date / Time"}</th>
+                                          <th className="px-3 py-2">{isJa ? "設備" : "Machine"}</th>
+                                          <th className="px-3 py-2">{isJa ? "品番" : "Product"}</th>
+                                          <th className="px-3 py-2">{isJa ? "背番号" : "Seiban"}</th>
+                                          <th className="px-3 py-2 text-right">{isJa ? "使用量" : "Used"}</th>
+                                          <th className="px-3 py-2 text-right">{isJa ? "ショット" : "Shots"}</th>
+                                          <th className="px-3 py-2 text-right">{isJa ? "生産数" : "Pieces"}</th>
+                                          <th className="px-3 py-2">{isJa ? "送り / 取り数" : "Pitch / Cycle"}</th>
+                                          <th className="px-3 py-2">{isJa ? "作業者" : "Worker"}</th>
+                                          <th className="px-3 py-2 text-left">{isJa ? "トレース" : "Trace"}</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-[var(--border)]">
+                                        {lot.runs.map((r, rIdx) => {
+                                          const runDefectImages = r.defectImages || [];
+                                          const runLabelImage = r.labelImage || (r.materialLabelImages || [])[0];
+
+                                          return (
+                                            <tr
+                                              key={rIdx}
+                                              onClick={() => handleOpenRecordDetail(r)}
+                                              title={isJa ? "クリックしてプレス加工実績詳細を表示" : "Click to view Press Process Record Details"}
+                                              className="group/run cursor-pointer transition-colors hover:bg-blue-50/60 dark:hover:bg-blue-950/25"
+                                            >
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-primary)] freya-tabular tabular-nums">
+                                                {formatShortDate(r.date, r.timeStart, isJa)}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
+                                                {r.machine || "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)] group-hover/run:text-[var(--text-primary)]">
+                                                <span className="inline-flex items-center gap-1 group-hover/run:underline decoration-[var(--freya-blue)] underline-offset-2">
+                                                  {r.hinban || "—"}
+                                                </span>
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
+                                                <span className="inline-flex items-center gap-1 text-[var(--text-primary)] group-hover/run:text-[var(--freya-blue)]">
+                                                  {r.seiban || "—"}
+                                                  <span
+                                                    className="material-symbols-outlined text-[13px] opacity-0 group-hover/run:opacity-100 text-[var(--freya-blue)] transition-opacity"
+                                                    aria-hidden="true"
+                                                  >
+                                                    open_in_new
+                                                  </span>
+                                                </span>
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-semibold text-[var(--text-primary)] freya-tabular tabular-nums">
+                                                {fmtMeters(r.meters)} m
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                                                {formatNumber(r.shots)}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                                                {formatNumber(r.pieces)}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-secondary)] freya-tabular tabular-nums">
+                                                {r.feedPitch ? `${formatNumber(r.feedPitch)}mm` : "—"} / {r.pcPerCycle ? `${formatNumber(r.pcPerCycle)}pc` : "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-sans text-sm font-medium text-[var(--text-secondary)]">
+                                                {r.worker || "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-left" onClick={(e) => e.stopPropagation()}>
+                                                <EvidencePills labelImages={runLabelImage ? [runLabelImage] : []} defectImages={runDefectImages} scannedQR={r.scannedQR} lotNumber={r.lotNumber || lot.lotNumber} isJa={isJa} onPreview={handleOpenPhotoPreview} showLabels="compact" />
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                      <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)] text-sm font-semibold">
+                                        <tr>
+                                          <td colSpan={4} className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                            {isJa ? "ロット合計" : "Lot Total"}
+                                          </td>
+                                          <td className="px-3 py-2.5 text-right font-semibold text-sm text-[var(--text-primary)] freya-tabular tabular-nums">
+                                            {fmtMeters(lot.totalMeters)} m
+                                          </td>
+                                          <td className="px-3 py-2.5 text-right font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                                            {formatNumber(lot.totalShots)}
+                                          </td>
+                                          <td className="px-3 py-2.5 text-right font-medium text-[var(--text-secondary)] freya-tabular tabular-nums">
+                                            {formatNumber(lot.totalPieces)}
+                                          </td>
+                                          <td colSpan={3}></td>
+                                        </tr>
+                                      </tfoot>
+                                    </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+
+                  {/* Main Table Total Footer */}
+                  <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface-subtle)] text-sm font-semibold text-[var(--text-primary)]">
+                    <tr>
+                      <td className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em]">TOTAL</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)] text-xs font-normal">
+                        {filteredSummary.lotsCount} lots
+                      </td>
+                      {/* Total Used Meters (Right-Aligned) */}
+                      <td className="px-4 py-3 text-right font-semibold text-sm text-[var(--text-primary)] freya-tabular tabular-nums whitespace-nowrap">
+                        {fmtMeters(filteredSummary.meters)} <span className="text-xs font-normal text-[var(--text-muted)]">m</span>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--text-muted)] text-xs font-normal">
+                        {filteredSummary.productsCount} {isJa ? "製品" : "products"}
+                      </td>
+                      {/* Runs (Right-Aligned) */}
+                      <td className="px-4 py-3 text-right font-medium text-sm freya-tabular tabular-nums">{filteredSummary.runs}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)] text-xs font-normal truncate">
+                        {filteredSummary.machinesCount} {isJa ? "台" : "machines"}
+                      </td>
+                      {/* Pieces (Right-Aligned) */}
+                      <td className="px-4 py-3 text-right font-semibold text-sm freya-tabular tabular-nums text-[var(--text-primary)]">{formatNumber(filteredSummary.pieces)}</td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          ) : (
+            /* =========================================================================
+               CARD VIEW (SECONDARY OPTION per Spec)
+               ========================================================================= */
+            <div className="analytics-card-grid">
+              {filteredLots.map((lot) => {
+                const lotKey = lot.key || lot.lotNumber;
+                return (
+                  <MaterialLotCard
+                    key={lotKey}
+                    lot={lot}
+                    onOpenHistory={setHistoryModalLot}
+                    onPreview={handleOpenPhotoPreview}
+                    isJa={isJa}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Lot Usage History Modal (Card View) ────────────────────────────────── */}
+      {historyModalLot && (
+        <LotUsageHistoryModal
+          lot={historyModalLot}
+          onClose={() => setHistoryModalLot(null)}
+          onPreview={handleOpenPhotoPreview}
+          onOpenRecord={handleOpenRecordDetail}
+          isJa={isJa}
+        />
+      )}
+
+      {/* ── Press Process Record Details Modal ─────────────────────────────── */}
+      {modalRecord && (
+        <RecordDetailModal
+          record={modalRecord}
+          processName={modalProcess || "Press"}
+          onClose={closeRecord}
+          onLotClick={(lotNum) => {
+            closeRecord();
+            setSearch(lotNum);
+          }}
+          onUpdated={loadData}
+        />
+      )}
+
+      {/* ── Reusable Photo Preview Modal (Same as Product Details) ─────────── */}
+      {photoPreview && (
+        <SensorDevicePhotoPreviewModal
+          preview={photoPreview}
+          onClose={() => setPhotoPreview(null)}
+          onNavigate={handlePhotoNavigate}
+        />
+      )}
+    </section>
+  );
+}

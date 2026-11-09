@@ -1,0 +1,199 @@
+/* FactoryLiveMonitor.css */
+
+.live-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.live-tile {
+  position: relative;
+  background: var(--surface-container-high, #1E293B);
+  border: 2px solid var(--outline-variant, #334155);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+  min-height: 110px;
+  padding: 12px;
+}
+
+.live-tile .name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--on-surface-variant, #94A3B8);
+}
+
+.live-tile .status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--on-surface-variant, #94A3B8);
+  text-transform: uppercase;
+}
+
+.live-tile .elapsed {
+  position: absolute;
+  bottom: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--on-surface-variant, #94A3B8);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Machine Modes */
+
+/* Idle */
+.live-tile.idle {
+  opacity: 0.6;
+}
+
+/* Running */
+.live-tile.running {
+  border-color: #10B981; /* Emerald */
+}
+.live-tile.running .status {
+  color: #10B981;
+}
+.live-tile.running .name {
+  color: var(--on-surface, #F8FAFC);
+}
+.live-tile.running .seb {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--on-surface, #F8FAFC);
+  white-space: nowrap;
+}
+
+/* Break */
+.live-tile.brk {
+  background: #0F172A;
+  border-color: #3B82F6;
+  animation: chillPulseBlue 3.4s ease-in-out infinite;
+}
+.live-tile.brk .name {
+  color: #93C5FD;
+}
+.live-tile.brk .big-mode {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #BFDBFE;
+}
+
+/* Maintenance */
+.live-tile.maint {
+  background: #1E1B4B;
+  border-color: #F59E0B;
+  animation: chillPulseAmber 3.4s ease-in-out infinite;
+}
+.live-tile.maint .name {
+  color: #FCD34D;
+}
+.live-tile.maint .big-mode {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #FDE68A;
+}
+
+/* Calling */
+.live-tile.calling {
+  color: white;
+}
+.live-tile.calling .name {
+  color: white;
+  font-size: 1.5rem;
+}
+.live-tile.calling .elapsed {
+  color: rgba(255, 255, 255, 0.8);
+}
+.live-tile.calling .seb,
+.live-tile.calling .status {
+  display: none;
+}
+
+.live-tile.calling[data-primary-call="leader"] {
+  background: #EF4444;
+  border-color: #fff;
+  animation: tileBlinkRed 0.9s steps(1) infinite;
+}
+.live-tile.calling[data-primary-call="box"] {
+  background: #F59E0B;
+  border-color: #fff;
+  animation: tileBlinkYellow 0.9s steps(1) infinite;
+}
+.live-tile.calling[data-primary-call="material"] {
+  background: #3B82F6;
+  border-color: #fff;
+  animation: tileBlinkBlue 0.9s steps(1) infinite;
+}
+
+.live-tile .type-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+}
+.live-tile .big-rank {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: white;
+  line-height: 1;
+}
+
+/* Animations */
+@keyframes chillPulseBlue {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(59, 130, 246, 0); }
+  50% { box-shadow: inset 0 0 40px rgba(59, 130, 246, 0.25), 0 0 15px rgba(59, 130, 246, 0.1); }
+}
+
+@keyframes chillPulseAmber {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: inset 0 0 40px rgba(245, 158, 11, 0.25), 0 0 15px rgba(245, 158, 11, 0.1); }
+}
+
+@keyframes tileBlinkRed {
+  0%, 100% { background: #EF4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+  50% { background: #991B1B; box-shadow: 0 0 5px rgba(239, 68, 68, 0.1); }
+}
+
+@keyframes tileBlinkYellow {
+  0%, 100% { background: #F59E0B; box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+  50% { background: #92400E; box-shadow: 0 0 5px rgba(245, 158, 11, 0.1); }
+}
+
+@keyframes tileBlinkBlue {
+  0%, 100% { background: #3B82F6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+  50% { background: #1E3A8A; box-shadow: 0 0 5px rgba(59, 130, 246, 0.1); }
+}
+
+/* Badges */
+.live-tile .ng-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background-color: #EF4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 99px;
+  padding: 2px 6px;
+  z-index: 10;
+}
+.live-tile .device-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background-color: var(--surface-container-highest, #334155);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 99px;
+  padding: 2px 6px;
+  z-index: 10;
+}

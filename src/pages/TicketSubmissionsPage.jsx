@@ -1,14 +1,15 @@
 import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import StatSummaryCard from "../components/StatSummaryCard";
+import TemplateQuickPeekModal from "../components/TemplateQuickPeekModal";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, updateNgTicketRecord } from "../services/api";
+import { fetchCheckFormTemplateById, fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, translateTextApi, updateNgTicketRecord, uploadMaintenanceImage } from "../services/api";
 import { getAuthDisplayName, readStoredAuthUser } from "../utils/auth";
 import {
   buildTicketSubmissionAdvancedFilterClauses,
@@ -22,6 +23,7 @@ import {
   formatTicketRange,
   formatTicketStatusLabel,
   TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS,
+  getTicketSubmissionAdvancedFilterFields,
   TICKET_SUBMISSION_IMAGE_OPTIONS,
   TICKET_SUBMISSION_PAGE_SIZE_OPTIONS,
 } from "../utils/ticketSubmissions";
@@ -287,7 +289,7 @@ function ActionNoticeBanner({ notice, onClose }) {
     <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
           <p className="mt-1 text-sm font-medium">{notice.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -300,35 +302,35 @@ function ActionNoticeBanner({ notice, onClose }) {
 
 function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, onApply, onCancelEdit, onDelete, onDraftNameChange, onRename, onSave, presets }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="freya-card rounded-[8px] p-5 border border-[var(--border)] bg-[var(--surface)] shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Saved Views</p>
-          <h3 className="mt-1 text-lg font-black text-on-surface">Supervisor Presets</h3>
-          <p className="mt-2 text-sm leading-6 text-outline">
+          <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Saved Views</p>
+          <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Supervisor Presets</h3>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
             Save repeated ticket review filters in this browser, then reapply them in one click.
           </p>
         </div>
         {activePresetId && (
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+          <span className="inline-flex items-center rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider text-[var(--freya-blue)]">
             Active preset
           </span>
         )}
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
         <input
           type="text"
           value={draftName}
           onChange={(event) => onDraftNameChange(event.target.value)}
           placeholder={editingPresetId ? "Rename this preset" : "Name this filter view"}
-          className="h-11 flex-1 rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+          className="h-8 flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)]"
         />
         <button
           type="button"
           onClick={onSave}
           disabled={!draftName.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editingPresetId ? "drive_file_rename_outline" : "bookmark_added"}</span>
           {editingPresetId ? "Rename Preset" : "Save Current View"}
@@ -337,7 +339,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           <button
             type="button"
             onClick={onCancelEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             Cancel
@@ -363,7 +365,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="truncate text-sm font-semibold text-on-surface">{preset.name}</h4>
                     {isActive && (
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-primary">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                         Active
                       </span>
                     )}
@@ -374,7 +376,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onApply(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
                     Apply
@@ -382,7 +384,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onRename(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>drive_file_rename_outline</span>
                     Rename
@@ -390,7 +392,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onDelete(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10"
+                    className="inline-flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
                     Delete
@@ -407,22 +409,22 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
 
 function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopyShareLink, onExport, shareButtonLabel }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export</p>
-      <h3 className="mt-1 text-lg font-black text-on-surface">Filtered Ticket CSV</h3>
-      <p className="mt-3 text-sm leading-6 text-outline">
+    <div className="freya-card rounded-[8px] p-5 border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Export</p>
+      <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Filtered Ticket CSV</h3>
+      <p className="mt-1 text-xs text-[var(--text-muted)]">
         Export the current ticket view or the full submitted-ticket history. Large all-data exports may take longer than filtered exports.
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2.5">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-outline">Current Export Scope</p>
-          <p className="mt-1 text-sm font-semibold text-on-surface">{formatTicketNumber(filteredCount)} matching tickets</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Current Export Scope</p>
+          <p className="mt-0.5 text-xs font-mono font-semibold text-[var(--text-primary)]">{formatTicketNumber(filteredCount)} matching tickets</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onCopyShareLink}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
             {shareButtonLabel}
@@ -431,14 +433,14 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
             type="button"
             onClick={onExport}
             disabled={disabled || exporting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             {exporting ? "Preparing CSV..." : "Export CSV"}
           </button>
         </div>
       </div>
-      <p className="mt-3 text-xs leading-5 text-outline">
+      <p className="mt-2 text-[11px] text-[var(--text-muted)]">
         Share link copies the current filters, advanced filters, sort, page size, and page into URL query params.
       </p>
     </div>
@@ -458,37 +460,37 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150" onClick={onClose}>
       <div
-        className="dashboard-section flex w-full max-w-xl flex-col overflow-hidden rounded-2xl"
+        className="flex w-full max-w-xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl animate-in zoom-in-95 duration-150"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-6 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export Choice</p>
-            <h3 className="mt-1 text-lg font-black text-on-surface">Choose what to export</h3>
-            <p className="mt-2 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Export Choice</p>
+            <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">Choose what to export</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               The current view may already be narrowed by date range, quick filters, advanced filters, or sort. Choose whether to export that filtered view or the full ticket history.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="p-1 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
         </div>
 
-        <div className="grid gap-3 px-6 py-5 sm:grid-cols-2">
+        <div className="grid gap-3 p-6 sm:grid-cols-2">
           <button
             type="button"
             onClick={onExportFiltered}
-            className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left transition hover:border-primary/35 hover:bg-primary/10"
+            className="rounded-[8px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/5 p-4 text-left transition hover:border-[var(--freya-blue)] hover:bg-[var(--freya-blue)]/10"
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Current View</p>
-            <p className="mt-2 text-base font-black text-on-surface">Export filtered data</p>
-            <p className="mt-2 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">Current View</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Export filtered data</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               Exports the same filtered ticket set currently shown in the table. Matching tickets: {formatTicketNumber(filteredCount)}.
             </p>
           </button>
@@ -496,11 +498,11 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
           <button
             type="button"
             onClick={onExportAll}
-            className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
+            className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Full History</p>
-            <p className="mt-2 text-base font-black text-on-surface">Export all data</p>
-            <p className="mt-2 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Full History</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Export all data</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               Ignores the current filters and exports every submitted ticket. This may take longer for larger datasets.
             </p>
           </button>
@@ -554,16 +556,21 @@ function getTicketStatusMeta(status) {
   };
 }
 
-function formatTicketHistoryAction(entry = {}) {
-  if (entry.action) return entry.action;
-
+function formatTicketHistoryAction(entry = {}, t = (k) => k) {
   const fromStatus = normalizeTicketStatusValue(entry.fromStatus);
   const toStatus = normalizeTicketStatusValue(entry.toStatus);
 
-  if (toStatus === "closed") return "Ticket Closed";
-  if (fromStatus === "closed" && toStatus === "open") return "Ticket Reopened";
-  if (toStatus === "open") return "Ticket Opened";
-  return "Status Updated";
+  if (toStatus === "closed") return t("ticketClosed") || "Ticket Closed";
+  if (fromStatus === "closed" && toStatus === "open") return t("ticketReopened") || "Ticket Reopened";
+  if (toStatus === "open") return t("ticketOpened") || "Ticket Opened";
+
+  if (entry.action) {
+    if (entry.action === "Ticket Closed") return t("ticketClosed") || "Ticket Closed";
+    if (entry.action === "Ticket Reopened") return t("ticketReopened") || "Ticket Reopened";
+    return entry.action;
+  }
+
+  return t("statusUpdated") || "Status Updated";
 }
 
 function sortTicketHistoryEntries(entries = []) {
@@ -577,16 +584,77 @@ function sortTicketHistoryEntries(entries = []) {
 function SummaryCard({ accent, icon, label, subtitle, value }) {
   return (
     <StatSummaryCard
+      variant="freya"
       icon={icon}
       label={label}
       value={value}
       subtitle={subtitle}
       accent={accent}
-      valueClassName="text-2xl font-black tabular-nums"
-      labelClassName="text-[11px] font-semibold text-on-surface-variant"
-      subtitleClassName="text-[10px] text-outline"
-      iconClassName="shadow-none"
     />
+  );
+}
+
+function isOptionalTicket(ticket) {
+  if (!ticket) return false;
+  const rawType = String(ticket.ticketType ?? ticket.type ?? ticket.ticket_type ?? ticket.ticketCategory ?? "").trim().toLowerCase();
+  if (rawType === "optional") return true;
+  if (rawType === "defect") return false;
+  if (ticket.isOptional === true || ticket.optional === true) return true;
+  if (ticket.isDefect === true) return false;
+  if (ticket.required === false) return true;
+  if (ticket.required === true) return false;
+
+  // If answer value in ticket is OK / normal / pass / none -> surely optional
+  const answer = String(ticket.answerValue ?? ticket.value ?? "").trim().toLowerCase();
+  if (answer === "ok" || answer === "合格" || answer === "正常" || answer === "適用" || answer === "なし") {
+    return true;
+  }
+  if (answer === "ng" || answer === "不合格" || answer === "異常" || answer === "あり") {
+    return false;
+  }
+
+  // If numeric answer is within allowed range -> optional; outside -> defect
+  if (ticket.min !== null && ticket.min !== undefined && ticket.max !== null && ticket.max !== undefined && answer !== "") {
+    const num = Number(answer);
+    if (!Number.isNaN(num)) {
+      if (num >= Number(ticket.min) && num <= Number(ticket.max)) {
+        return true;
+      }
+      return false;
+    }
+  }
+
+  const reason = String(ticket.reason || "").trim().toLowerCase();
+  if (
+    reason === "optional" ||
+    reason.startsWith("optional ticket:") ||
+    reason.startsWith("optional:") ||
+    reason.startsWith("任意チケット") ||
+    reason.startsWith("連絡事項") ||
+    reason.startsWith("申し送り")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function TicketTypePill({ ticket, language = "en" }) {
+  const isOptional = isOptionalTicket(ticket);
+  const isJa = language === "ja";
+
+  if (isOptional) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[6px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[11px] font-semibold tracking-wide">
+        💬 {isJa ? "連絡・申し送り" : "Optional"}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-[6px] bg-error/10 text-error dark:text-red-400 border border-red-500/20 px-2 py-0.5 text-[11px] font-semibold tracking-wide">
+      ⚠️ {isJa ? "異常・不具合" : "Defect"}
+    </span>
   );
 }
 
@@ -594,17 +662,36 @@ function TicketStatusPill({ status }) {
   const meta = getTicketStatusMeta(status);
 
   return (
-    <span className={joinClasses("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold", meta.badgeClassName)}>
+    <span className={joinClasses("inline-flex rounded-[6px] px-2.5 py-0.5 text-[11px] font-semibold", meta.badgeClassName)}>
       {meta.label}
     </span>
   );
 }
 
+
 function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, onOpenChecklistSubmission = null, onReopenTicket = null, ticket }) {
+  const { language, t } = useLanguage();
   const [previewImage, setPreviewImage] = useState(null);
-  const statusMeta = getTicketStatusMeta(ticket?.status);
+  const [peekTemplateId, setPeekTemplateId] = useState(null);
+  const isTicketOptional = isOptionalTicket(ticket);
+  const isJa = language === "ja";
   const expectedRange = formatTicketRange(ticket);
   const normalizedStatus = normalizeTicketStatusValue(ticket?.status);
+  const isClosed = normalizedStatus === "closed";
+
+  const activeFixReason = language === "en"
+    ? (ticket?.fixReason_en || ticket?.fixReason)
+    : (ticket?.fixReason_ja || ticket?.fixReason);
+  const activeReason = language === "en"
+    ? (ticket?.reason_en || ticket?.reason)
+    : (ticket?.reason_ja || ticket?.reason);
+  const activeFieldLabel = language === "en"
+    ? (ticket?.fieldLabel_en || ticket?.fieldLabel)
+    : (ticket?.fieldLabel_ja || ticket?.fieldLabel);
+  const activeFormName = language === "en"
+    ? (ticket?.formName_en || ticket?.formName)
+    : (ticket?.formName_ja || ticket?.formName);
+
   const historyEntries = useMemo(
     () => sortTicketHistoryEntries(Array.isArray(ticket?.statusHistory) ? ticket.statusHistory : []),
     [ticket?.statusHistory]
@@ -614,11 +701,11 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
     return ticket.imageURLs
       .filter(Boolean)
-      .map((imageUrl, index) => ({
-        url: imageUrl,
-        label: `${ticket?.fieldLabel || "Ticket image"} ${index + 1}`,
+      .map((url, index) => ({
+        url,
+        label: `${activeFieldLabel || (isTicketOptional ? "Note Photo" : "Defect Photo")} #${index + 1}`,
       }));
-  }, [ticket?.fieldLabel, ticket?.imageURLs]);
+  }, [activeFieldLabel, isTicketOptional, ticket?.imageURLs]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -661,71 +748,97 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
+        onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      >
         <div
-          className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
+          className="w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl animate-in zoom-in-95 duration-150"
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
-              <h3 className="mt-1 truncate text-lg font-black text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
-                {ticket.formName && <span>{ticket.formName}</span>}
-                {ticket.machineName && <span>{ticket.machineName}</span>}
-                {ticket.factory && <span>{ticket.factory}</span>}
+          {/* Sticky Modal Header */}
+          <div className="sticky top-0 z-10 rounded-t-[12px] px-6 py-4 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface-raised)]">
+            <div className="min-w-0 flex-1 pr-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  {isTicketOptional
+                    ? (isJa ? "申し送りチケット" : "Optional Note Ticket")
+                    : (isJa ? "不具合・NGチケット" : "Defect Ticket")}
+                  {ticket.ticketNo != null && ` #${ticket.ticketNo}`}
+                </p>
+              </div>
+
+              <h2 className="mt-0.5 text-lg font-bold text-[var(--text-primary)] truncate">
+                {activeFieldLabel || "Untitled Check Item"}
+              </h2>
+
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <TicketTypePill ticket={ticket} language={language} />
+                <TicketStatusPill status={ticket?.status} />
+                {ticket.factory && (
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 13 }}>factory</span>
+                    {ticket.factory}
+                  </span>
+                )}
+                {(ticket.machineName || ticket.加工設備) && (
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 13 }}>precision_manufacturing</span>
+                    {ticket.machineName || ticket.加工設備}
+                  </span>
+                )}
+                {activeFormName && (
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 13 }}>assignment</span>
+                    {activeFormName}
+                  </span>
+                )}
+                {(ticket.timing || ticket.timing_en || ticket.timing_ja) && (
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 13 }}>schedule</span>
+                    {language === "en" ? (ticket.timing_en || ticket.timing || "Pre-Production Check") : (ticket.timing_ja || "作業前点検")}
+                  </span>
+                )}
               </div>
             </div>
+
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+              className="p-1 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 border-b border-separator/35 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-3">
-              <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]", statusMeta.badgeClassName)}>
-                {statusMeta.label}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-outline">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>schedule</span>
+          {/* Subheader info bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-2.5 text-xs text-[var(--text-muted)]">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>schedule</span>
                 {formatTicketDateTime(ticket.createdAt)}
               </span>
-              <span className="inline-flex items-center gap-1.5 text-outline">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>person</span>
                 {ticket.completedBy || "Unknown operator"}
               </span>
               {ticket.recordId && (
-                <span className="inline-flex items-center gap-1.5 text-outline">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>fingerprint</span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>fingerprint</span>
                   {ticket.recordId}
                 </span>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {normalizedStatus === "closed" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {(ticket.templateId || ticket.formId) && (
                 <button
                   type="button"
-                  onClick={onReopenTicket}
-                  disabled={actionBusy || !onReopenTicket}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:border-emerald-500/35 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                  onClick={() => setPeekTemplateId(ticket.templateId || ticket.formId)}
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>history</span>
-                  {actionBusy ? "Reopening..." : "Reopen Ticket"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onCloseTicket}
-                  disabled={actionBusy || !onCloseTicket}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/10 px-4 py-2 text-sm font-bold text-error transition hover:border-error/35 hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
-                  {actionBusy ? "Closing..." : "Close Ticket"}
+                  <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 15 }}>visibility</span>
+                  {t("quickPeekTemplate") || "Quick Peek Template"}
                 </button>
               )}
 
@@ -733,162 +846,436 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={onOpenChecklistSubmission}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_outward</span>
-                  Open Checklist Submission
+                  <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 15 }}>open_in_new</span>
+                  {t("viewFullChecklist") || "View Full Checklist"}
                 </button>
               )}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(240px,0.7fr)]">
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">NG Reason</p>
-                <p className="mt-2 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
-              </article>
-
-              <div className="grid gap-4">
-                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Value</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.answerValue || "—"}</p>
-                </article>
-
-                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Allowed Range</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{expectedRange || "No range configured"}</p>
-                </article>
-
-                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Image Evidence</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{formatTicketNumber(ticket.imageCount ?? ticket.imageURLs?.length ?? 0)} image{(ticket.imageCount ?? ticket.imageURLs?.length ?? 0) === 1 ? "" : "s"}</p>
-                </article>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
-                <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.formName || "—"}</p>
-              </article>
-
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Machine</p>
-                <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.machineName || "—"}</p>
-              </article>
-
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Latest Closure</p>
-                {ticket.closedAt ? (
-                  <>
-                    <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
-                    <p className="mt-1 text-xs text-outline">{formatTicketDateTime(ticket.closedAt)}</p>
-                  </>
-                ) : (
-                  <p className="mt-2 text-sm font-semibold text-on-surface">No closure recorded</p>
-                )}
-              </article>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status History</p>
-                  <p className="mt-1 text-sm text-outline">Tracks each close and reopen action for this ticket.</p>
+          {/* Body Split Grid */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              
+              {/* Left Column: Operator Input & Submission Details */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                  <span className={`material-symbols-outlined ${isTicketOptional ? "text-blue-600" : "text-error"}`} style={{ fontSize: 18 }}>
+                    {isTicketOptional ? "chat_bubble" : "report_problem"}
+                  </span>
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    {isTicketOptional
+                      ? (isJa ? "申し送り・連絡事項" : "Operator Note & Submission")
+                      : (isJa ? "指摘内容・NG理由" : "Defect & Operator Reason")}
+                  </h4>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
-                  {historyEntries.length} event{historyEntries.length === 1 ? "" : "s"}
-                </span>
+
+                {/* Note / Reason Box */}
+                <div className={`rounded-[8px] border p-4 ${
+                  isTicketOptional
+                    ? "border-blue-500/20 bg-blue-500/5 dark:bg-blue-950/20"
+                    : "border-error/20 bg-error/5 dark:bg-red-950/20"
+                }`}>
+                  <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 ${
+                    isTicketOptional ? "text-blue-700 dark:text-blue-300" : "text-error dark:text-red-400"
+                  }`}>
+                    {isTicketOptional ? (isJa ? "申し送り内容" : "Operator Note") : (isJa ? "NG理由" : "Operator NG Reason")}
+                  </p>
+                  <p className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
+                    {activeReason ? `"${activeReason}"` : (isJa ? "理由の入力はありません" : "No specific reason text provided.")}
+                  </p>
+                </div>
+
+                {/* Value & Range Card */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                      {t("submittedValue") || "Submitted Value"}
+                    </p>
+                    <p className={`mt-1 text-sm font-semibold ${isTicketOptional ? "text-emerald-600 dark:text-emerald-400" : "text-error dark:text-red-400"}`}>
+                      {ticket.answerValue || (isTicketOptional ? "OK" : "NG")}
+                    </p>
+                  </div>
+                  <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                      {ticket.min != null || ticket.max != null ? (t("allowedRange") || "Allowed Range") : (t("expectedValue") || "Expected Value")}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                      {expectedRange || "OK"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Evidence / Attached Photos */}
+                <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>photo_library</span>
+                    {isTicketOptional ? (isJa ? "添付画像" : "Attached Photos") : (isJa ? "不具合写真" : "Evidence Photos")} ({previewImages.length})
+                  </p>
+
+                  {previewImages.length === 0 ? (
+                    <div className="rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-6 text-center text-xs text-[var(--text-muted)]">
+                      {isJa ? "添付画像はありません" : "No photos attached."}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {previewImages.map((imgObj, idx) => (
+                        <div
+                          key={imgObj.url || idx}
+                          onClick={() => openPreviewImage(idx)}
+                          className="group relative aspect-video cursor-pointer overflow-hidden rounded-[6px] border border-[var(--border)] bg-black/5 shadow-xs transition hover:border-[var(--freya-blue)] hover:shadow-md"
+                        >
+                          <img src={imgObj.url} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
+                            <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>zoom_in</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="mt-4 space-y-3">
-                {historyEntries.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-outline-variant/25 bg-white/50 px-4 py-4 text-sm text-outline">
-                    No ticket status changes recorded yet.
-                  </div>
-                ) : historyEntries.map((entry, index) => (
-                  <article
-                    key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
-                    className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-on-surface">{formatTicketHistoryAction(entry)}</p>
-                        <p className="mt-1 text-xs text-outline">{entry.user || entry.username || "Unknown user"}</p>
-                      </div>
-                      <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
+              {/* Right Column: Resolution & Maintenance Status */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                  <span className={`material-symbols-outlined ${isClosed ? "text-emerald-600" : "text-amber-500"}`} style={{ fontSize: 18 }}>
+                    {isClosed ? "verified" : "build"}
+                  </span>
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    {isJa ? "対応状況・履歴" : "Status & Resolution"}
+                  </h4>
+                </div>
+
+                {/* Resolution Details Card */}
+                {isClosed ? (
+                  <div className="rounded-[8px] border border-emerald-500/25 bg-emerald-500/5 p-4 dark:bg-emerald-950/20">
+                    <div className="flex items-center justify-between gap-2 border-b border-emerald-500/20 pb-2 mb-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
+                        Resolved by {ticket.closedBy || ticket.closedByUsername || "Maintenance"}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)]">{formatTicketDateTime(ticket.closedAt)}</span>
                     </div>
 
-                    {(entry.fromStatus || entry.toStatus) && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
-                        {entry.fromStatus ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
-                            From {formatTicketStatusLabel(entry.fromStatus)}
-                          </span>
-                        ) : null}
-                        {entry.toStatus ? (() => {
-                          const toStatusMeta = getTicketStatusMeta(entry.toStatus);
-                          return (
-                            <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
-                              To {toStatusMeta.label}
-                            </span>
-                          );
-                        })() : null}
-                      </div>
+                    {activeFixReason ? (
+                      <p className="text-sm font-medium leading-relaxed text-[var(--text-primary)] flex items-start gap-2 mt-2">
+                        <span className="material-symbols-outlined text-emerald-600 mt-0.5 shrink-0" style={{ fontSize: 16 }}>build</span>
+                        <span>{activeFixReason}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-[var(--text-muted)]">{t("noResolutionProvided") || "No resolution notes recorded."}</p>
                     )}
 
-                    {entry.comment ? (
-                      <p className="mt-3 text-sm leading-6 text-on-surface">{entry.comment}</p>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            </div>
+                    {/* Resolution Photo if attached */}
+                    {Array.isArray(ticket.fixImageURLs) && ticket.fixImageURLs.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-emerald-500/20">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 mb-2">
+                          {t("resolutionEvidencePhoto") || "Fix Photo / Evidence"}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {ticket.fixImageURLs.map((fixUrl, fIdx) => (
+                            <a key={fixUrl || fIdx} href={fixUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-[6px] border border-emerald-500/30 aspect-video hover:opacity-90">
+                              <img src={fixUrl} alt={`Fix evidence ${fIdx + 1}`} className="w-full h-full object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : isTicketOptional ? (
+                  <div className="rounded-[8px] border border-blue-500/25 bg-blue-500/5 p-4 text-xs text-blue-800 dark:text-blue-300">
+                    <p className="font-semibold flex items-center gap-1.5 text-sm mb-1 text-blue-700 dark:text-blue-400">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>info</span>
+                      {isJa ? "申し送り事項が登録されています" : "Optional Note Recorded"}
+                    </p>
+                    <p className="mt-1 leading-relaxed opacity-90">
+                      {isJa ? "このチケットは作業者からの連絡事項です。必要に応じて確認後に解決（完了）へ更新してください。" : "This ticket records an operator note/remark for reference. You can mark it resolved when acknowledged."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-[8px] border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
+                    <p className="font-semibold flex items-center gap-1.5 text-sm mb-1 text-amber-700 dark:text-amber-400">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>hourglass_empty</span>
+                      {t("awaitingMaintenanceResolution") || "Awaiting Maintenance Action"}
+                    </p>
+                    <p className="mt-1 leading-relaxed opacity-90">
+                      {t("awaitingResolutionDescription") || "This ticket is currently OPEN. Once maintenance action or repair is complete, click 'Close & Resolve Ticket'."}
+                    </p>
+                  </div>
+                )}
 
-            {Array.isArray(ticket.imageURLs) && ticket.imageURLs.length > 0 && (
-              <div className="mt-5">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Attached Images</p>
-                    <p className="mt-1 text-sm text-outline">Open any image for a larger preview.</p>
+                {/* Audit Trail Timeline */}
+                <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>history</span>
+                    {t("auditHistory") || "Audit History"} ({historyEntries.length})
+                  </p>
+
+                  <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                    {historyEntries.length === 0 ? (
+                      <p className="text-xs text-[var(--text-muted)]">{isJa ? "ステータス変更履歴はありません" : "No history events recorded yet."}</p>
+                    ) : historyEntries.map((entry, index) => {
+                      const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
+                      const entryNote = isClosure
+                        ? (language === "en" ? (entry.fixReason_en || entry.fixReason || entry.comment) : (entry.fixReason_ja || entry.fixReason || entry.comment))
+                        : (language === "en" ? (entry.reason_en || entry.reason || entry.comment) : (entry.reason_ja || entry.reason || entry.comment));
+
+                      return (
+                        <div key={entry.timestamp || index} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-xs">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span className={isClosure ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-error dark:text-red-400 flex items-center gap-1"}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                                {isClosure ? "check_circle" : "published_with_changes"}
+                              </span>
+                              {formatTicketHistoryAction(entry, t)}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-muted)]">{formatTicketDateTime(entry.timestamp)}</span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">By: {entry.user || entry.username || "System"}</p>
+                          {entryNote && <p className="mt-1 text-xs text-[var(--text-primary)]/80 italic">"{entryNote}"</p>}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {ticket.imageURLs.map((imageUrl, index) => (
-                    <button
-                      key={`${imageUrl}-${index}`}
-                      type="button"
-                      onClick={() => openPreviewImage(index)}
-                      className="group overflow-hidden rounded-2xl border border-separator/40 bg-surface transition hover:border-primary/30"
-                    >
-                      <img
-                        src={imageUrl}
-                        alt={ticket.fieldLabel || "Ticket image"}
-                        className="h-36 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                      />
-                    </button>
-                  ))}
-                </div>
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* Sticky Modal Footer Actions */}
+          <div className="border-t border-[var(--border)] px-6 py-4 bg-[var(--surface-subtle)] flex items-center justify-between">
+            <div className="text-xs text-[var(--text-muted)] font-medium">
+              {ticket.fieldType && (
+                <span className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-2 py-0.5 text-[11px] uppercase font-semibold">
+                  {ticket.fieldType}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                {isJa ? "閉じる" : "Close"}
+              </button>
+
+              {isClosed ? (
+                onReopenTicket && (
+                  <button
+                    type="button"
+                    onClick={onReopenTicket}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>published_with_changes</span>
+                    {actionBusy ? "Reopening..." : (t("reopenTicketBtn") || "Reopen Ticket")}
+                  </button>
+                )
+              ) : (
+                onCloseTicket && (
+                  <button
+                    type="button"
+                    onClick={onCloseTicket}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
+                    {actionBusy ? "Closing..." : (t("closeAndResolveTicketBtn") || "Close & Resolve Ticket")}
+                  </button>
+                )
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <SensorDevicePhotoPreviewModal
-        preview={previewImage ? { ...previewImage, eyebrow: "Ticket Photos", displayName: ticket?.fieldLabel || "Ticket image", subtitle: ticket?.factory || ticket?.formName || undefined } : null}
+        preview={previewImage ? { ...previewImage, eyebrow: "Ticket Photos", displayName: activeFieldLabel || "Ticket image", subtitle: ticket?.factory || activeFormName || undefined } : null}
         onClose={() => setPreviewImage(null)}
         onNavigate={handlePreviewNavigate}
       />
+
+      {peekTemplateId && (
+        <TemplateQuickPeekModal
+          templateId={peekTemplateId}
+          activeFieldId={ticket?.fieldId}
+          isOptional={isTicketOptional}
+          onClose={() => setPeekTemplateId(null)}
+        />
+      )}
     </>
+  );
+}
+
+function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
+  const { language, t } = useLanguage();
+  const activeFieldLabel = language === "en"
+    ? (ticket?.fieldLabel_en || ticket?.fieldLabel)
+    : (ticket?.fieldLabel_ja || ticket?.fieldLabel);
+  const [fixReason, setFixReason] = useState("");
+  const [fixPhotoBase64, setFixPhotoBase64] = useState("");
+  const [fixPhotoPreview, setFixPhotoPreview] = useState("");
+  const [err, setErr] = useState("");
+  const [translating, setTranslating] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setFixPhotoBase64(evt.target.result);
+      setFixPhotoPreview(evt.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!fixReason.trim()) {
+      setErr(t("fixReasonRequiredErr") || "Resolution details are required to close this ticket.");
+      return;
+    }
+
+    setTranslating(true);
+    let fixReason_ja = fixReason.trim();
+    let fixReason_en = fixReason.trim();
+
+    const hasJapanese = /[一-龠ぁ-ゔァ-ヴー]/.test(fixReason);
+    try {
+      if (hasJapanese) {
+        const translatedEn = await translateTextApi(fixReason.trim(), "ja|en");
+        if (translatedEn && typeof translatedEn === "string") {
+          fixReason_en = translatedEn.trim();
+        }
+      } else {
+        const translatedJa = await translateTextApi(fixReason.trim(), "en|ja");
+        if (translatedJa && typeof translatedJa === "string") {
+          fixReason_ja = translatedJa.trim();
+        }
+      }
+    } catch (translateErr) {
+      console.warn("Auto-translate of resolution reason failed:", translateErr);
+    } finally {
+      setTranslating(false);
+    }
+
+    onConfirm({
+      fixReason: fixReason.trim(),
+      fixReason_ja,
+      fixReason_en,
+      fixPhotoBase64,
+    });
+  };
+
+  const isSubmitting = busy || translating;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-lg rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/40">
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>task_alt</span>
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Ticket Resolution</p>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                {t("resolveNgTicket") || "Resolve Ticket"}
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          </button>
+        </div>
+
+        <p className="mt-3 text-xs text-[var(--text-muted)] font-medium">
+          {activeFieldLabel || "NG Item"} • {ticket?.machineName || ticket?.加工設備 || "Equipment"} ({ticket?.factory || ""})
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
+              {t("resolutionDetailsLabel") || "How did you fix it / Resolution Details"} <span className="text-error">*</span>
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={fixReason}
+              onChange={(e) => { setFixReason(e.target.value); setErr(""); }}
+              placeholder={t("resolutionDetailsPlaceholder") || "e.g. Cleaned and adjusted the valve..."}
+              className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)] placeholder:text-[var(--text-muted)]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
+              {t("fixPhotoEvidenceLabel") || "Fix Photo / Evidence"}
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:rounded-[6px] file:border-0 file:bg-[var(--freya-blue)]/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--freya-blue)] hover:file:bg-[var(--freya-blue)]/20"
+            />
+            {fixPhotoPreview && (
+              <div className="mt-3 relative w-24 h-24 rounded-[8px] overflow-hidden border border-[var(--border)] shadow-xs">
+                <img src={fixPhotoPreview} alt="Fix evidence" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setFixPhotoBase64(""); setFixPhotoPreview(""); }}
+                  className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {err && <p className="text-xs font-semibold text-error">{err}</p>}
+
+          <div className="mt-2 flex items-center justify-end gap-3 pt-4 border-t border-[var(--border)]">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+            >
+              {t("cancel") || "Cancel"}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+              {isSubmitting ? (t("resolvingBtn") || "Resolving...") : (t("confirmCloseTicketBtn") || "Confirm & Close Ticket")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
 export default function TicketSubmissionsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const isJa = language === "ja";
   const [authUser] = useState(() => readStoredAuthUser());
   const actorName = useMemo(() => getAuthDisplayName(authUser), [authUser]);
   const initialViewRef = useRef(null);
@@ -897,7 +1284,7 @@ export default function TicketSubmissionsPage() {
     initialViewRef.current = parseTicketViewState(searchParams);
   }
 
-  const [filters, setFilters] = useState(() => initialViewRef.current.filters);
+  const [filters, setFilters] = useState(() => ({ machine: "", ...initialViewRef.current.filters }));
   const [dateRange, setDateRange] = useState(() => initialViewRef.current.dateRange);
   const [advancedRows, setAdvancedRows] = useState(() => initialViewRef.current.advancedRows);
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState(() => initialViewRef.current.appliedAdvancedFilters);
@@ -915,7 +1302,7 @@ export default function TicketSubmissionsPage() {
   const [error, setError] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(() => location.state?.openTicket ?? null);
   const [statusAction, setStatusAction] = useState(null);
   const presetStorageKey = useMemo(() => buildTicketPresetStorageKey(authUser?.username), [authUser?.username]);
   const [presetName, setPresetName] = useState("");
@@ -925,6 +1312,12 @@ export default function TicketSubmissionsPage() {
   const [shareButtonLabel, setShareButtonLabel] = useState("Copy Share Link");
 
   const deferredKeyword = useDeferredValue(filters.keyword);
+
+  useEffect(() => {
+    if (location.state?.openTicket) {
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setSavedPresets(readTicketSubmissionPresets(presetStorageKey));
@@ -1006,21 +1399,23 @@ export default function TicketSubmissionsPage() {
       status: normalizedTicketStatuses.map(formatTicketStatusLabel),
       fieldLabel: filterOptions.fieldLabels,
       fieldType: filterOptions.fieldTypes,
-      hasImages: TICKET_SUBMISSION_IMAGE_OPTIONS,
+      hasImages: isJa ? ["写真あり (With Images)", "写真なし (Without Images)"] : TICKET_SUBMISSION_IMAGE_OPTIONS,
     };
 
-    return TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS.map((field) => ({
+    return getTicketSubmissionAdvancedFilterFields(isJa).map((field) => ({
       ...field,
       options: optionMap[field.field] ?? field.options ?? [],
     }));
-  }, [filterOptions.completedBy, filterOptions.factories, filterOptions.fieldLabels, filterOptions.fieldTypes, filterOptions.formNames, filterOptions.machineNames, normalizedTicketStatuses]);
+  }, [filterOptions.completedBy, filterOptions.factories, filterOptions.fieldLabels, filterOptions.fieldTypes, filterOptions.formNames, filterOptions.machineNames, isJa, normalizedTicketStatuses]);
 
   const statusOptions = useMemo(() => {
     return normalizedTicketStatuses.map((status) => ({
       value: status,
-      label: formatTicketStatusLabel(status),
+      label: isJa
+        ? (status === "open" ? "未対応 (Open)" : status === "in_progress" ? "対応中 (In Progress)" : status === "closed" ? "完了 (Closed)" : formatTicketStatusLabel(status))
+        : formatTicketStatusLabel(status),
     }));
-  }, [normalizedTicketStatuses]);
+  }, [isJa, normalizedTicketStatuses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1035,6 +1430,7 @@ export default function TicketSubmissionsPage() {
           filters: {
             keyword: deferredKeyword,
             factory: filters.factory,
+            machine: filters.machine,
             status: filters.status,
             startDate: dateRange.startDate,
             endDate: dateRange.endDate,
@@ -1076,105 +1472,281 @@ export default function TicketSubmissionsPage() {
 
   const columns = useMemo(() => ([
     {
-      key: "createdAt",
-      label: "Submitted At",
-      width: 176,
-      renderCell: (row) => <span className="font-semibold text-on-surface">{formatTicketDateTime(row.createdAt)}</span>,
-      disableCellWrapper: true,
-    },
-    {
-      key: "factory",
-      label: "Factory",
-      width: 120,
-    },
-    {
-      key: "machineName",
-      label: "Machine",
-      width: 164,
-    },
-    {
-      key: "formName",
-      label: "Checklist Form",
-      width: 220,
-    },
-    {
-      key: "fieldLabel",
-      label: "Check Item",
-      width: 220,
+      key: "ticketNo",
+      label: "Ticket No.",
+      width: 104,
       renderCell: (row) => (
-        <span className="font-semibold text-on-surface">{row.fieldLabel || "Untitled field"}</span>
+        row.ticketNo != null
+          ? <span className="font-bold text-on-surface">#{row.ticketNo}</span>
+          : <span className="text-outline">—</span>
       ),
       disableCellWrapper: true,
     },
     {
-      key: "fieldType",
-      label: "Input Type",
-      width: 126,
-      renderCell: (row) => row.fieldType ? (
-        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
-          {row.fieldType}
-        </span>
-      ) : "—",
+      key: "type",
+      label: language === "ja" ? "種別" : "Type",
+      width: 120,
+      align: "center",
+      renderCell: (row) => <TicketTypePill ticket={row} language={language} />,
       disableCellWrapper: true,
-    },
-    {
-      key: "answerValue",
-      label: "Submitted Value",
-      width: 150,
-      renderCell: (row) => <span className="font-semibold text-on-surface">{row.answerValue || "—"}</span>,
-      disableCellWrapper: true,
-    },
-    {
-      key: "expectedRange",
-      label: "Allowed Range",
-      width: 156,
-      sortable: false,
-      renderCell: (row) => <span className="text-on-surface">{formatTicketRange(row) || "—"}</span>,
-      getCellTitle: (row) => formatTicketRange(row) || "—",
-      disableCellWrapper: true,
-    },
-    {
-      key: "completedBy",
-      label: "Submitted By",
-      width: 144,
     },
     {
       key: "status",
       label: "Status",
-      width: 116,
+      width: 130,
       align: "center",
       renderCell: (row) => <TicketStatusPill status={row.status} />,
       disableCellWrapper: true,
     },
     {
-      key: "imageCount",
-      label: "Images",
-      width: 96,
-      align: "center",
+      key: "location",
+      label: "Location & Machine",
+      width: 170,
       renderCell: (row) => (
-        <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-surface-container px-2.5 py-1 text-xs font-bold text-on-surface">
-          {formatTicketNumber(row.imageCount ?? row.imageURLs?.length ?? 0)}
-        </span>
+        <div className="flex flex-col gap-0.5 py-0.5">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>precision_manufacturing</span>
+            {row.machineName || row.加工設備 || "—"}
+          </span>
+          <span className="text-[11px] font-medium text-outline flex items-center gap-1">
+            <span className="material-symbols-outlined text-outline/60" style={{ fontSize: 13 }}>factory</span>
+            {row.factory || "—"}
+          </span>
+        </div>
       ),
       disableCellWrapper: true,
     },
     {
-      key: "reason",
-      label: "Reason",
-      width: 280,
-      sortable: false,
-      wrap: true,
-      renderCell: (row) => <span className="line-clamp-3 whitespace-normal text-sm leading-6 text-on-surface">{row.reason || "No reason provided."}</span>,
+      key: "fieldLabel",
+      label: "Check Item & Operator Note",
+      width: 320,
+      renderCell: (row) => {
+        const itemTitle = language === "en" ? (row.fieldLabel_en || row.fieldLabel) : (row.fieldLabel_ja || row.fieldLabel);
+        return (
+          <div className="py-1">
+            <p className="font-bold text-on-surface text-sm leading-snug">{itemTitle || "Untitled check item"}</p>
+            {row.reason && (
+              <p className="mt-1 text-xs text-outline line-clamp-1 italic bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-md border border-separator/20">
+                "{row.reason}"
+              </p>
+            )}
+          </div>
+        );
+      },
       disableCellWrapper: true,
     },
-  ]), []);
+    {
+      key: "formName",
+      label: "Checklist Form",
+      width: 200,
+      renderCell: (row) => (
+        <span className="text-xs text-outline font-medium">{language === "en" ? (row.formName_en || row.formName) : (row.formName_ja || row.formName)}</span>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "createdAt",
+      label: "Submitted At",
+      width: 160,
+      renderCell: (row) => <span className="text-xs font-semibold text-on-surface">{formatTicketDateTime(row.createdAt)}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "answerValue",
+      label: "Submitted Value",
+      width: 140,
+      renderCell: (row) => {
+        const isOpt = isOptionalTicket(row);
+        return (
+          <span className={isOpt ? "font-bold text-emerald-600 dark:text-emerald-400" : "font-bold text-red-600 dark:text-red-400"}>
+            {row.answerValue || (isOpt ? "OK" : "NG")}
+          </span>
+        );
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "completedBy",
+      label: "Submitted By",
+      width: 140,
+      renderCell: (row) => <span className="text-xs text-outline">{row.completedBy || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "imageCount",
+      label: "Photos",
+      width: 90,
+      align: "center",
+      renderCell: (row) => {
+        const count = row.imageCount ?? row.imageURLs?.length ?? 0;
+        return count > 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>photo_camera</span>
+            {count}
+          </span>
+        ) : <span className="text-outline/40 text-xs">—</span>;
+      },
+      disableCellWrapper: true,
+    },
+  ]), [language]);
+
+  const [resolvingTicket, setResolvingTicket] = useState(null);
+  const [resolvingBusy, setResolvingBusy] = useState(false);
+
+  const activeFilters = useMemo(
+    () => ({
+      ...filters,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    }),
+    [dateRange.endDate, dateRange.startDate, filters]
+  );
+
+  async function handleUpdateTicketStatus(ticket, nextStatus, resolutionPayload = null) {
+    if (!ticket) return;
+
+    if (!authUser?.username || !authUser?.role) {
+      setActionNotice({ type: "error", message: "Sign in again before updating ticket status." });
+      return;
+    }
+
+    const currentStatus = normalizeTicketStatusValue(ticket.status);
+    const normalizedNextStatus = normalizeTicketStatusValue(nextStatus);
+    if (!normalizedNextStatus || currentStatus === normalizedNextStatus) return;
+
+    if (normalizedNextStatus === "closed" && !resolutionPayload) {
+      setResolvingTicket(ticket);
+      return;
+    }
+
+    const ticketId = ticket?._id ?? ticket?.ticketId;
+    if (!ticketId) {
+      setActionNotice({ type: "error", message: "This ticket is missing its record ID, so the status could not be updated." });
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const fixReason = resolutionPayload?.fixReason || "";
+    const fixImageURLs = resolutionPayload?.fixPhotoUrl ? [resolutionPayload.fixPhotoUrl] : [];
+
+    const historyEntry = {
+      action: normalizedNextStatus === "closed" ? "Ticket Closed" : "Ticket Reopened",
+      fromStatus: currentStatus,
+      toStatus: normalizedNextStatus,
+      timestamp,
+      user: actorName,
+      username: authUser.username,
+      ...(fixReason ? { fixReason } : {}),
+      ...(fixImageURLs.length ? { imageURLs: fixImageURLs } : {}),
+    };
+
+    const update = normalizedNextStatus === "closed"
+      ? {
+        $set: {
+          status: "closed",
+          closedAt: timestamp,
+          closedBy: actorName,
+          closedByUsername: authUser.username,
+          ...(fixReason ? { fixReason } : {}),
+          ...(fixImageURLs.length ? { fixImageURLs } : {}),
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      }
+      : {
+        $set: {
+          status: "open",
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      };
+
+    const ticketKey = getTicketKey(ticket);
+    setStatusAction({ nextStatus: normalizedNextStatus, ticketKey });
+    setError("");
+
+    try {
+      await updateNgTicketRecord({
+        ticketId,
+        update,
+        username: authUser.username,
+        role: authUser.role,
+      });
+
+      const optimisticTicket = {
+        ...ticket,
+        closedAt: normalizedNextStatus === "closed" ? timestamp : ticket.closedAt,
+        closedBy: normalizedNextStatus === "closed" ? actorName : ticket.closedBy,
+        closedByUsername: normalizedNextStatus === "closed" ? authUser.username : ticket.closedByUsername,
+        ...(fixReason ? { fixReason } : {}),
+        ...(fixImageURLs.length ? { fixImageURLs } : {}),
+        status: normalizedNextStatus,
+        statusHistory: [
+          ...(Array.isArray(ticket.statusHistory) ? ticket.statusHistory : []),
+          historyEntry,
+        ],
+      };
+
+      setRows((current) => current.map((row) => (getTicketKey(row) === ticketKey ? optimisticTicket : row)));
+      setSelectedTicket((current) => (
+        current && getTicketKey(current) === ticketKey
+          ? optimisticTicket
+          : current
+      ));
+      setRefreshNonce((current) => current + 1);
+      setActionNotice({
+        type: "success",
+        message: normalizedNextStatus === "closed"
+          ? "Ticket closed. Resolution details were recorded."
+          : "Ticket reopened. History was recorded.",
+      });
+    } catch (updateError) {
+      setActionNotice({
+        type: "error",
+        message: updateError.message || "Failed to update the ticket status.",
+      });
+    } finally {
+      setStatusAction(null);
+    }
+  }
+
+  async function handleConfirmResolveTicket({ fixReason, fixPhotoBase64 }) {
+    if (!resolvingTicket) return;
+    setResolvingBusy(true);
+    try {
+      let fixPhotoUrl = "";
+      if (fixPhotoBase64) {
+        const uploadRes = await uploadMaintenanceImage({
+          base64: fixPhotoBase64,
+          factoryName: resolvingTicket.factory || "",
+          equipmentName: resolvingTicket.machineName || resolvingTicket.加工設備 || "",
+          username: authUser?.username || "admin",
+        });
+        fixPhotoUrl = uploadRes?.url || uploadRes?.imageURL || "";
+      }
+
+      const ticketToClose = resolvingTicket;
+      setResolvingTicket(null);
+      await handleUpdateTicketStatus(ticketToClose, "closed", { fixReason, fixPhotoUrl });
+    } catch (err) {
+      setActionNotice({ type: "error", message: err.message || (isJa ? "処置写真のアップロードまたはチケットの完了に失敗しました。" : "Failed to upload fix photo or close ticket.") });
+    } finally {
+      setResolvingBusy(false);
+    }
+  }
+
+
 
   const rangeLabel = useMemo(
     () => formatDateRangeLabel(dateRange.startDate, dateRange.endDate),
     [dateRange.endDate, dateRange.startDate]
   );
 
-  const scopeLabel = `${formatTicketNumber(pagination.totalItems || summary.totalTickets)} matching tickets`;
+  const scopeLabel = isJa
+    ? `${formatTicketNumber(pagination.totalItems || summary.totalTickets)} 件のチケット`
+    : `${formatTicketNumber(pagination.totalItems || summary.totalTickets)} matching tickets`;
   const paginationLabel = `${formatTicketNumber(summary.recordCount)} checklist records • ${pageSize} per page • server pagination`;
 
   function markPresetDirty() {
@@ -1219,7 +1791,7 @@ export default function TicketSubmissionsPage() {
   }
 
   function handleResetBasicFilters() {
-    setFilters({ keyword: "", factory: "", status: "" });
+    setFilters({ keyword: "", factory: "", machine: "", status: "" });
     setDateRange(createDefaultDateRange());
     markPresetDirty();
     setPage(1);
@@ -1232,7 +1804,7 @@ export default function TicketSubmissionsPage() {
     if (editingPresetId) {
       const duplicatePreset = savedPresets.find((preset) => preset.id !== editingPresetId && preset.name.trim().toLowerCase() === trimmedName.toLowerCase());
       if (duplicatePreset) {
-        setActionNotice({ type: "error", message: "A preset with that name already exists." });
+        setActionNotice({ type: "error", message: isJa ? "同名のプリセットが既に存在します。" : "A preset with that name already exists." });
         return;
       }
 
@@ -1244,7 +1816,7 @@ export default function TicketSubmissionsPage() {
       setPresetName(trimmedName);
       setActivePresetId(editingPresetId === activePresetId ? editingPresetId : activePresetId);
       setEditingPresetId("");
-      setActionNotice({ type: "success", message: "Saved preset renamed." });
+      setActionNotice({ type: "success", message: isJa ? "プリセット名を変更しました。" : "Saved preset renamed." });
       return;
     }
 
@@ -1272,7 +1844,7 @@ export default function TicketSubmissionsPage() {
 
     setPresetName(trimmedName);
     setActivePresetId(nextActivePresetId);
-    setActionNotice({ type: "success", message: "Current ticket view saved." });
+    setActionNotice({ type: "success", message: isJa ? "現在のチケット表示条件を保存しました。" : "Current ticket view saved." });
   }
 
   function handleApplyPreset(preset) {
@@ -1342,6 +1914,7 @@ export default function TicketSubmissionsPage() {
           : {
             keyword: deferredKeyword,
             factory: filters.factory,
+            machine: filters.machine,
             status: filters.status,
             startDate: dateRange.startDate,
             endDate: dateRange.endDate,
@@ -1351,7 +1924,7 @@ export default function TicketSubmissionsPage() {
       });
 
       if (!Array.isArray(exportRows) || exportRows.length === 0) {
-        setActionNotice({ type: "warning", message: "No tickets matched the selected export scope." });
+        setActionNotice({ type: "warning", message: isJa ? "出力対象のチケットが見つかりませんでした。" : "No tickets matched the selected export scope." });
         return;
       }
 
@@ -1359,11 +1932,11 @@ export default function TicketSubmissionsPage() {
       setActionNotice({
         type: "success",
         message: scope === "all"
-          ? "All submitted ticket data exported."
-          : "Filtered ticket data exported.",
+          ? (isJa ? "すべてのチケットデータを出力しました。" : "All submitted ticket data exported.")
+          : (isJa ? "絞り込み済みチケットデータを出力しました。" : "Filtered ticket data exported."),
       });
     } catch (loadError) {
-      setError(loadError.message || "Failed to export submitted tickets.");
+      setError(loadError.message || (isJa ? "チケットのエクスポートに失敗しました。" : "Failed to export submitted tickets."));
     } finally {
       setExporting(false);
     }
@@ -1388,11 +1961,11 @@ export default function TicketSubmissionsPage() {
 
     try {
       await copyTextToClipboard(shareUrl);
-      setShareButtonLabel("Link Copied");
-      setActionNotice({ type: "success", message: "Share link copied with the current ticket view." });
-      window.setTimeout(() => setShareButtonLabel("Copy Share Link"), 2200);
+      setShareButtonLabel(isJa ? "リンクをコピーしました" : "Link Copied");
+      setActionNotice({ type: "success", message: isJa ? "現在のチケット表示リンクをクリップボードにコピーしました。" : "Share link copied with the current ticket view." });
+      window.setTimeout(() => setShareButtonLabel(isJa ? "共有リンクをコピー" : "Copy Share Link"), 2200);
     } catch {
-      setActionNotice({ type: "error", message: "Could not copy the share link." });
+      setActionNotice({ type: "error", message: isJa ? "共有リンクのコピーに失敗しました。" : "Could not copy the share link." });
     }
   }
 
@@ -1412,141 +1985,74 @@ export default function TicketSubmissionsPage() {
     });
   }
 
-  async function handleUpdateTicketStatus(ticket, nextStatus) {
-    if (!ticket) return;
-
-    if (!authUser?.username || !authUser?.role) {
-      setActionNotice({ type: "error", message: "Sign in again before updating ticket status." });
-      return;
-    }
-
-    const currentStatus = normalizeTicketStatusValue(ticket.status);
-    const normalizedNextStatus = normalizeTicketStatusValue(nextStatus);
-    if (!normalizedNextStatus || currentStatus === normalizedNextStatus) return;
-
-    const ticketId = ticket?._id ?? ticket?.ticketId;
-    if (!ticketId) {
-      setActionNotice({ type: "error", message: "This ticket is missing its record ID, so the status could not be updated." });
-      return;
-    }
-
-    const timestamp = new Date().toISOString();
-    const historyEntry = {
-      action: normalizedNextStatus === "closed" ? "Ticket Closed" : "Ticket Reopened",
-      fromStatus: currentStatus,
-      toStatus: normalizedNextStatus,
-      timestamp,
-      user: actorName,
-      username: authUser.username,
-    };
-
-    const update = normalizedNextStatus === "closed"
-      ? {
-        $set: {
-          status: "closed",
-          closedAt: timestamp,
-          closedBy: actorName,
-          closedByUsername: authUser.username,
-        },
-        $push: {
-          statusHistory: historyEntry,
-        },
-      }
-      : {
-        $set: {
-          status: "open",
-        },
-        $push: {
-          statusHistory: historyEntry,
-        },
-      };
-
-    const ticketKey = getTicketKey(ticket);
-    setStatusAction({ nextStatus: normalizedNextStatus, ticketKey });
-    setError("");
-
-    try {
-      await updateNgTicketRecord({
-        ticketId,
-        update,
-        username: authUser.username,
-        role: authUser.role,
-      });
-
-      const optimisticTicket = {
-        ...ticket,
-        closedAt: normalizedNextStatus === "closed" ? timestamp : ticket.closedAt,
-        closedBy: normalizedNextStatus === "closed" ? actorName : ticket.closedBy,
-        closedByUsername: normalizedNextStatus === "closed" ? authUser.username : ticket.closedByUsername,
-        status: normalizedNextStatus,
-        statusHistory: [
-          ...(Array.isArray(ticket.statusHistory) ? ticket.statusHistory : []),
-          historyEntry,
-        ],
-      };
-
-      setRows((current) => current.map((row) => (getTicketKey(row) === ticketKey ? optimisticTicket : row)));
-      setSelectedTicket((current) => (
-        current && getTicketKey(current) === ticketKey
-          ? optimisticTicket
-          : current
-      ));
-      setRefreshNonce((current) => current + 1);
-      setActionNotice({
-        type: "success",
-        message: normalizedNextStatus === "closed"
-          ? "Ticket closed. Closure history was recorded."
-          : "Ticket reopened. History was recorded.",
-      });
-    } catch (updateError) {
-      setActionNotice({
-        type: "error",
-        message: updateError.message || "Failed to update the ticket status.",
-      });
-    } finally {
-      setStatusAction(null);
-    }
-  }
-
   return (
-    <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
-        eyebrow="メンテナンス"
+        eyebrow={t("maintenanceEyebrow") || (isJa ? "点検" : "Maintenance")}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("submittedTickets")}
-        subtitle="Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage."
-        subtitleClassName="max-w-3xl leading-6 text-outline"
-        className="mb-8"
+        subtitle={isJa ? "設備点検で発生したNGチケット・申し送り事項の確認と対応管理を行います。" : "Review and manage equipment inspection NG tickets."}
+        subtitleClassName="max-w-3xl leading-6 text-[var(--text-muted)]"
+        className="mb-6"
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/maintenance/submissions")}
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>table_chart</span>
+              {isJa ? "点検提出履歴" : "Checklist Submissions"}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/maintenance")}
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>checklist</span>
+              {isJa ? "点検フォーム管理" : "Checklist Forms"}
+            </button>
+            <button
+              type="button"
+              onClick={() => runTicketExport("filtered")}
+              disabled={loading || exporting}
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>download</span>
+              {exporting ? (isJa ? "出力中…" : "Exporting...") : (t("exportCsv") || "Export CSV")}
+            </button>
+          </div>
+        )}
       />
 
       <ActionNoticeBanner notice={actionNotice} onClose={() => setActionNotice(null)} />
 
-      <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label="Submitted Tickets"
+          label={isJa ? "点検不具合・NG総数" : "Total Defects / Tickets"}
           value={formatTicketNumber(summary.totalTickets)}
-          subtitle="Matching the current filters"
-          icon="confirmation_number"
+          subtitle={isJa ? "現在のフィルター条件に一致" : "Matching current filters"}
+          icon="report_problem"
           accent="bg-primary/10 text-primary"
         />
         <SummaryCard
-          label="Checklist Records"
+          label={isJa ? "関連点検記録数" : "Checklist Records"}
           value={formatTicketNumber(summary.recordCount)}
-          subtitle="Unique submissions referenced by the current result set"
+          subtitle={isJa ? "参照された点検提出データ" : "Unique submissions referenced"}
           icon="fact_check"
           accent="bg-tertiary/10 text-tertiary"
         />
         <SummaryCard
-          label="Machines Impacted"
+          label={isJa ? "対象設備数" : "Machines Impacted"}
           value={formatTicketNumber(summary.machineCount)}
-          subtitle="Distinct machines represented by the filtered tickets"
+          subtitle={isJa ? "関連する設備" : "Distinct machines represented"}
           icon="precision_manufacturing"
           accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
         />
         <SummaryCard
-          label="With Image Evidence"
+          label={isJa ? "写真付きチケット" : "With Image Evidence"}
           value={formatTicketNumber(summary.imageTickets)}
-          subtitle="Tickets that include attached images"
+          subtitle="Tickets with attached defect photos"
           icon="photo_library"
           accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
         />
@@ -1556,19 +2062,21 @@ export default function TicketSubmissionsPage() {
         <TicketSubmissionsFilterPanel
           keyword={filters.keyword}
           factory={filters.factory}
+          machine={filters.machine}
           status={filters.status}
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
           rangeLabel={rangeLabel}
           scopeLabel={scopeLabel}
-          paginationLabel={paginationLabel}
           appliedAdvancedFilterCount={appliedAdvancedFilters.length}
           factoryOptions={filterOptions.factories}
+          machineOptions={filterOptions.machineNames}
           statusOptions={statusOptions}
           fieldDefinitions={advancedFieldDefinitions}
           advancedRows={advancedRows}
           onKeywordChange={(value) => updateFilter("keyword", value)}
           onFactoryChange={(value) => updateFilter("factory", value)}
+          onMachineChange={(value) => updateFilter("machine", value)}
           onStatusChange={(value) => updateFilter("status", value)}
           onDateChange={handleDateChange}
           onResetBasicFilters={handleResetBasicFilters}
@@ -1580,30 +2088,6 @@ export default function TicketSubmissionsPage() {
           })}
           onApplyAdvancedFilters={handleApplyAdvancedFilters}
           onClearAdvancedFilters={handleClearAdvancedFilters}
-        />
-      </div>
-
-      <div className="mb-6 grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <SavedPresetManagerCard
-          activePresetId={activePresetId}
-          draftName={presetName}
-          editingPresetId={editingPresetId}
-          presets={savedPresets}
-          onDraftNameChange={setPresetName}
-          onSave={handleSavePreset}
-          onApply={handleApplyPreset}
-          onRename={handleStartRenamePreset}
-          onCancelEdit={handleCancelPresetEdit}
-          onDelete={handleDeletePreset}
-        />
-
-        <ExportTicketResultsCard
-          filteredCount={pagination.totalItems || summary.totalTickets}
-          disabled={loading || exporting}
-          exporting={exporting}
-          onCopyShareLink={handleCopyShareLink}
-          onExport={handleOpenExportDialog}
-          shareButtonLabel={shareButtonLabel}
         />
       </div>
 
@@ -1639,11 +2123,11 @@ export default function TicketSubmissionsPage() {
         stickyHeader
         stickyHeaderOffset={0}
         tableClassName="ui-table-data min-w-full border-separate border-spacing-0"
-        className="glass-card mb-8 overflow-hidden rounded-[28px]"
-        topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-        rowsSelectClassName="h-10 rounded-2xl border border-separator/50 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+        className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] mb-6 shadow-sm"
+        topBarClassName="flex flex-col gap-4 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between bg-[var(--surface)]"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between bg-[var(--surface)]"
+        rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
+        rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
       />
 
       {selectedTicket && createPortal(
@@ -1667,6 +2151,16 @@ export default function TicketSubmissionsPage() {
         />,
         document.body
       )}
-    </section>
+
+      {resolvingTicket && createPortal(
+        <ResolveTicketModal
+          ticket={resolvingTicket}
+          busy={resolvingBusy}
+          onClose={() => setResolvingTicket(null)}
+          onConfirm={handleConfirmResolveTicket}
+        />,
+        document.body
+      )}
+    </div>
   );
 }

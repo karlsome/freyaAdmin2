@@ -13,7 +13,7 @@ const LOCAL_URL = "http://localhost:3000/";
 const ENV_URL = import.meta.env.VITE_API_URL?.trim();
 
 // Local dev falls back to localhost. Hosted builds must provide VITE_API_URL.
-const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
+export const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const _cache = new Map();
@@ -103,6 +103,16 @@ export async function query(dbName, collectionName, q = {}, { sort, limit, proje
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ dbName, collectionName, query: q, sort, limit, projection, aggregation }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+export async function fetchCustomFields(dbName, collectionName) {
+  const res = await fetch(BASE_URL + "schema/custom-fields", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dbName, collectionName }),
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json();
@@ -212,8 +222,31 @@ export async function permanentDeleteEquipmentHistory({ recordId, username, role
   return deleteMasterRecord({ recordId, username, role, tabKey: "equipmentHistoryDB" });
 }
 
-export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
+export async function uploadEquipmentEventImage({ file, base64, factoryName, equipmentName, username }) {
+  if (file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('factoryName', factoryName || "");
+    formData.append('equipmentName', equipmentName || "");
+    formData.append('username', username || "");
+
+    const res = await fetch(BASE_URL + "api/upload-equipment-event-file", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
   return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
+}
+
+export async function deleteEquipmentEventImage(imageURL) {
+  return _postJson("api/delete-equipment-event-image", { imageURL });
+}
+
+export async function translateTextApi(text, langpair = "en|ja") {
+  const res = await _postJson("api/translate", { text, langpair });
+  return res.translatedText;
 }
 
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
@@ -224,27 +257,76 @@ export async function fetchProductionData(factoryName, date) {
   const cached = _getCached(key, SENSOR_TTL);
   if (cached) return cached;
 
-  const settled = await Promise.allSettled(
-    PROCESS_COLLECTIONS.map((col) =>
-      query("submittedDB", col, { 工場: factoryName, Date: date }, { sort: { Time_start: -1 } })
-    )
-  );
-
-  const records = settled.flatMap((r, i) =>
-    r.status === "fulfilled" ? r.value.map((row) => ({ ...row, _source: PROCESS_COLLECTIONS[i] })) : []
-  );
-
-  let total = 0, totalNG = 0;
-  records.forEach((r) => {
-    total   += Number(r.Total)    || 0;
-    totalNG += Number(r.Total_NG) || 0;
-  });
-  const defectRate = total > 0 ? Math.round((totalNG / total) * 10000) / 100 : 0;
-
-  const data = { records, total, totalNG, defectRate };
-  _setCache(key, data);
-  return data;
+  try {
+    const data = await _getJson(`api/factory/production/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    _setCache(key, data);
+    return data;
+  } catch {
+    return { records: [], total: 0, totalNG: 0, defectRate: 0 };
+  }
 }
+
+// ─── First Factory (PSA Process) Production Data ─────────────────────────────
+export async function fetchFirstFactoryProduction(date) {
+  const key = `firstFactoryProd_${date}`;
+  const cached = _getCached(key, SENSOR_TTL);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`${BASE_URL}api/production/status?date=${encodeURIComponent(date)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.records)) {
+        _setCache(key, json.records);
+        return json.records;
+      }
+    }
+  } catch {
+    // fallback to universal query
+  }
+
+  try {
+    const data = await query("submittedDB", "firstFactoryProduction", { date });
+    const records = Array.isArray(data) ? data : (data?.records || data?.data || []);
+    _setCache(key, records);
+    return records;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFirstFactoryProductionByPeriod(from, to, partNumbers = [], filters = {}) {
+  const queryObj = {};
+  if (from && to && from === to) {
+    queryObj.date = from;
+  } else if (from && to) {
+    queryObj.date = { $gte: from, $lte: to };
+  } else if (from) {
+    queryObj.date = { $gte: from };
+  } else if (to) {
+    queryObj.date = { $lte: to };
+  }
+
+  if (Array.isArray(partNumbers) && partNumbers.length > 0) {
+    queryObj.hinban = { $in: partNumbers };
+  }
+
+  if (filters?.machine) queryObj.machine = filters.machine;
+  if (filters?.worker) queryObj.worker = filters.worker;
+  if (filters?.status) queryObj.status = filters.status;
+
+  try {
+    const data = await query("submittedDB", "firstFactoryProduction", queryObj, {
+      sort: { date: -1, startEpoch: -1, createdAt: -1 },
+      limit: 3000,
+    });
+    return Array.isArray(data) ? data : (data?.records || data?.data || []);
+  } catch (err) {
+    console.error("fetchFirstFactoryProductionByPeriod error:", err);
+    return [];
+  }
+}
+
 
 // ─── Sensor data (tempHumidityDB) ─────────────────────────────────────────────
 export function calcWBGT(temperature, humidity) {
@@ -264,10 +346,11 @@ export function calcWBGT(temperature, humidity) {
   }
 }
 
-function _parseSensorReadings(readings) {
+function _parseSensorReadings(readings, offsets = {}, names = {}) {
   const sensorMap = new Map();
   readings.forEach((r) => {
-    const id = r.device;
+    const id = String(r.device ?? "").trim();
+    if (!id) return;
     const rTime = new Date(`${r.Date} ${r.Time}`);
     const existing = sensorMap.get(id);
     if (!existing || rTime > new Date(`${existing.Date} ${existing.Time}`)) {
@@ -275,14 +358,23 @@ function _parseSensorReadings(readings) {
     }
   });
 
-  const sensors = Array.from(sensorMap.values()).map((r) => ({
-    deviceId:    r.device,
-    temperature: parseFloat(String(r.Temperature ?? "").replace("°C", "").trim()),
-    humidity:    parseFloat(String(r.Humidity    ?? "").replace("%",  "").trim()),
-    status:      r.sensorStatus ?? "OK",
-    lastUpdate:  `${r.Date} ${r.Time}`,
-    factory:     r["工場"],
-  }));
+  const sensors = Array.from(sensorMap.values()).map((r) => {
+    const id = String(r.device ?? "").trim();
+    let rawTemp = parseFloat(String(r.Temperature ?? "").replace("°C", "").trim());
+    if (!isNaN(rawTemp) && offsets[id]) {
+      rawTemp += offsets[id];
+    }
+    const rawHumid = parseFloat(String(r.Humidity ?? "").replace("%", "").trim());
+    return {
+      deviceId:    id,
+      name:        names[id] || null,
+      temperature: Math.round(rawTemp * 100) / 100,
+      humidity:    Math.round(rawHumid * 100) / 100,
+      status:      r.sensorStatus ?? "OK",
+      lastUpdate:  `${r.Date} ${r.Time}`,
+      factory:     r["工場"],
+    };
+  });
 
   const temps  = sensors.map((s) => s.temperature).filter((t) => !isNaN(t));
   const humids = sensors.map((s) => s.humidity).filter((h) => !isNaN(h));
@@ -305,13 +397,35 @@ export async function fetchSensorData(factoryName, date) {
 
   const empty = { sensors: [], highestTemp: null, averageHumidity: null, wbgt: null, sensorCount: 0, hasData: false };
   try {
-    const readings = await query(
-      "submittedDB", "tempHumidityDB",
-      { 工場: factoryName, Date: date },
-      { sort: { Time: -1 }, limit: 200 }
-    );
+    let readings = [];
+    try {
+      readings = await _getJson(`api/factory/sensors/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    } catch {
+      readings = [];
+    }
+    if (!readings?.length) {
+      readings = await query(
+        "submittedDB",
+        "tempHumidityDB",
+        { 工場: factoryName },
+        { sort: { Date: -1, Time: -1 }, limit: 200 }
+      );
+    }
     if (!readings?.length) { _setCache(key, empty); return empty; }
-    const data = _parseSensorReadings(readings);
+
+    const deviceNames = await fetchIoTDeviceNames(factoryName);
+    const offsets = {};
+    const names = {};
+    if (Array.isArray(deviceNames)) {
+      deviceNames.forEach((d) => {
+        const id = String(d?.deviceId ?? "").trim();
+        if (!id) return;
+        if (d.offset) offsets[id] = Number(d.offset);
+        if (d.name) names[id] = String(d.name).trim();
+      });
+    }
+
+    const data = _parseSensorReadings(readings, offsets, names);
     _setCache(key, data);
     return data;
   } catch {
@@ -331,86 +445,30 @@ function buildSensorFactoryNameExpression() {
   };
 }
 
-export async function fetchSensorFactoryOverview(date = new Date().toISOString().split("T")[0]) {
+// Sensor `Date` fields are written in JST (factory-local time). `toISOString()`
+// is UTC, which lags JST by up to 9 hours and misses today's readings between
+// 00:00-09:00 JST — use this instead when matching against sensor data.
+function todayJST() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(new Date());
+}
+
+export async function fetchSensorFactoryOverview(date = todayJST()) {
   const cacheKey = `sensorFactoryOverview:${date}`;
   const cached = _getCached(cacheKey, SENSOR_TTL);
   if (cached) return cached;
 
   return _withInFlight(cacheKey, async () => {
-    const result = await query(
-      "submittedDB",
-      "tempHumidityDB",
-      {},
-      {
-        aggregation: [
-          {
-            $addFields: {
-              factoryName: buildSensorFactoryNameExpression(),
-            },
-          },
-          {
-            $facet: {
-              allFactories: [
-                { $match: { factoryName: { $ne: "" } } },
-                { $group: { _id: "$factoryName" } },
-                { $sort: { _id: 1 } },
-              ],
-              todayByFactory: [
-                { $match: { Date: date, factoryName: { $ne: "" } } },
-                {
-                  $addFields: {
-                    temperatureValue: buildSensorReadingTemperatureExpression(),
-                    humidityValue: buildSensorReadingHumidityExpression(),
-                  },
-                },
-                {
-                  $addFields: {
-                    wbgtValue: buildSensorReadingWBGTExpression(),
-                  },
-                },
-                { $sort: { factoryName: 1, device: 1, Time: -1, _id: -1 } },
-                {
-                  $group: {
-                    _id: {
-                      device: "$device",
-                      factory: "$factoryName",
-                    },
-                    latest: { $first: "$$ROOT" },
-                  },
-                },
-                {
-                  $group: {
-                    _id: "$_id.factory",
-                    highestTemp: { $max: "$latest.temperatureValue" },
-                    averageHumidity: { $avg: "$latest.humidityValue" },
-                    sensorCount: { $sum: 1 },
-                    wbgt: { $max: "$latest.wbgtValue" },
-                    deviceLatest: {
-                      $push: {
-                        date: "$latest.Date",
-                        time: "$latest.Time",
-                      },
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    averageHumidity: { $round: ["$averageHumidity", 1] },
-                    factory: "$_id",
-                    highestTemp: { $round: ["$highestTemp", 1] },
-                    sensorCount: 1,
-                    wbgt: { $round: ["$wbgt", 1] },
-                    deviceLatest: 1,
-                  },
-                },
-                { $sort: { factory: 1 } },
-              ],
-            },
-          },
-        ],
-      }
-    );
+    let offsets = {};
+    try {
+      const iotNames = await fetchIoTDeviceNames();
+      offsets = Object.fromEntries(
+        (Array.isArray(iotNames) ? iotNames : []).map(d => [d.deviceId, d.offset]).filter(([_, offset]) => offset)
+      );
+    } catch {
+      // ignore
+    }
+
+    const result = await _postJson("api/factory/sensors/overview", { date, offsets });
 
     const payload = extractAggregationResultDocument(result);
     const knownFactories = mapAggregationFacetValues(payload?.allFactories);
@@ -490,215 +548,32 @@ export async function fetchHistoricalSensorData(factoryName, startDate, endDate)
   }
 }
 
-function buildSensorReadingTemperatureExpression() {
-  return {
-    $convert: {
-      input: {
-        $trim: {
-          input: {
-            $replaceAll: {
-              input: { $toString: { $ifNull: ["$Temperature", ""] } },
-              find: "°C",
-              replacement: "",
-            },
-          },
-        },
-      },
-      to: "double",
-      onError: null,
-      onNull: null,
-    },
-  };
-}
-
-function buildSensorReadingHumidityExpression() {
-  return {
-    $convert: {
-      input: {
-        $trim: {
-          input: {
-            $replaceAll: {
-              input: { $toString: { $ifNull: ["$Humidity", ""] } },
-              find: "%",
-              replacement: "",
-            },
-          },
-        },
-      },
-      to: "double",
-      onError: null,
-      onNull: null,
-    },
-  };
-}
-
-function buildSensorReadingWBGTExpression() {
-  const temperature = "$temperatureValue";
-  const humidity = "$humidityValue";
-
-  const wetBulbTemperature = {
-    $subtract: [
-      {
-        $add: [
-          {
-            $multiply: [
-              temperature,
-              {
-                $atan: {
-                  $multiply: [
-                    0.151977,
-                    {
-                      $sqrt: {
-                        $add: [humidity, 8.313659],
-                      },
-                    },
-                  ],
-                },
-              },
-            ],
-          },
-          { $atan: { $add: [temperature, humidity] } },
-          {
-            $multiply: [
-              0.00391838,
-              { $pow: [humidity, 1.5] },
-              { $atan: { $multiply: [0.023101, humidity] } },
-            ],
-          },
-        ],
-      },
-      {
-        $add: [
-          { $atan: { $subtract: [humidity, 1.676331] } },
-          4.686035,
-        ],
-      },
-    ],
-  };
-
-  return {
-    $cond: [
-      {
-        $and: [
-          { $ne: [temperature, null] },
-          { $ne: [humidity, null] },
-          { $gte: [temperature, -50] },
-          { $lte: [temperature, 60] },
-          { $gte: [humidity, 0] },
-          { $lte: [humidity, 100] },
-        ],
-      },
-      {
-        $round: [
-          {
-            $add: [
-              { $multiply: [0.7, wetBulbTemperature] },
-              { $multiply: [0.3, temperature] },
-            ],
-          },
-          1,
-        ],
-      },
-      null,
-    ],
-  };
-}
-
-function buildSensorReadingBaseMatch({ factoryName, startDate, endDate }) {
-  const match = {};
-
-  if (factoryName) {
-    match["工場"] = factoryName;
-  }
-
-  if (startDate || endDate) {
-    const dateMatch = {};
-    if (startDate) dateMatch.$gte = startDate;
-    if (endDate) dateMatch.$lte = endDate;
-    match.Date = dateMatch;
-  }
-
-  return match;
-}
-
-function buildSensorReadingDeviceMatch(deviceId = "all") {
-  if (!deviceId || deviceId === "all") return null;
-  return { device: deviceId };
-}
-
-function buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }) {
-  return [
-    { $match: buildSensorReadingBaseMatch({ factoryName, startDate, endDate }) },
-    {
-      $addFields: {
-        temperatureValue: buildSensorReadingTemperatureExpression(),
-        humidityValue: buildSensorReadingHumidityExpression(),
-      },
-    },
-    {
-      $addFields: {
-        wbgtValue: buildSensorReadingWBGTExpression(),
-      },
-    },
-  ];
-}
-
-function buildSensorReadingSortStage(sortKey) {
-  if (sortKey === "date_asc") return { Date: 1, Time: 1, _id: 1 };
-  if (sortKey === "temp_desc") return { temperatureValue: -1, Date: -1, Time: -1, _id: -1 };
-  if (sortKey === "temp_asc") return { temperatureValue: 1, Date: -1, Time: -1, _id: -1 };
-  return { Date: -1, Time: -1, _id: -1 };
-}
-
 export async function fetchHistoricalSensorReadingsPage({
   factoryName,
   startDate,
   endDate,
+  years,
   deviceId = "all",
   sortKey = "date_desc",
   page = 1,
   limit = 15,
+  offsets = {},
 } = {}) {
   const safeLimit = Math.max(1, Number(limit) || 15);
   const safePage = Math.max(1, Number(page) || 1);
   const skip = (safePage - 1) * safeLimit;
-  const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
 
-  const result = await query(
-    "submittedDB",
-    "tempHumidityDB",
-    {},
-    {
-      aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }),
-        ...(deviceMatch ? [{ $match: deviceMatch }] : []),
-        {
-          $facet: {
-            data: [
-              { $sort: buildSensorReadingSortStage(sortKey) },
-              { $skip: skip },
-              { $limit: safeLimit },
-              {
-                $project: {
-                  _id: 1,
-                  Date: 1,
-                  Time: 1,
-                  device: 1,
-                  Temperature: 1,
-                  Humidity: 1,
-                  sensorStatus: 1,
-                  工場: 1,
-                },
-              },
-            ],
-            totalCount: [
-              { $count: "count" },
-            ],
-          },
-        },
-      ],
-    }
-  );
+  const result = await _postJson("api/factory/sensors/historical", {
+    factoryName,
+    startDate,
+    endDate,
+    years,
+    deviceId,
+    sortKey,
+    skip,
+    limit: safeLimit,
+    offsets
+  });
 
   const payload = extractAggregationResultDocument(result);
   const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
@@ -709,10 +584,12 @@ export async function fetchHistoricalSensorReadingsPage({
       factoryName,
       startDate,
       endDate,
+      years,
       deviceId,
       sortKey,
       page: totalPages,
       limit: safeLimit,
+      offsets,
     });
   }
 
@@ -731,117 +608,23 @@ export async function fetchHistoricalSensorOverview({
   factoryName,
   startDate,
   endDate,
+  years,
   deviceId = "all",
+  offsets = {},
 } = {}) {
-  const cacheKey = `sensorOverview:${factoryName}:${startDate}:${endDate}:${deviceId}`;
+  const cacheKey = `sensorOverview:${factoryName}:${startDate}:${endDate}:${years?.join(",")}:${deviceId}:${JSON.stringify(offsets)}`;
   const cached = _getCached(cacheKey, SENSOR_TTL);
   if (cached) return cached;
 
   return _withInFlight(cacheKey, async () => {
-    const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
-
-    const result = await query(
-      "submittedDB",
-      "tempHumidityDB",
-      {},
-      {
-        aggregation: [
-          ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }),
-          {
-            $facet: {
-              deviceOptions: [
-                { $match: { device: { $ne: "" } } },
-                { $group: { _id: "$device" } },
-                { $sort: { _id: 1 } },
-              ],
-              summary: [
-                ...(deviceMatch ? [{ $match: deviceMatch }] : []),
-                {
-                  $group: {
-                    _id: null,
-                    totalReadings: { $sum: 1 },
-                    avgTemp: { $avg: "$temperatureValue" },
-                    peakTemp: { $max: "$temperatureValue" },
-                    minTemp: { $min: "$temperatureValue" },
-                    avgHumid: { $avg: "$humidityValue" },
-                    heatAlerts: {
-                      $sum: {
-                        $cond: [
-                          { $gt: ["$wbgtValue", 28] },
-                          1,
-                          0,
-                        ],
-                      },
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    totalReadings: 1,
-                    avgTemp: { $round: ["$avgTemp", 1] },
-                    peakTemp: { $round: ["$peakTemp", 1] },
-                    minTemp: { $round: ["$minTemp", 1] },
-                    avgHumid: { $round: ["$avgHumid", 1] },
-                    heatAlerts: 1,
-                  },
-                },
-              ],
-              trends: [
-                { $match: { device: { $ne: "" }, ...(deviceMatch || {}) } },
-                {
-                  $group: {
-                    _id: {
-                      device: "$device",
-                      date: "$Date",
-                    },
-                    avgTemperature: { $avg: "$temperatureValue" },
-                    avgHumidity: { $avg: "$humidityValue" },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    device: "$_id.device",
-                    Date: "$_id.date",
-                    Temperature: { $round: ["$avgTemperature", 1] },
-                    Humidity: { $round: ["$avgHumidity", 1] },
-                  },
-                },
-                { $sort: { Date: 1, device: 1 } },
-              ],
-              latestDevices: [
-                { $match: { device: { $ne: "" }, ...(deviceMatch || {}) } },
-                { $sort: { device: 1, Date: -1, Time: -1, _id: -1 } },
-                {
-                  $group: {
-                    _id: "$device",
-                    latest: { $first: "$$ROOT" },
-                    readingCount: { $sum: 1 },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    deviceId: "$_id",
-                    readingCount: 1,
-                    latest: {
-                      Date: "$latest.Date",
-                      Time: "$latest.Time",
-                      Temperature: "$latest.Temperature",
-                      Humidity: "$latest.Humidity",
-                      sensorStatus: "$latest.sensorStatus",
-                      factory: "$latest.工場",
-                    },
-                  },
-                },
-                { $sort: { "latest.Date": -1, "latest.Time": -1, deviceId: 1 } },
-              ],
-            },
-          },
-        ],
-      }
-    );
+    const result = await _postJson("api/factory/sensors/historical/overview", {
+      factoryName,
+      startDate,
+      endDate,
+      years,
+      deviceId,
+      offsets
+    });
 
     const payload = extractAggregationResultDocument(result);
     const summary = payload?.summary?.[0] ?? {};
@@ -868,33 +651,16 @@ export async function fetchHistoricalSensorExport({
   endDate,
   deviceId = "all",
   sortKey = "date_desc",
+  offsets = {},
 } = {}) {
-  const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
-
-  const result = await query(
-    "submittedDB",
-    "tempHumidityDB",
-    {},
-    {
-      aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }),
-        ...(deviceMatch ? [{ $match: deviceMatch }] : []),
-        { $sort: buildSensorReadingSortStage(sortKey) },
-        {
-          $project: {
-            _id: 1,
-            Date: 1,
-            Time: 1,
-            device: 1,
-            Temperature: 1,
-            Humidity: 1,
-            sensorStatus: 1,
-            工場: 1,
-          },
-        },
-      ],
-    }
-  );
+  const result = await _postJson("api/factory/sensors/historical/export", {
+    factoryName,
+    startDate,
+    endDate,
+    deviceId,
+    sortKey,
+    offsets
+  });
 
   return Array.isArray(result) ? result : [];
 }
@@ -934,6 +700,7 @@ export async function fetchAllIoTDevicesWithUsers() {
             createdAt: 1,
             updatedAt: 1,
             username: 1,
+            offset: 1,
             "registeredBy.firstName": 1,
             "registeredBy.lastName": 1,
             "registeredBy.email": 1,
@@ -947,8 +714,8 @@ export async function fetchAllIoTDevicesWithUsers() {
   return Array.isArray(result) ? result : [];
 }
 
-export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username }) {
-  return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username });
+export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username, offset }) {
+  return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username, offset });
 }
 
 export async function uploadIoTDeviceImage({ base64, deviceId, factoryName, username }) {
@@ -1086,12 +853,29 @@ function _toDistinctSortedStrings(values = []) {
  * collections, scoped to the given factory.
  */
 export async function fetchDistinctValues(factory, field) {
-  if (field === "モデル") {
+  if (["モデル", "品番", "背番号"].includes(field)) {
     const rows = await query("Sasaki_Coating_MasterDB", "masterDB", {}, {
-      projection: { モデル: 1, _id: 0 },
+      projection: { [field]: 1, _id: 0 },
       limit: 10000,
     });
-    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.モデル) : []);
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.[field]) : []);
+  }
+
+  if (field === "Worker_Name") {
+    const rows = await query("Sasaki_Coating_MasterDB", "workerDB", {}, {
+      projection: { Name: 1, _id: 0 },
+      limit: 10000,
+    });
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.Name) : []);
+  }
+
+  if (field === "設備") {
+    const factoryQuery = _hasFactoryScope(factory) ? { 工場: factory } : {};
+    const rows = await query("Sasaki_Coating_MasterDB", "setsubiDB", factoryQuery, {
+      projection: { name: 1, _id: 0 },
+      limit: 10000,
+    });
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.name) : []);
   }
 
   const proj = { [field]: 1, _id: 0 };
@@ -1117,7 +901,7 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
 
   const groupedClauses = new Map();
 
-  for (const { field, operator, value } of advancedFilters) {
+  for (const { field, operator, value, type } of advancedFilters) {
     const isEmptyArray = Array.isArray(value) && value.length === 0;
     if (!field || !operator || value === "" || value === undefined || isEmptyArray) continue;
 
@@ -1147,32 +931,38 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
       continue;
     }
 
-    const coerced = _NUMBER_FIELDS.has(field) ? Number(value) : value;
+    let targetField = field;
+    if (field === "初回生産品") targetField = "非不良廃棄_詳細.初回生産品";
+    else if (field === "終物") targetField = "非不良廃棄_詳細.終物";
+    else if (field === "サンプル") targetField = "非不良廃棄_詳細.サンプル";
+    else if (field === "調整用") targetField = "非不良廃棄_詳細.調整用";
+
+    const coerced = (_NUMBER_FIELDS.has(field) || type === "number") ? Number(value) : value;
     let clause = null;
 
     switch (operator) {
       case "equals":
-        clause = { [field]: coerced };
+        clause = { [targetField]: coerced };
         break;
       case "in": {
         const values = Array.isArray(value)
-          ? value.map((item) => (_NUMBER_FIELDS.has(field) ? Number(item) : item)).filter((item) => item !== "" && item !== undefined)
+          ? value.map((item) => ((_NUMBER_FIELDS.has(field) || type === "number") ? Number(item) : item)).filter((item) => item !== "" && item !== undefined)
           : String(value || "")
               .split(",")
               .map((item) => item.trim())
               .filter(Boolean)
-              .map((item) => (_NUMBER_FIELDS.has(field) ? Number(item) : item));
-        clause = values.length ? { [field]: { $in: values } } : null;
+              .map((item) => ((_NUMBER_FIELDS.has(field) || type === "number") ? Number(item) : item));
+        clause = values.length ? { [targetField]: { $in: values } } : null;
         break;
       }
       case "contains":
-        clause = { [field]: { $regex: value, $options: "i" } };
+        clause = { [targetField]: { $regex: value, $options: "i" } };
         break;
       case "greater_than":
-        clause = { [field]: { $gt: coerced } };
+        clause = { [targetField]: { $gt: coerced } };
         break;
       case "less_than":
-        clause = { [field]: { $lt: coerced } };
+        clause = { [targetField]: { $lt: coerced } };
         break;
       default:
         break;
@@ -1197,15 +987,18 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
 
 async function _fetchRange(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
   const queries = await Promise.all(PROCESSES.map(() => _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters)));
-  const settled = await Promise.allSettled(
-    PROCESSES.map((p, index) =>
-      query("submittedDB", p.collection, queries[index])
-    )
-  );
-  return PROCESSES.reduce((acc, p, i) => {
-    acc[p.name] = settled[i].status === "fulfilled" ? settled[i].value : [];
-    return acc;
-  }, {});
+  
+  const response = await fetch(BASE_URL + "api/factory/production-period", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ queries })
+  });
+  
+  if (!response.ok) {
+    throw new Error("Failed to fetch production period");
+  }
+  
+  return await response.json();
 }
 
 function _fmtDate(d) { return d.toISOString().split("T")[0]; }
@@ -1232,6 +1025,24 @@ export async function fetchTodayAllRecords(date) {
   );
   _setCache(key, records);
   return records;
+}
+
+// ─── Stop Call ────────────────────────────────────────────────────────────────
+/**
+ * Fetches press records that contain StopCall data, with server-side pagination.
+ * Returns { data, summaryData, pagination: { currentPage, totalPages, totalItems, itemsPerPage } }.
+ */
+export async function fetchStopCallRecords({ dateFrom, dateTo, factory, page = 1, limit = 20, sortColumn, sortDirection } = {}) {
+  return _postJson("api/analytics/stop-calls", { dateFrom, dateTo, factory, page, limit, sortColumn, sortDirection });
+}
+
+/**
+ * Lightweight fetch to pull all StopCall summary data for KPI and leaderboard aggregation.
+ * Hits the same dedicated route which returns unpaginated summaryData for the date range.
+ */
+export async function fetchStopCallSummary({ dateFrom, dateTo, factory } = {}) {
+  const result = await _postJson("api/analytics/stop-calls", { dateFrom, dateTo, factory, page: 1, limit: 1 });
+  return result.summaryData || [];
 }
 
 /**
@@ -1337,21 +1148,21 @@ export async function fetchCombinedEnvironmentalData() {
 }
 
 // ─── Manufacturing lot lookup ──────────────────────────────────────────────────
-export async function checkMaterialSebanggo(lotNumber) {
+export async function checkMaterialSebanggo(hinban) {
   const res = await fetch(BASE_URL + "api/check-material-sebanggo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lotNumber }),
+    body: JSON.stringify({ 品番: hinban }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
 }
 
-export async function lookupMaterialLot(lotNumber, sebanggo) {
+export async function lookupMaterialLot(hinban, lotNumber, sebanggo) {
   const res = await fetch(BASE_URL + "api/material-lot-lookup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lotNumber, sebanggo }),
+    body: JSON.stringify({ 品番: hinban, 材料ロット: lotNumber, 材料背番号: sebanggo }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
@@ -1385,13 +1196,20 @@ const MASTER_FACTORY_COLLECTIONS = ["kensaDB", "pressDB", "SRSDB", "slitDB"];
 
 export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "materialDB") {
-    return { collectionName: "materialMasterDB2", baseQuery: { 工程名: "粘着工程" } };
+    return { collectionName: "materialMasterDB3", baseQuery: {} };
   }
   if (tabKey === "factoryDB") {
     return { collectionName: "factoryDB", baseQuery: {} };
   }
   if (tabKey === "setsubiDB") {
     return { collectionName: "setsubiDB", baseQuery: {} };
+  }
+
+  if (tabKey === "processDB") {
+    return { collectionName: "processMasterDB", baseQuery: {} };
+  }
+  if (tabKey === "bomDB") {
+    return { collectionName: "bomMasterDB", baseQuery: {} };
   }
   if (tabKey === "equipmentHistoryDB") {
     return { collectionName: "equipmentHistoryDB", baseQuery: {} };
@@ -1590,6 +1408,43 @@ export async function createWorkerRecord(name) {
   });
 }
 
+// ─── Equipment history (submittedDB › setsubiHistory) ─────────────────────────
+
+export async function fetchSetsubiHistoryRecords({ factory, equipmentId, status, search, dateFrom, dateTo, page = 1, limit = 50, sortColumn, sortDir = "desc" } = {}) {
+  const params = new URLSearchParams();
+  if (factory) params.append("factory", factory);
+  if (equipmentId) params.append("equipmentId", equipmentId);
+  if (status) params.append("status", status);
+  if (search) params.append("search", search);
+  if (dateFrom) params.append("dateFrom", dateFrom);
+  if (dateTo) params.append("dateTo", dateTo);
+  params.append("page", page);
+  params.append("limit", limit);
+  if (sortColumn) params.append("sortColumn", sortColumn);
+  params.append("sortDir", sortDir);
+
+  const res = await fetch(`${BASE_URL}api/setsubi-history?${params.toString()}`);
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+export async function createSetsubiHistoryRecord(data) {
+  return _postJson("queries", {
+    dbName: "submittedDB",
+    collectionName: "setsubiHistory",
+    insertData: { ...data, createdAt: new Date().toISOString() },
+  });
+}
+
+export async function updateSetsubiHistoryRecord(id, data) {
+  return _postJson("queries", {
+    dbName: "submittedDB",
+    collectionName: "setsubiHistory",
+    query: { _id: id },
+    update: { $set: { ...data, updatedAt: new Date().toISOString() } },
+  });
+}
+
 function normalizePaginatedItems(result) {
   if (Array.isArray(result)) {
     return {
@@ -1712,6 +1567,117 @@ export async function permanentlyDeleteProductPDF(documentId) {
   return _deleteJson(`api/product-pdf-permanent/${encodeURIComponent(documentId)}`);
 }
 
+// ─── Material PDFs ─────────────────────────────────────────────────────────────
+
+export async function fetchMaterialPDFMaterials() {
+  const cacheKey = "material_pdf_materials";
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const materials = await query(
+    "Sasaki_Coating_MasterDB",
+    "materialMasterDB3",
+    {},
+    { projection: { "品目マスタ.図番": 1, "品目マスタ.品名": 1, 品番: 1, "品目マスタ.工程コード": 1 } }
+  );
+
+  const nextMaterials = Array.isArray(materials) ? materials.map(m => ({
+    ...m,
+    図番: m.品目マスタ?.図番 || m.図番,
+    品名: m.品目マスタ?.品名 || m.品名,
+    工程コード: m.品目マスタ?.工程コード || m.工程コード
+  })) : [];
+  _setCache(cacheKey, nextMaterials);
+  return nextMaterials;
+}
+
+export async function fetchMaterialPDFsByType({
+  pdfType,
+  page = 1,
+  limit = 25,
+  searchQuery = "",
+  processCode = "",
+  sortField = "uploadedAt",
+  sortDir = "desc",
+  includeHinban = true,
+} = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (includeHinban) query.set("includeHinban", "1");
+  if (searchQuery) query.set("q", searchQuery);
+  if (processCode) query.set("processCode", processCode);
+  if (sortField) query.set("sortField", sortField);
+  if (sortDir) query.set("sortDir", sortDir);
+
+  const result = await _getJson(`api/material-pdfs-by-type/${encodeURIComponent(pdfType)}?${query.toString()}`);
+  return normalizePaginatedItems(result);
+}
+
+export async function checkExistingMaterialPDFs({ pdfType, drawingNumbers = [] }) {
+  return _postJson("api/check-existing-material-pdfs", {
+    pdfType,
+    図番Array: drawingNumbers,
+  });
+}
+
+export async function uploadMaterialPDFFile({
+  pdfType,
+  drawingNumbers = [],
+  pdfBase64,
+  fileName,
+  uploadedBy,
+  resolutions = {},
+  excludedMaterialIds = [],
+}) {
+  return _postJson("api/upload-material-pdf", {
+    pdfType,
+    図番Array: drawingNumbers,
+    pdfBase64,
+    fileName,
+    uploadedBy,
+    resolutions,
+    excludedMaterialIds,
+  });
+}
+
+export async function uploadMaterialPDFImage({ documentId, imageBase64, pdfType }) {
+  return _postJson("api/upload-material-pdf-image", {
+    documentId,
+    imageBase64,
+    pdfType,
+  });
+}
+
+export async function batchDeleteMaterialPDFs(documentIds = []) {
+  return _postJson("api/material-pdf-batch-delete", {
+    documentIds,
+  });
+}
+
+export async function deleteMaterialPDF(documentId) {
+  return _deleteJson(`api/material-pdf/${encodeURIComponent(documentId)}`);
+}
+
+export async function fetchMaterialPDFTrash({ page = 1, limit = 25 } = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  const result = await _getJson(`api/material-pdfs-trash?${query.toString()}`);
+  return normalizePaginatedItems(result);
+}
+
+export async function recoverMaterialPDF(documentId) {
+  return _postJson(`api/material-pdf-recover/${encodeURIComponent(documentId)}`, {});
+}
+
+export async function permanentlyDeleteMaterialPDF(documentId) {
+  return _deleteJson(`api/material-pdf-permanent/${encodeURIComponent(documentId)}`);
+}
+
 // ─── Furyo Kanri (不良管理) ──────────────────────────────────────────────────
 export async function fetchFuryoModels() {
   const cacheKey = "furyo_models";
@@ -1792,6 +1758,20 @@ export async function uploadCheckFormReferenceImage({ base64, folderKey, usernam
   return _postJson("api/check-forms/reference-images", { base64, folderKey, username });
 }
 
+export function formatWorkerNames(val) {
+  if (!val) return "";
+  if (Array.isArray(val)) {
+    const names = val
+      .map((item) => (typeof item === "object" ? (item?.name || item?.Name || "") : String(item).trim()))
+      .filter(Boolean);
+    return names.length > 0 ? names.join(", ") : "";
+  }
+  if (typeof val === "object") {
+    return val.name || val.Name || JSON.stringify(val);
+  }
+  return String(val).trim();
+}
+
 export async function createCheckFormTemplate(draft, username) {
   return _postJson("submitToMasterDB", {
     data: {
@@ -1868,7 +1848,19 @@ function normalizeCheckFormResponses(answers = []) {
   }, {});
 }
 
+function pickFirstNonEmptyDate(...candidates) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (typeof candidate === "string" && !candidate.trim()) continue;
+    const normalized = normalizeMongoDate(candidate);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
 function normalizeCheckFormRecord(record) {
+  if (!record || typeof record !== "object") return null;
+
   const answers = Array.isArray(record.answers) ? record.answers : [];
   const derivedHasNg = answers.some((answer) => {
     const status = String(answer.status ?? "").trim().toLowerCase();
@@ -1882,13 +1874,13 @@ function normalizeCheckFormRecord(record) {
     schedule: String(record.schedule ?? "").trim().toLowerCase(),
     machineId: String(record.machineId ?? record.equipmentId ?? ""),
     machineName: record.machineName ?? record["加工設備"] ?? "",
-    completedBy: record.completedBy ?? record.workerName ?? "",
-    completedAt: normalizeMongoDate(
-      record.completedAt
-      ?? record.submittedAtClient
-      ?? record.createdAt
-      ?? record.updatedAt
-      ?? record.submittedAt
+    completedBy: formatWorkerNames(record.completedBy ?? record.workerName ?? record.Worker_Name ?? ""),
+    completedAt: pickFirstNonEmptyDate(
+      record.completedAt,
+      record.submittedAtClient,
+      record.createdAt,
+      record.updatedAt,
+      record.submittedAt
     ),
     periodStart: record.periodStart ?? record.startDate ?? "",
     periodEnd: record.periodEnd ?? record.startDate ?? "",
@@ -1905,6 +1897,9 @@ function normalizeNgStatusHistoryEntry(entry) {
   return {
     action: String(entry.action ?? "").trim(),
     comment: String(entry.comment ?? entry.note ?? "").trim(),
+    fixReason: String(entry.fixReason ?? "").trim(),
+    reason: String(entry.reason ?? "").trim(),
+    imageURLs: Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [],
     fromStatus: String(entry.fromStatus ?? "").trim().toLowerCase(),
     timestamp: normalizeMongoDate(entry.timestamp ?? entry.createdAt ?? entry.updatedAt),
     toStatus: String(entry.toStatus ?? "").trim().toLowerCase(),
@@ -1913,7 +1908,57 @@ function normalizeNgStatusHistoryEntry(entry) {
   };
 }
 
+function isAnswerValueOkOrInRange(report) {
+  const ansStr = String(report.answerValue ?? report.value ?? "").trim();
+  const lower = ansStr.toLowerCase();
+  if (lower === "ok" || lower === "合格" || lower === "正常" || lower === "なし" || lower === "適用") {
+    return true;
+  }
+  if (lower === "ng" || lower === "不合格" || lower === "異常" || lower === "あり") {
+    return false;
+  }
+  // Check numeric min/max if defined
+  const min = report.min !== null && report.min !== undefined && report.min !== "" ? Number(report.min) : null;
+  const max = report.max !== null && report.max !== undefined && report.max !== "" ? Number(report.max) : null;
+  if ((min !== null || max !== null) && ansStr !== "") {
+    const num = Number(ansStr);
+    if (!Number.isNaN(num)) {
+      const isOutOfRange = (min !== null && !Number.isNaN(min) && num < min) || (max !== null && !Number.isNaN(max) && num > max);
+      return !isOutOfRange;
+    }
+  }
+  return false;
+}
+
 function normalizeNgReport(report) {
+  const rawType = String(report.ticketType ?? report.type ?? report.ticket_type ?? report.ticketCategory ?? "").trim().toLowerCase();
+  let ticketType = "";
+  let isOpt = false;
+
+  if (rawType === "optional") {
+    ticketType = "optional";
+    isOpt = true;
+  } else if (rawType === "defect") {
+    ticketType = "defect";
+    isOpt = false;
+  } else if (report.isOptional === true || report.optional === true || report.required === false) {
+    ticketType = "optional";
+    isOpt = true;
+  } else if (report.isDefect === true || report.required === true) {
+    ticketType = "defect";
+    isOpt = false;
+  } else {
+    // When no explicit ticketType is set in ngReportsDB, answerValue "OK" (or in-range) indicates an optional ticket
+    const isOkAnswer = isAnswerValueOkOrInRange(report);
+    if (isOkAnswer) {
+      ticketType = "optional";
+      isOpt = true;
+    } else {
+      ticketType = "defect";
+      isOpt = false;
+    }
+  }
+
   return {
     ...report,
     ticketId: normalizeId(report._id ?? report.ticketId),
@@ -1925,6 +1970,10 @@ function normalizeNgReport(report) {
     machineName: report.machineName ?? report["加工設備"] ?? "",
     completedBy: report.completedBy ?? report.workerName ?? "",
     factory: report.factory ?? report.工場 ?? "",
+    ticketType,
+    isOptional: isOpt,
+    isDefect: !isOpt,
+    required: report.required ?? !isOpt,
     createdAt: normalizeMongoDate(
       report.createdAt
       ?? report.completedAt
@@ -1942,6 +1991,8 @@ function normalizeNgReport(report) {
     closedAt: normalizeMongoDate(report.closedAt),
     closedBy: report.closedBy ?? "",
     closedByUsername: report.closedByUsername ?? "",
+    fixReason: report.fixReason ?? "",
+    ticketNo: report.ticketNo ?? null,
     status: report.status ?? "open",
     statusHistory: Array.isArray(report.statusHistory)
       ? report.statusHistory.map(normalizeNgStatusHistoryEntry).filter(Boolean)
@@ -2013,6 +2064,7 @@ function buildNgTicketNormalizationStages() {
         statusHistory: { $ifNull: ["$statusHistory", []] },
         unit: buildMongoStringExpression(["$unit"]),
         status: { $toLower: buildMongoStringExpression(["$status"], "open") },
+        ticketNo: { $ifNull: ["$ticketNo", null] },
       },
     },
     {
@@ -2039,11 +2091,12 @@ function buildNgTicketNormalizationStages() {
     {
       $addFields: {
         createdAtMs: {
-          $cond: [
-            { $ne: ["$createdAt", null] },
-            { $toLong: "$createdAt" },
-            null,
-          ],
+          $convert: {
+            input: "$createdAt",
+            to: "long",
+            onError: null,
+            onNull: null,
+          },
         },
         hasImages: { $gt: ["$imageCount", 0] },
       },
@@ -2319,6 +2372,18 @@ export async function fetchCheckFormRecords(formIds = []) {
   return Array.isArray(records) ? records.map(normalizeCheckFormRecord) : [];
 }
 
+export async function fetchTodayChecklistOverview({ factory = "", date = "" } = {}) {
+  const query = new URLSearchParams();
+  if (factory) query.set("factory", factory);
+  if (date) query.set("date", date);
+
+  const endpoint = query.toString()
+    ? `api/check-forms/today-overview?${query.toString()}`
+    : "api/check-forms/today-overview";
+
+  return _getJson(endpoint);
+}
+
 export async function fetchCheckFormRecordById(recordId) {
   const normalizedRecordId = normalizeId(recordId);
   if (!normalizedRecordId) return null;
@@ -2365,10 +2430,8 @@ export async function updateNgTicketRecord({ ticketId, update, username, role })
     : normalizeId(ticketId);
   if (!normalizedTicketId) throw new Error("A ticket ID is required.");
 
-  return _postJson("queries", {
-    dbName: "submittedDB",
-    collectionName: "ngReportsDB",
-    query: { _id: normalizedTicketId },
+  return _postJson("api/check-forms/ng-tickets/update-status", {
+    ticketId: normalizedTicketId,
     update,
     username,
     role,
@@ -2402,200 +2465,43 @@ export async function fetchNgTicketFilterOptions() {
   const cached = _getCached(cacheKey, MASTER_TTL);
   if (cached) return cached;
 
-  const result = await query(
-    "submittedDB",
-    "ngReportsDB",
-    {},
-    {
-      aggregation: [
-        ...buildNgTicketNormalizationStages(),
-        {
-          $facet: {
-            factories: [
-              { $match: { factory: { $ne: "" } } },
-              { $group: { _id: "$factory" } },
-              { $sort: { _id: 1 } },
-            ],
-            machineNames: [
-              { $match: { machineName: { $ne: "" } } },
-              { $group: { _id: "$machineName" } },
-              { $sort: { _id: 1 } },
-            ],
-            formNames: [
-              { $match: { formName: { $ne: "" } } },
-              { $group: { _id: "$formName" } },
-              { $sort: { _id: 1 } },
-            ],
-            completedBy: [
-              { $match: { completedBy: { $ne: "" } } },
-              { $group: { _id: "$completedBy" } },
-              { $sort: { _id: 1 } },
-            ],
-            statuses: [
-              { $match: { status: { $ne: "" } } },
-              { $group: { _id: "$status" } },
-              { $sort: { _id: 1 } },
-            ],
-            fieldLabels: [
-              { $match: { fieldLabel: { $ne: "" } } },
-              { $group: { _id: "$fieldLabel" } },
-              { $sort: { _id: 1 } },
-            ],
-            fieldTypes: [
-              { $match: { fieldType: { $ne: "" } } },
-              { $group: { _id: "$fieldType" } },
-              { $sort: { _id: 1 } },
-            ],
-          },
-        },
-      ],
-    }
-  );
-
-  const payload = extractAggregationResultDocument(result);
-  const options = {
-    factories: mapAggregationFacetValues(payload.factories),
-    machineNames: mapAggregationFacetValues(payload.machineNames),
-    formNames: mapAggregationFacetValues(payload.formNames),
-    completedBy: mapAggregationFacetValues(payload.completedBy),
-    statuses: mapAggregationFacetValues(payload.statuses),
-    fieldLabels: mapAggregationFacetValues(payload.fieldLabels),
-    fieldTypes: mapAggregationFacetValues(payload.fieldTypes),
-  };
-
+  const options = await _getJson("api/check-forms/ng-tickets/filter-options");
   _setCache(cacheKey, options);
   return options;
 }
 
-export async function fetchNgTicketPage({ filters = {}, advancedFilters = [], page = 1, limit = 10, sort = {} } = {}) {
-  const safeLimit = Math.max(1, Number(limit) || 10);
-  const safePage = Math.max(1, Number(page) || 1);
-  const skip = (safePage - 1) * safeLimit;
-  const sortStage = buildNgTicketSortStage(sort);
-
-  const result = await query(
-    "submittedDB",
-    "ngReportsDB",
-    {},
-    {
-      aggregation: [
-        ...buildNgTicketFilteredAggregationStages({ filters, advancedFilters }),
-        {
-          $facet: {
-            data: [
-              { $sort: sortStage },
-              { $skip: skip },
-              { $limit: safeLimit },
-            ],
-            totalCount: [
-              { $count: "count" },
-            ],
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalTickets: { $sum: 1 },
-                  imageTickets: { $sum: { $cond: ["$hasImages", 1, 0] } },
-                  recordIds: { $addToSet: "$recordId" },
-                  machineKeys: {
-                    $addToSet: {
-                      $cond: [
-                        { $ne: ["$machineId", ""] },
-                        "$machineId",
-                        "$machineName",
-                      ],
-                    },
-                  },
-                  operatorNames: { $addToSet: "$completedBy" },
-                },
-              },
-              {
-                $project: {
-                  _id: 0,
-                  totalTickets: 1,
-                  imageTickets: 1,
-                  recordCount: {
-                    $size: {
-                      $filter: {
-                        input: "$recordIds",
-                        as: "value",
-                        cond: { $ne: ["$$value", ""] },
-                      },
-                    },
-                  },
-                  machineCount: {
-                    $size: {
-                      $filter: {
-                        input: "$machineKeys",
-                        as: "value",
-                        cond: { $ne: ["$$value", ""] },
-                      },
-                    },
-                  },
-                  operatorCount: {
-                    $size: {
-                      $filter: {
-                        input: "$operatorNames",
-                        as: "value",
-                        cond: { $ne: ["$$value", ""] },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        },
-      ],
-    }
-  );
-
-  const payload = extractAggregationResultDocument(result);
-  const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
-  const totalPages = totalItems > 0 ? Math.ceil(totalItems / safeLimit) : 0;
-
-  if (totalItems > 0 && safePage > 1 && (!Array.isArray(payload?.data) || payload.data.length === 0)) {
-    return fetchNgTicketPage({
-      filters,
-      advancedFilters,
-      page: totalPages,
-      limit: safeLimit,
-      sort,
-    });
+export async function fetchCheckFormTemplateById(templateId) {
+  if (!templateId) return null;
+  const response = await fetch(`/api/check-forms/template/${templateId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load template (HTTP ${response.status})`);
   }
+  const payload = await response.json();
+  return payload.template || payload;
+}
 
-  const summary = payload?.summary?.[0] ?? {};
+export async function fetchNgTicketPage({ filters = {}, advancedFilters = [], page = 1, limit = 10, sort = {} } = {}) {
+  const payload = await _postJson("api/check-forms/ng-tickets/page", {
+    filters,
+    advancedFilters,
+    page,
+    limit,
+    sort,
+  });
 
   return {
     data: Array.isArray(payload?.data) ? payload.data.map(normalizeNgReport) : [],
-    summary: {
-      totalTickets: Number(summary.totalTickets) || totalItems,
-      imageTickets: Number(summary.imageTickets) || 0,
-      recordCount: Number(summary.recordCount) || 0,
-      machineCount: Number(summary.machineCount) || 0,
-      operatorCount: Number(summary.operatorCount) || 0,
-    },
-    pagination: {
-      currentPage: totalPages > 0 ? Math.min(safePage, totalPages) : 1,
-      totalPages,
-      totalItems,
-      itemsPerPage: safeLimit,
-    },
+    summary: payload?.summary || { totalTickets: 0, imageTickets: 0, recordCount: 0, machineCount: 0, operatorCount: 0 },
+    pagination: payload?.pagination || { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: limit },
   };
 }
 
 export async function fetchNgTicketExport({ filters = {}, advancedFilters = [], sort = {} } = {}) {
-  const result = await query(
-    "submittedDB",
-    "ngReportsDB",
-    {},
-    {
-      aggregation: [
-        ...buildNgTicketFilteredAggregationStages({ filters, advancedFilters }),
-        { $sort: buildNgTicketSortStage(sort) },
-      ],
-    }
-  );
+  const result = await _postJson("api/check-forms/ng-tickets/export", {
+    filters,
+    advancedFilters,
+    sort,
+  });
 
   return Array.isArray(result) ? result.map(normalizeNgReport) : [];
 }
@@ -2608,6 +2514,164 @@ export async function fetchNgInspectionCount() {
     { projection: { _id: 1 }, limit: 9999 }
   );
   return Array.isArray(recs) ? recs.length : 0;
+}
+
+export async function fetchCameraStreamUrl() {
+  const res = await fetch(`${BASE_URL}api/camera-stream-url`);
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || `Camera stream URL fetch failed (${res.status})`);
+  return String(data.url || "");
+}
+
+// ─── PCE File Upload ──────────────────────────────────────────────────────────
+export async function fetchPceMasterData() {
+  return _withInFlight('pce-master-data', async () => {
+    const cached = _getCached('pce-master-data', MASTER_TTL);
+    if (cached) return cached;
+    const data = await _getJson('api/masterdb/pce-data');
+    _setCache('pce-master-data', data);
+    return data;
+  });
+}
+
+export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix, entries, overwrite }) {
+  const res = await fetch(`${BASE_URL}api/pce/upload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileBase64, sebanggoList, machineSuffix, entries, overwrite }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 409 && data.conflicts?.length) {
+      const err = new Error(`Already exists in Drive — ${data.conflicts.join(", ")}`);
+      err.isConflict = true;
+      err.conflicts = data.conflicts;
+      throw err;
+    }
+    const detail = data?.google
+      ? JSON.stringify(data.google)
+      : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Upload failed"} — ${detail}`);
+  }
+  return data;
+}
+
+// ─── Prototype (試作) Registration ─────────────────────────────────────────────
+export async function fetchShisakuList({ page = 1, limit = 10, sortColumn = "createdAt", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku`);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype list");
+  return data;
+}
+
+export async function fetchShisaku(id) {
+  return _getJson(`api/shisaku/${encodeURIComponent(id)}`);
+}
+
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }) {
+  const res = await fetch(`${BASE_URL}api/shisaku/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }),
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const detail = data?.google ? JSON.stringify(data.google) : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Registration failed"} — ${detail}`);
+  }
+  return data;
+}
+
+export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }) {
+  const res = await fetch(`${BASE_URL}api/shisaku/update/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }),
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const detail = data?.google ? JSON.stringify(data.google) : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Update failed"} — ${detail}`);
+  }
+  return data;
+}
+
+export async function deleteShisaku(id) {
+  return _deleteJson(`api/shisaku/${encodeURIComponent(id)}`);
+}
+
+// ─── Prototype Request (試作依頼) ───────────────────────────────────────────────
+export async function fetchAvailableShisakuForRequest() {
+  const url = new URL(`${BASE_URL}api/shisaku-request/available`);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch available prototypes for request");
+  return data;
+}
+
+export async function fetchShisakuRequestList({ shisakudb_id, page = 1, limit = 30, sortColumn = "createdAt", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku-request/list`);
+  if (shisakudb_id) url.searchParams.set("shisakudb_id", shisakudb_id);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype request list");
+  return data;
+}
+
+export async function fetchShisakuRequestGroupedList({ page = 1, limit = 30, sortColumn = "latestDate", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku-request/grouped-list`);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch grouped prototype requests");
+  return data;
+}
+
+export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, shisakudb_id, createdBy, status, orderNumber }) {
+  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, shisakudb_id, createdBy, status, orderNumber });
+}
+
+export async function updateShisakuRequest(id, { name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, status, orderNumber }) {
+  return _postJson(`api/shisaku-request/update/${encodeURIComponent(id)}`, { name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, status, orderNumber });
+}
+
+export async function deleteShisakuRequest(id) {
+  return _deleteJson(`api/shisaku-request/${encodeURIComponent(id)}`);
+}
+
+export async function bulkDeleteShisakuRequests(ids) {
+  return _postJson("api/shisaku-request/bulk-delete", { ids });
+}
+
+export async function reorderShisakuRequests(updates) {
+  return _postJson("api/shisaku-request/reorder", { updates });
 }
 
 export async function translateJapaneseText(text) {
@@ -2627,3 +2691,318 @@ export async function translateJapaneseText(text) {
 
   return String(data?.responseData?.translatedText || "").trim();
 }
+
+/**
+ * Edit an existing submitted record securely.
+ * POST /api/approvals/edit-document
+ */
+export async function editSubmittedRecord(payload) {
+  const url = `${BASE_URL}api/approvals/edit-document`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to edit record: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}
+
+/**
+ * Upload maintenance photo to Firebase Storage (via Kurachi backend)
+ * POST /api/upload-maintenance-image
+ */
+export async function uploadMaintenanceImage(payload) {
+  const url = `${BASE_URL}api/upload-maintenance-image`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to upload maintenance image: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}
+
+/**
+ * Upload material label photo to Firebase Storage (via Kurachi backend)
+ * POST /api/upload-material-label-image
+ */
+export async function uploadMaterialLabelImage(payload) {
+  const url = `${BASE_URL}api/upload-material-label-image`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to upload material label image: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}
+
+// ─── Export Templates ────────────────────────────────────────────────────────
+export async function fetchExportTemplates(processType = "All") {
+  const q = processType === "All" ? {} : { processType };
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName: "exportTemplatesDB",
+    query: q,
+    sort: { templateName: 1 }
+  });
+}
+
+export async function saveExportTemplate(templateData) {
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName: "exportTemplatesDB",
+    insertData: templateData
+  });
+}
+
+// ─── Material Lots Analytics ────────────────────────────────────────────────
+export async function fetchMaterialLotAnalytics(params = {}) {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== "") {
+      queryParams.append(key, val);
+    }
+  });
+  const endpoint = `api/analytics/material-lots${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  return _getJson(endpoint);
+}
+
+// ─── FREYA Industrial AI Copilot ────────────────────────────────────────────
+export async function askAICopilot({ prompt, currentPersona, kpiContext, history = [] }) {
+  const res = await fetch(`${BASE_URL}api/ai/copilot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, currentPersona, kpiContext, history })
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || `AI Copilot request failed (${res.status})`);
+  return data;
+}
+
+// ─── Production & Quality Analytics ─────────────────────────────────────────
+export async function fetchAnalyticsData({
+  fromDate,
+  toDate,
+  collectionName = "kensaDB",
+  factoryFilter,
+  bans = [],
+  partNumbers = [],
+  models = [],
+  advancedFilters = [],
+  userRole = "admin",
+  factoryAccess = [],
+}) {
+  const body = {
+    fromDate,
+    toDate,
+    collectionName,
+    userRole,
+    factoryAccess,
+  };
+  if (factoryFilter) body.factoryFilter = factoryFilter;
+  if (Array.isArray(bans) && bans.length > 0) body.bans = bans;
+  if (Array.isArray(partNumbers) && partNumbers.length > 0) body.partNumbers = partNumbers;
+  if (Array.isArray(models) && models.length > 0) body.models = models;
+  if (Array.isArray(advancedFilters) && advancedFilters.length > 0) body.advancedFilters = advancedFilters;
+
+  return _postJson("api/analytics-data", body);
+}
+
+export async function fetchMasterDbProducts(model) {
+  const queryParam = model ? `?model=${encodeURIComponent(model)}` : "";
+  return _getJson(`api/masterdb/products${queryParam}`);
+}
+
+/**
+ * Fetch equipment list grouped by factory for Equipment Management / Machine Performance.
+ */
+export async function fetchEquipmentList() {
+  return _getJson("api/equipment/list");
+}
+
+/**
+ * Fetch detailed production records for equipment analytics.
+ * @param {Object} params
+ * @param {string} params.startDate
+ * @param {string} params.endDate
+ * @param {string[]} [params.equipment]
+ * @param {string} [params.hinban]
+ * @param {string} [params.seiban]
+ */
+export async function fetchEquipmentData({ startDate, endDate, equipment, hinban, seiban, hinbans, parts } = {}) {
+  return _postJson("api/equipment/data", {
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    equipment: Array.isArray(equipment) && equipment.length > 0 ? equipment : undefined,
+    hinban: hinban || undefined,
+    seiban: seiban || undefined,
+    hinbans: Array.isArray(hinbans) && hinbans.length > 0 ? hinbans : undefined,
+    parts: Array.isArray(parts) && parts.length > 0 ? parts : undefined,
+  });
+}
+
+/**
+ * Fetch cross-machine part comparison data for given part(s)
+ * @param {Object} params
+ * @param {string} [params.hinban]
+ * @param {string} [params.seiban]
+ * @param {Array<{hinban: string, seiban?: string}>} [params.parts]
+ * @param {string[]} [params.hinbans]
+ * @param {string} [params.startDate]
+ * @param {string} [params.endDate]
+ */
+export async function fetchPartCrossMachineComparison({ hinban, seiban, hinbans, parts, startDate, endDate } = {}) {
+  return _postJson("api/equipment/part-comparison", {
+    hinban: hinban || undefined,
+    seiban: seiban || undefined,
+    hinbans: Array.isArray(hinbans) && hinbans.length > 0 ? hinbans : undefined,
+    parts: Array.isArray(parts) && parts.length > 0 ? parts : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+}
+
+// ─── Digital Twin 3D Annotations (Sensors & Cameras Coordinates in MongoDB) ──
+export async function fetchTwinAnnotations(factoryName) {
+  if (!factoryName) return null;
+
+  // 1. Try dedicated REST endpoint
+  try {
+    const res = await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && (data.sensors !== null || data.cameras !== null || data.callMonitor !== null)) {
+        return {
+          sensors: Array.isArray(data.sensors) ? data.sensors : [],
+          cameras: Array.isArray(data.cameras) ? data.cameras : [],
+          callMonitor: data.callMonitor || null,
+          updatedAt: data.updatedAt,
+        };
+      }
+    }
+  } catch (_) {
+    // fallback to generic queries
+  }
+
+  // 2. Fallback to Sasaki_Coating_MasterDB.twinAnnotations via POST /queries
+  try {
+    const rows = await query("Sasaki_Coating_MasterDB", "twinAnnotations", { factory: factoryName });
+    if (rows && rows.length > 0) {
+      const doc = rows[0];
+      return {
+        sensors: Array.isArray(doc.sensors) ? doc.sensors : [],
+        cameras: Array.isArray(doc.cameras) ? doc.cameras : [],
+        callMonitor: doc.callMonitor || null,
+        updatedAt: doc.updatedAt,
+      };
+    }
+  } catch (err) {
+    console.warn("fetchTwinAnnotations query fallback failed:", err);
+  }
+
+  return null;
+}
+
+export async function saveTwinAnnotations(factoryName, { sensors, cameras, callMonitor, username = "admin" }) {
+  if (!factoryName) return false;
+
+  const payload = {
+    factory: factoryName,
+    sensors: Array.isArray(sensors) ? sensors : [],
+    cameras: Array.isArray(cameras) ? cameras : [],
+    callMonitor: callMonitor || null,
+    updatedAt: new Date().toISOString(),
+    updatedBy: username,
+  };
+
+  let saved = false;
+
+  // 1. Try dedicated REST endpoint
+  try {
+    const res = await _postJson(`api/digital-twin/${encodeURIComponent(factoryName)}/annotations`, payload);
+    if (res?.success) saved = true;
+  } catch (_) {
+    // fallback to generic queries
+  }
+
+  // 2. Fallback: Save directly via POST /queries to MongoDB
+  if (!saved) {
+    try {
+      const existing = await query("Sasaki_Coating_MasterDB", "twinAnnotations", { factory: factoryName });
+      if (existing && existing.length > 0) {
+        await _postJson("queries", {
+          dbName: "Sasaki_Coating_MasterDB",
+          collectionName: "twinAnnotations",
+          query: { factory: factoryName },
+          update: {
+            $set: {
+              sensors: payload.sensors,
+              cameras: payload.cameras,
+              callMonitor: payload.callMonitor,
+              updatedAt: new Date(),
+              updatedBy: username,
+            },
+          },
+        });
+      } else {
+        await _postJson("queries", {
+          dbName: "Sasaki_Coating_MasterDB",
+          collectionName: "twinAnnotations",
+          insertData: {
+            factory: factoryName,
+            sensors: payload.sensors,
+            cameras: payload.cameras,
+            callMonitor: payload.callMonitor,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            updatedBy: username,
+          },
+        });
+      }
+      saved = true;
+    } catch (err) {
+      console.error("Failed to save twin annotations to MongoDB:", err);
+    }
+  }
+
+  return saved;
+}
+
+export async function resetTwinAnnotations(factoryName) {
+  if (!factoryName) return;
+
+  try {
+    await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`, { method: "DELETE" });
+  } catch (_) {}
+
+  try {
+    await _postJson("queries", {
+      dbName: "Sasaki_Coating_MasterDB",
+      collectionName: "twinAnnotations",
+      query: { factory: factoryName },
+      update: {
+        $set: {
+          sensors: [],
+          cameras: [],
+          callMonitor: null,
+          updatedAt: new Date(),
+          _reset: true,
+        },
+      },
+    });
+  } catch (_) {}
+}
+
+
+
+

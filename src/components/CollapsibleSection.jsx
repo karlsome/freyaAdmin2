@@ -11,10 +11,10 @@ export default function CollapsibleSection({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className={wrapperClassName ?? "px-6 py-0 border-t border-separator/30"}>
+    <div className={wrapperClassName ?? "px-6 py-0 border-t border-separator/40"}>
       <button
         type="button"
-        className="w-full flex items-center justify-between gap-2 py-4 text-[10px] font-bold uppercase tracking-wider text-outline hover:text-on-surface transition-colors"
+        className="w-full flex items-center justify-between gap-2 py-4 text-[10px] font-semibold uppercase tracking-wider text-outline hover:text-on-surface transition-colors"
         onClick={() => setOpen((v) => !v)}
       >
         <span className="flex items-center gap-1.5">

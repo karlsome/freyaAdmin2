@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import DataTable from "./DataTable";
 import FactoryRecordModal from "./FactoryRecordModal";
 import {
@@ -30,6 +31,9 @@ function getSortableValue(value) {
 }
 
 export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const authUser = getAuthUser();
   const canEdit = authUser?.role === "admin";
   const [records, setRecords] = useState([]);
@@ -56,7 +60,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
         setRecords(Array.isArray(factoryRecords) ? factoryRecords : []);
       } catch (err) {
         if (!active) return;
-        const message = err?.message || "Failed to load factory records.";
+        const message = err?.message || (isJa ? "工場レコードの読み込みに失敗しました。" : "Failed to load factory records.");
         setError(message);
         onFlash?.({ type: "error", message });
       } finally {
@@ -68,7 +72,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
     return () => {
       active = false;
     };
-  }, [refreshToken, localRefresh, onFlash]);
+  }, [refreshToken, localRefresh, onFlash, isJa]);
 
   const sortedRecords = useMemo(() => {
     const { column, direction } = sort;
@@ -138,18 +142,18 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
       if (editingRecord) {
         const recordId = editingRecord._id?.$oid || editingRecord._id;
         await updateMasterRecord({ recordId, updates: payload, username: authUserName, role: authUser?.role, tabKey: "factoryDB" });
-        setSuccessMessage("Record edited successfully.");
+        setSuccessMessage(isJa ? "レコードを更新しました。" : "Record edited successfully.");
         setSuccessModalOpen(true);
       } else {
         await createMasterRecord({ data: payload, username: authUserName, role: authUser?.role, tabKey: "factoryDB" });
-        setSuccessMessage("Record created successfully.");
+        setSuccessMessage(isJa ? "レコードを作成しました。" : "Record created successfully.");
         setSuccessModalOpen(true);
       }
 
       closeFormModal();
       setLocalRefresh((current) => current + 1);
     } catch (saveError) {
-      onFlash?.({ type: "error", message: saveError.message || "Failed to save factory record." });
+      onFlash?.({ type: "error", message: saveError.message || (isJa ? "工場の保存に失敗しました。" : "Failed to save factory record.") });
     } finally {
       setFormSubmitting(false);
     }
@@ -160,22 +164,26 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
     if (!record) return;
     const recordId = record._id?.$oid || record._id;
     if (!recordId) {
-      onFlash?.({ type: "error", message: "Cannot delete a record without an ID." });
+      onFlash?.({ type: "error", message: isJa ? "IDのないレコードは削除できません。" : "Cannot delete a record without an ID." });
       return;
     }
 
-    if (!window.confirm(`Delete factory record ${record["工場"] || recordId}? This cannot be undone.`)) {
+    const promptText = isJa
+      ? `工場レコード「${record["工場"] || recordId}」を削除しますか？ この操作は取り消せません。`
+      : `Delete factory record ${record["工場"] || recordId}? This cannot be undone.`;
+
+    if (!window.confirm(promptText)) {
       return;
     }
 
     setDeleteBusyId(recordId);
     try {
       await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "factoryDB" });
-      setSuccessMessage("Record deleted successfully.");
+      setSuccessMessage(isJa ? "レコードを削除しました。" : "Record deleted successfully.");
       setSuccessModalOpen(true);
       setLocalRefresh((current) => current + 1);
     } catch (deleteError) {
-      onFlash?.({ type: "error", message: deleteError.message || "Failed to delete factory record." });
+      onFlash?.({ type: "error", message: deleteError.message || (isJa ? "工場の削除に失敗しました。" : "Failed to delete factory record.") });
     } finally {
       setDeleteBusyId(null);
     }
@@ -184,42 +192,42 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
   const columns = [
     {
       key: "工場",
-      label: "工場",
+      label: isJa ? "工場" : "Factory",
       sortable: true,
       width: 200,
       renderCell: (record) => record["工場"] || "—",
     },
     {
       key: "location",
-      label: "Location",
+      label: isJa ? "所在地" : "Location",
       sortable: true,
       width: 320,
       renderCell: (record) => record.location || "—",
     },
     {
       key: "geotag",
-      label: "Geo Tag",
+      label: isJa ? "ジオタグ" : "Geo Tag",
       sortable: true,
       width: 240,
       renderCell: (record) => record.geotag || "—",
     },
     {
       key: "coordinates",
-      label: "Coordinates",
+      label: isJa ? "座標" : "Coordinates",
       sortable: true,
       width: 220,
       renderCell: (record) => formatCoordinates(record.coordinates),
     },
     {
       key: "phone",
-      label: "Phone",
+      label: isJa ? "電話番号" : "Phone",
       sortable: true,
       width: 180,
       renderCell: (record) => record.phone || "—",
     },
     {
       key: "actions",
-      label: "Actions",
+      label: isJa ? "操作" : "Actions",
       width: 180,
       sortable: false,
       align: "center",
@@ -232,17 +240,17 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
               type="button"
               onClick={() => openEditModal(record)}
               disabled={!canEdit}
-              className="inline-flex items-center justify-center rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Edit
+              {isJa ? "編集" : "Edit"}
             </button>
             <button
               type="button"
               onClick={() => handleDeleteFactory(record)}
               disabled={!canEdit || deleteBusyId === recordId}
-              className="inline-flex items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive transition hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {deleteBusyId === recordId ? "Deleting…" : "Delete"}
+              {deleteBusyId === recordId ? (isJa ? "削除中…" : "Deleting…") : (isJa ? "削除" : "Delete")}
             </button>
           </div>
         );
@@ -251,23 +259,25 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
   ];
 
   return (
-    <section className="dashboard-section rounded-2xl p-6">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">工場</p>
-          <h3 className="mt-1 text-2xl font-black text-on-surface">Factory Master List</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{isJa ? "工場" : "Factory"}</p>
+          <h3 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-primary)]">{isJa ? "工場マスター一覧" : "Factory Master List"}</h3>
         </div>
         <div className="flex flex-col gap-3 sm:items-end sm:flex-row sm:gap-4">
-          <div className="text-sm text-on-surface-variant">
-            {records.length ? `${records.length} factories loaded` : "No factory records available."}
+          <div className="text-xs font-medium text-[var(--text-muted)]">
+            {records.length
+              ? `${records.length} ${isJa ? "件の工場" : "factories loaded"}`
+              : (isJa ? "工場レコードがありません。" : "No factory records available.")}
           </div>
           {canEdit ? (
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+              className="inline-flex items-center justify-center rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
             >
-              Add Factory
+              {isJa ? "工場を追加" : "Add Factory"}
             </button>
           ) : null}
         </div>
@@ -292,8 +302,8 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
         layoutStorageKey="freyaAdmin2.factoryDBTableLayout"
         stickyHeader
         className="overflow-hidden"
-        topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        topBarClassName="flex flex-col gap-4 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between"
         rowKey={(row, rowIndex) => {
           if (row?._id) {
             if (typeof row._id === "string") return row._id;
@@ -312,27 +322,26 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
       />
 
       {successModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
-              <div className="border-b border-separator/35 px-6 py-5">
-                <h3 className="text-2xl font-black text-on-surface">Success</h3>
-              </div>
-              <div className="px-6 py-6">
-                <p className="text-sm text-on-surface-variant">{successMessage}</p>
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => setSuccessModalOpen(false)}
-                    className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
-                  >
-                    OK
-                  </button>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">{isJa ? "完了" : "Success"}</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-[var(--text-secondary)]">{successMessage}</p>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSuccessModalOpen(false)}
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
+                >
+                  OK
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

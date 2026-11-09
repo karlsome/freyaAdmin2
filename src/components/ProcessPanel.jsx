@@ -1,6 +1,7 @@
-//This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
 import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "./DataTable";
+import ExportOptionsModal from "./ExportOptionsModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -10,6 +11,13 @@ export const PROCESS_ACCENT = {
   Press: { dot: "bg-emerald-400", label: "text-emerald-400" },
   SRS:   { dot: "bg-slate-400",   label: "text-slate-400" },
   Slit:  { dot: "bg-sky-400",     label: "text-sky-400" },
+};
+
+const PROCESS_LABELS_JA = {
+  Kensa: "検査工程",
+  Press: "プレス工程",
+  SRS: "SRS工程",
+  Slit: "スリット工程",
 };
 
 const SORT_NUMERIC = new Set(["Total", "Total_NG", "Process_Quantity", "Remaining_Quantity", "Cycle_Time"]);
@@ -30,14 +38,45 @@ function defectChip(rate) {
   return "bg-emerald-400/15 text-emerald-400";
 }
 
-function groupSummary(rows) {
+function groupSummary(rows, isHidase = false) {
   const map = new Map();
   rows.forEach((r) => {
     const key = `${r["品番"]}__${r["背番号"]}`;
-    if (!map.has(key)) map.set(key, { hinban: r["品番"], sebanggo: r["背番号"], total: 0, ng: 0 });
+    if (!map.has(key)) {
+      map.set(key, {
+        hinban: r["品番"],
+        sebanggo: r["背番号"],
+        total: 0,
+        processQuantity: 0,
+        ng: 0,
+        nonDefectDisposal: 0,
+        disposalDetail: {
+          初回生産品: 0,
+          終物: 0,
+          サンプル: 0,
+          調整用: 0,
+        },
+      });
+    }
     const e = map.get(key);
-    e.total += Number(r.Process_Quantity) || Number(r.Total) || 0;
-    e.ng    += Number(r.Total_NG) || 0;
+    e.processQuantity += Number(r.Process_Quantity) || Number(r.Total) || 0;
+    e.total += isHidase && r.Total != null ? Number(r.Total) : (Number(r.Process_Quantity) || Number(r.Total) || 0);
+    e.ng += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
+    if (isHidase) {
+      e.nonDefectDisposal += Number(r["非不良廃棄"]) || 0;
+      if (r["非不良廃棄_詳細"]) {
+        const d = r["非不良廃棄_詳細"];
+        e.disposalDetail.初回生産品 += Number(d["初回生産品"]) || 0;
+        e.disposalDetail.終物 += Number(d["終物"]) || 0;
+        e.disposalDetail.サンプル += Number(d["サンプル"]) || 0;
+        e.disposalDetail.調整用 += Number(d["調整用"]) || 0;
+      } else {
+        if (r["初回生産品"] != null) e.disposalDetail.初回生産品 += Number(r["初回生産品"]) || 0;
+        if (r["終物"] != null) e.disposalDetail.終物 += Number(r["終物"]) || 0;
+        if (r["サンプル"] != null) e.disposalDetail.サンプル += Number(r["サンプル"]) || 0;
+        if (r["調整用"] != null) e.disposalDetail.調整用 += Number(r["調整用"]) || 0;
+      }
+    }
   });
   return Array.from(map.values());
 }
@@ -47,12 +86,17 @@ function groupSummary(rows) {
 //   processName — "Kensa" | "Press" | "SRS" | "Slit"
 //   rows        — array of raw production records from the matching DB
 //   onRowClick  — callback(record, processName) when a row is clicked
-export default function ProcessPanel({ processName, rows, onRowClick, showFactoryColumn = false }) {
+export default function ProcessPanel({ processName, rows, onRowClick, showFactoryColumn = false, factoryName = null }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const isHidase = factoryName === "肥田瀬" || (!factoryName && rows.length > 0 && rows.every((r) => r["工場"] === "肥田瀬"));
   const accent = PROCESS_ACCENT[processName] ?? PROCESS_ACCENT.Kensa;
   const [sort, setSort]               = useState({ col: null, dir: 1 });
   const [page, setPage]               = useState(1);
   const [search, setSearch]           = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showSummaryExport, setShowSummaryExport] = useState(false);
   const summaryRef = useRef(null);
 
   useEffect(() => setPage(1), [rows]);
@@ -74,29 +118,69 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   const sorted = [...filtered].sort((a, b) => {
     if (!sort.col) return 0;
     if (sort.col === "Work_Hours") {
-      const ha = calcWorkHours(a.Time_start, a.Time_end) ?? -1;
-      const hb = calcWorkHours(b.Time_start, b.Time_end) ?? -1;
+      const ha = calcWorkHours(a.Time_start, a.Time_end) ?? (a.Total_Work_Hours != null ? Number(a.Total_Work_Hours) : -1);
+      const hb = calcWorkHours(b.Time_start, b.Time_end) ?? (b.Total_Work_Hours != null ? Number(b.Total_Work_Hours) : -1);
       return (ha - hb) * sort.dir;
     }
     if (sort.col === "Defect_Rate") {
-      const qa = Number(a.Process_Quantity) || 0;
-      const qb = Number(b.Process_Quantity) || 0;
-      const ra = qa ? (Number(a.Total_NG) || 0) / qa : 0;
-      const rb = qb ? (Number(b.Total_NG) || 0) / qb : 0;
+      const qa = Number(a.Process_Quantity) || Number(a.Total) || 0;
+      const qb = Number(b.Process_Quantity) || Number(b.Total) || 0;
+      const ra = qa ? (Number(a.SRS_Total_NG) || Number(a.Total_NG) || 0) / qa : 0;
+      const rb = qb ? (Number(b.SRS_Total_NG) || Number(b.Total_NG) || 0) / qb : 0;
       return (ra - rb) * sort.dir;
     }
+    
+    if (sort.col === "Process_Quantity" || sort.col === "Total") {
+      const va = Number(a.Process_Quantity) || Number(a.Total) || 0;
+      const vb = Number(b.Process_Quantity) || Number(b.Total) || 0;
+      return (va - vb) * sort.dir;
+    }
+
+    if (sort.col === "Total_NG") {
+      const va = Number(a.SRS_Total_NG) || Number(a.Total_NG) || 0;
+      const vb = Number(b.SRS_Total_NG) || Number(b.Total_NG) || 0;
+      return (va - vb) * sort.dir;
+    }
+
     const va = a[sort.col] ?? "";
     const vb = b[sort.col] ?? "";
-    if (SORT_NUMERIC.has(sort.col)) return (Number(va) - Number(vb)) * sort.dir;
+    
+    if (SORT_NUMERIC.has(sort.col)) {
+      const numA = Number(va) || 0;
+      const numB = Number(vb) || 0;
+      return (numA - numB) * sort.dir;
+    }
+    
     return va.toString().localeCompare(vb.toString(), "ja") * sort.dir;
   });
 
   const totalItems = sorted.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const pageRows   = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-  const summary    = groupSummary(sorted);
+  const summary    = groupSummary(sorted, isHidase);
   const pageStart = totalItems ? (page - 1) * ITEMS_PER_PAGE + 1 : 0;
   const pageEnd = Math.min(page * ITEMS_PER_PAGE, totalItems);
+
+  const summaryExportData = useMemo(() => {
+    return summary.map((s) => {
+      const rate = s.total > 0 ? ((s.ng / s.total) * 100).toFixed(2) : "0.00";
+      const item = {
+        品番: s.hinban ?? "",
+        背番号: s.sebanggo ?? "",
+        Total: s.total,
+        Total_NG: s.ng,
+        不良率: `${rate}%`,
+      };
+      if (isHidase) {
+        item["非不良廃棄"] = s.nonDefectDisposal ?? 0;
+        item["初回生産品"] = s.disposalDetail?.初回生産品 ?? 0;
+        item["終物"] = s.disposalDetail?.終物 ?? 0;
+        item["サンプル"] = s.disposalDetail?.サンプル ?? 0;
+        item["調整用"] = s.disposalDetail?.調整用 ?? 0;
+      }
+      return item;
+    });
+  }, [summary, isHidase]);
 
   const tableColumns = useMemo(() => {
     const baseColumns = [
@@ -104,7 +188,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         key: "品番",
         label: "品番",
         width: 164,
-        renderCell: (row) => <span className="font-bold text-on-surface">{row["品番"] ?? "—"}</span>,
+        renderCell: (row) => <span className="font-semibold text-on-surface">{row["品番"] ?? "—"}</span>,
         disableCellWrapper: true,
       },
       {
@@ -130,23 +214,47 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       },
       {
         key: "Process_Quantity",
-        label: "Total",
+        label: isHidase ? (isJa ? "良品 (生産数)" : "良品 (Total)") : (isJa ? "生産数" : "Total"),
         width: 108,
         align: "right",
         renderCell: (row) => {
-          const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
-          return <span className="font-bold text-on-surface">{quantity.toLocaleString()}</span>;
+          const quantity = isHidase && row.Total != null
+            ? Number(row.Total)
+            : Number(row.Process_Quantity) || Number(row.Total) || 0;
+          return <span className="font-semibold text-on-surface">{quantity.toLocaleString()}</span>;
         },
         disableCellWrapper: true,
       },
+      ...(isHidase ? [{
+        key: "非不良廃棄",
+        label: "非不良廃棄",
+        width: 110,
+        align: "right",
+        renderCell: (row) => {
+          const count = Number(row["非不良廃棄"]) || 0;
+          const details = row["非不良廃棄_詳細"] || {};
+          const tooltip = row["非不良廃棄_詳細"]
+            ? `初回:${details.初回生産品 || 0} 終物:${details.終物 || 0} サンプル:${details.サンプル || 0} 調整:${details.調整用 || 0}`
+            : "";
+          return (
+            <span
+              title={tooltip || undefined}
+              className={count > 0 ? "font-semibold text-amber-500 font-mono" : "font-semibold text-outline font-mono"}
+            >
+              {count}
+            </span>
+          );
+        },
+        disableCellWrapper: true,
+      }] : []),
       {
         key: "Total_NG",
-        label: "Total NG",
+        label: isJa ? "不良数" : "Total NG",
         width: 112,
         align: "right",
         renderCell: (row) => {
-          const totalNg = Number(row.Total_NG) || 0;
-          return <span className={totalNg > 0 ? "font-bold text-error" : "font-bold text-outline"}>{totalNg}</span>;
+          const totalNg = Number(row.SRS_Total_NG) || Number(row.Total_NG) || 0;
+          return <span className={totalNg > 0 ? "font-semibold text-error" : "font-semibold text-outline"}>{totalNg}</span>;
         },
         disableCellWrapper: true,
       },
@@ -157,7 +265,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         width: 112,
         align: "right",
         renderCell: (row) => {
-          const hours = calcWorkHours(row.Time_start, row.Time_end);
+          const hours = calcWorkHours(row.Time_start, row.Time_end) ?? (row.Total_Work_Hours != null ? Number(row.Total_Work_Hours) : null);
           return <span className="text-on-surface-variant">{hours != null ? `${hours.toFixed(2)}h` : "—"}</span>;
         },
         disableCellWrapper: true,
@@ -170,10 +278,10 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         align: "right",
         renderCell: (row) => {
           const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
-          const totalNg = Number(row.Total_NG) || 0;
+          const totalNg = Number(row.SRS_Total_NG) || Number(row.Total_NG) || 0;
           const rate = quantity > 0 ? ((totalNg / quantity) * 100).toFixed(2) : "0.00";
           return (
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${defectChip(rate)}`}>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${defectChip(rate)}`}>
               {rate}%
             </span>
           );
@@ -196,16 +304,18 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       },
       ...baseColumns.slice(2),
     ];
-  }, [showFactoryColumn]);
+  }, [showFactoryColumn, isHidase, isJa]);
 
   return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col">
+    <div className="freya-card overflow-hidden flex flex-col">
       {/* Panel header */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/30">
+      <div className="px-5 py-3.5 flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
-          <h4 className="text-sm font-bold text-on-surface truncate">{processName} Process</h4>
-          <span className="px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-bold text-outline flex-shrink-0">
+          <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            {isJa ? (PROCESS_LABELS_JA[processName] || `${processName}工程`) : `${processName} Process`}
+          </h4>
+          <span className="px-2 py-0.5 rounded-[4px] bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-[var(--text-muted)] flex-shrink-0 tabular-nums">
             {totalItems}
           </span>
         </div>
@@ -216,19 +326,20 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                 setShowSummary(true);
                 setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
-              className="text-[11px] text-outline hover:text-on-surface transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>expand_more</span>
-              Summary
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
+              {isJa ? "サマリー" : "Summary"}
             </button>
           )}
+
           <input
             type="text"
-            placeholder="Search…"
+            placeholder={isJa ? "検索…" : "Search…"}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/35 text-[11px]
-                       text-on-surface placeholder:text-outline outline-none focus:border-primary/40 w-28 transition-colors"
+            className="h-8 px-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] text-xs
+                       text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] w-32 transition-colors"
           />
         </div>
       </div>
@@ -243,53 +354,157 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         totalPages={totalPages}
         onSort={handleSort}
         onPageChange={setPage}
-        rowKey={(row, index) => `${processName}-${row["品番"] || "part"}-${row["背番号"] || "serial"}-${row.Date || index}`}
+        rowKey={(row, index) => {
+          const id = row._id?.$oid ?? row._id;
+          return id ? String(id) : `${processName}-${index}`;
+        }}
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
-          <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs text-[var(--text-muted)] tabular-nums">
+              {isJa
+                ? `${totalItems} 件中 ${pageStart}〜${pageEnd} 件を表示`
+                : `${totalItems} records · showing ${pageStart}-${pageEnd}`}
+            </span>
+            <button
+              onClick={() => setShowExport(true)}
+              className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--freya-blue)] hover:border-[var(--freya-blue)] transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+              {isJa ? "エクスポート" : "Export"}
+            </button>
+          </div>
         )}
-        emptyTitle={search ? "No results match your search" : "No data available"}
-        emptyMessage={search ? "Adjust the search term to find matching production records." : "No production records are available for this process."}
+        emptyTitle={
+          search
+            ? (isJa ? "検索条件に一致する結果がありません" : "No results match your search")
+            : (isJa ? "データがありません" : "No data available")
+        }
+        emptyMessage={
+          search
+            ? (isJa ? "検索条件を変更して再度お試しください。" : "Adjust the search term to find matching production records.")
+            : (isJa ? "この工程の生産実績データはありません。" : "No production records are available for this process.")
+        }
         enableColumnResize
         enableColumnReorder
         layoutStorageKey={`freyaAdmin2.process-panel-layout:${processName}:${showFactoryColumn ? "factory" : "default"}`}
         stickyHeader
         stickyHeaderOffset={0}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
-        topBarClassName="flex justify-end px-1 pb-4"
-        bottomBarClassName="flex flex-col gap-4 border-t border-separator/30 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+        topBarClassName="flex justify-end px-1 pb-3"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between bg-[var(--surface)]"
+        bottomInfoClassName="flex-1 w-full flex"
         tableClassName="ui-table-data min-w-[720px]"
         tableViewportClassName="min-h-0 overflow-auto"
-        headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
-        headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap"
-        cellClassName="px-4 py-2.5 align-top"
-        rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/10"
-        previousLabel="前へ"
-        nextLabel="次へ"
+        headClassName="bg-slate-50 dark:bg-slate-900/60 border-b border-[var(--border)]"
+        headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em]"
+        cellClassName="px-4 py-2.5 align-top text-sm font-medium tabular-nums"
+        rowClassName="border-b border-[var(--border)] transition hover:bg-slate-50/75 dark:hover:bg-slate-800/40"
+        previousLabel={isJa ? "前へ" : "Previous"}
+        nextLabel={isJa ? "次へ" : "Next"}
       />
 
       {/* Summary collapsible */}
       {summary.length > 0 && (
-        <div ref={summaryRef} className="border-t border-separator/30">
-          <button
-            className="w-full px-5 py-3 flex items-center gap-2 text-xs font-bold text-outline hover:text-on-surface transition-colors"
-            onClick={() => setShowSummary((v) => !v)}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-              {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-            </span>
-            Daily Summary ({summary.length} parts)
-          </button>
+        <div ref={summaryRef} className="border-t border-separator/40">
+          {(() => {
+            const overallTotal = summary.reduce((acc, s) => acc + s.total, 0);
+            const overallNg = summary.reduce((acc, s) => acc + s.ng, 0);
+            const overallDisposal = isHidase ? summary.reduce((acc, s) => acc + s.nonDefectDisposal, 0) : 0;
+            const overallRate = overallTotal > 0 ? ((overallNg / overallTotal) * 100).toFixed(2) : "0.00";
+            return (
+              <div className="w-full px-5 py-3 flex items-center justify-between text-xs font-semibold border-b border-separator/20 bg-surface/50">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-outline hover:text-on-surface transition-colors cursor-pointer"
+                  onClick={() => setShowSummary((v) => !v)}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+                  </span>
+                  <span>{isJa ? `日別サマリー (${summary.length} 品番)` : `Daily Summary (${summary.length} parts)`}</span>
+                </button>
+                <div className="flex items-center gap-3 text-[11px] font-medium tracking-wide">
+                  <span className="flex gap-1.5 items-center">
+                    <span className="text-outline/70 uppercase text-[9px]">{isJa ? "生産数" : "Total"}</span>
+                    <span className="text-on-surface font-semibold">{overallTotal.toLocaleString()}</span>
+                  </span>
+                  {isHidase && (
+                    <span className="flex gap-1.5 items-center">
+                      <span className="text-outline/70 uppercase text-[9px]">非不良廃棄</span>
+                      <span className="text-amber-500 font-semibold">{overallDisposal.toLocaleString()}</span>
+                    </span>
+                  )}
+                  <span className="flex gap-1.5 items-center">
+                    <span className="text-outline/70 uppercase text-[9px]">{isJa ? "不良数" : "NG"}</span>
+                    <span className={`font-semibold ${overallNg > 0 ? "text-error" : "text-on-surface"}`}>{overallNg.toLocaleString()}</span>
+                  </span>
+                  <span className="flex gap-1.5 items-center">
+                    <span className="text-outline/70 uppercase text-[9px]">{isJa ? "不良率" : "Rate"}</span>
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${defectChip(overallRate)}`}>{overallRate}%</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSummaryExport(true);
+                    }}
+                    className="ml-2 px-2.5 py-1 rounded-lg border border-separator/40 bg-surface text-[10px] font-medium text-on-surface hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center gap-1"
+                    title={isJa ? "サマリーをエクスポート" : "Export Summary"}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>download</span>
+                    {isJa ? "サマリー出力" : "Export Summary"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
           {showSummary && (
-            <div className="px-5 pb-4 overflow-x-auto">
+            <div className="px-5 pt-3 pb-4 overflow-x-auto space-y-3">
+              {isHidase && (() => {
+                const totalDisp = summary.reduce((acc, s) => acc + s.nonDefectDisposal, 0);
+                const c1 = summary.reduce((acc, s) => acc + (s.disposalDetail?.初回生産品 || 0), 0);
+                const c2 = summary.reduce((acc, s) => acc + (s.disposalDetail?.終物 || 0), 0);
+                const c3 = summary.reduce((acc, s) => acc + (s.disposalDetail?.サンプル || 0), 0);
+                const c4 = summary.reduce((acc, s) => acc + (s.disposalDetail?.調整用 || 0), 0);
+                return (
+                  <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
+                    <div className="flex items-center gap-1.5 font-semibold text-amber-500 mr-2">
+                      <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                      <span>非不良廃棄 合計: {totalDisp.toLocaleString()}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-md bg-surface text-[11px] text-on-surface border border-separator/30">
+                      初回生産品: <strong>{c1.toLocaleString()}</strong>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface text-[11px] text-on-surface border border-separator/30">
+                      終物: <strong>{c2.toLocaleString()}</strong>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface text-[11px] text-on-surface border border-separator/30">
+                      サンプル: <strong>{c3.toLocaleString()}</strong>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface text-[11px] text-on-surface border border-separator/30">
+                      調整用: <strong>{c4.toLocaleString()}</strong>
+                    </span>
+                  </div>
+                );
+              })()}
               <table className="ui-table-data w-full min-w-[400px]">
                 <thead>
-                  <tr className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                  <tr className="text-[10px] font-semibold uppercase tracking-wider text-outline">
                     <th className="ui-table-heading text-left pb-2 pr-6">品番</th>
                     <th className="ui-table-heading text-left pb-2 pr-6">背番号</th>
-                    <th className="ui-table-heading text-right pb-2 pr-6">Total</th>
-                    <th className="ui-table-heading text-right pb-2 pr-6">Total NG</th>
-                    <th className="ui-table-heading text-right pb-2">不良率</th>
+                    <th className="ui-table-heading text-right pb-2 pr-6">{isHidase ? (isJa ? "良品 (生産数)" : "良品 (Total)") : (isJa ? "生産数" : "Total")}</th>
+                    {isHidase && (
+                      <>
+                        <th className="ui-table-heading text-right pb-2 pr-4 text-amber-500">非不良廃棄</th>
+                        <th className="ui-table-heading text-right pb-2 pr-4 text-outline/80">初回生産品</th>
+                        <th className="ui-table-heading text-right pb-2 pr-4 text-outline/80">終物</th>
+                        <th className="ui-table-heading text-right pb-2 pr-4 text-outline/80">サンプル</th>
+                        <th className="ui-table-heading text-right pb-2 pr-4 text-outline/80">調整用</th>
+                      </>
+                    )}
+                    <th className="ui-table-heading text-right pb-2 pr-6">{isJa ? "不良数" : "Total NG"}</th>
+                    <th className="ui-table-heading text-right pb-2">{isJa ? "不良率" : "Defect Rate"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-separator/20">
@@ -297,12 +512,23 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                     const rate = s.total > 0 ? ((s.ng / s.total) * 100).toFixed(2) : "0.00";
                     return (
                       <tr key={i} className="hover:bg-surface-container/40 transition-colors">
-                        <td className="py-2 pr-6 font-bold text-on-surface">{s.hinban ?? "—"}</td>
+                        <td className="py-2 pr-6 font-semibold text-on-surface">{s.hinban ?? "—"}</td>
                         <td className="py-2 pr-6 text-on-surface-variant">{s.sebanggo ?? "—"}</td>
-                        <td className="py-2 pr-6 text-right text-on-surface">{s.total.toLocaleString()}</td>
-                        <td className={`py-2 pr-6 text-right font-bold ${s.ng > 0 ? "text-error" : "text-outline"}`}>{s.ng}</td>
+                        <td className="py-2 pr-6 text-right text-on-surface font-mono">{s.total.toLocaleString()}</td>
+                        {isHidase && (
+                          <>
+                            <td className={`py-2 pr-4 text-right font-mono font-semibold ${s.nonDefectDisposal > 0 ? "text-amber-500" : "text-outline"}`}>
+                              {s.nonDefectDisposal}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-outline">{s.disposalDetail?.初回生産品 || 0}</td>
+                            <td className="py-2 pr-4 text-right font-mono text-outline">{s.disposalDetail?.終物 || 0}</td>
+                            <td className="py-2 pr-4 text-right font-mono text-outline">{s.disposalDetail?.サンプル || 0}</td>
+                            <td className="py-2 pr-4 text-right font-mono text-outline">{s.disposalDetail?.調整用 || 0}</td>
+                          </>
+                        )}
+                        <td className={`py-2 pr-6 text-right font-semibold font-mono ${s.ng > 0 ? "text-error" : "text-outline"}`}>{s.ng}</td>
                         <td className="py-2 text-right">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${defectChip(rate)}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${defectChip(rate)}`}>
                             {rate}%
                           </span>
                         </td>
@@ -314,6 +540,22 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             </div>
           )}
         </div>
+      )}
+
+      {showExport && (
+        <ExportOptionsModal
+          data={filtered}
+          processName={processName}
+          onClose={() => setShowExport(false)}
+        />
+      )}
+
+      {showSummaryExport && (
+        <ExportOptionsModal
+          data={summaryExportData}
+          processName={`${processName}_Summary`}
+          onClose={() => setShowSummaryExport(false)}
+        />
       )}
     </div>
   );

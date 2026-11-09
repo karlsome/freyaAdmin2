@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import ModalShell from "./ModalShell";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { formatMasterValue, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function getVisibleFields(fieldDefinitions, record) {
   const seen = new Set();
@@ -32,6 +33,8 @@ export default function MasterDetailDrawer({
   onUploadImage,
   tabKey = "masterDB",
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const inputRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -46,10 +49,11 @@ export default function MasterDetailDrawer({
   if (!open || !record) return null;
 
   const tabUI = getMasterTabUI(tabKey);
+  const recordLabel = isJa ? (tabUI.recordLabelJa || tabUI.recordLabel) : tabUI.recordLabel;
   const identity = getMasterRecordIdentity(record, tabKey);
   const title = tabKey === "masterDB"
     ? (() => {
-        const partNo = record["品番"] || record["品名"] || record["材料品番"] || tabUI.recordLabel;
+        const partNo = record["品番"] || record["品名"] || record["材料品番"] || recordLabel;
         const serialNo = record["背番号"];
         return serialNo ? `${partNo} - ${serialNo}` : partNo;
       })()
@@ -62,13 +66,15 @@ export default function MasterDetailDrawer({
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow={tabUI.recordLabel}
+      eyebrow={recordLabel}
       title={title}
       maxWidth="max-w-2xl"
       footer={
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-on-surface-variant">
-            {editing ? "Editing live master record." : "Read-only mode."}
+            {editing
+              ? (isJa ? "マスターレコード編集中" : "Editing live master record.")
+              : (isJa ? "閲覧専用モード" : "Read-only mode.")}
           </div>
           <div className="flex items-center gap-3">
             {editing ? (
@@ -81,26 +87,28 @@ export default function MasterDetailDrawer({
                     setDraft(nextDraft);
                     setEditing(false);
                   }}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
-                  Cancel
+                  {isJa ? "キャンセル" : "Cancel"}
                 </button>
                 <button
                   type="button"
                   onClick={() => onSave(draft)}
                   disabled={saving}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save Changes"}
+                  {saving
+                    ? (isJa ? "保存中…" : "Saving…")
+                    : (isJa ? "変更を保存" : "Save Changes")}
                 </button>
               </>
             ) : (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
               >
-                Edit Record
+                {isJa ? "レコードを編集" : "Edit Record"}
               </button>
             )}
           </div>
@@ -116,7 +124,7 @@ export default function MasterDetailDrawer({
                 <button
                   type="button"
                   onClick={() => setPhotoPreview({
-                    eyebrow: tabUI.recordLabel || "Master Record",
+                    eyebrow: recordLabel,
                     displayName: title,
                     images: [{ url: record.imageURL, label: title }],
                     activeIndex: 0,
@@ -128,12 +136,16 @@ export default function MasterDetailDrawer({
               ) : (
                 <div className="flex h-20 items-center justify-center gap-3 text-on-surface-variant">
                   <span className="material-symbols-outlined" style={{ fontSize: 28 }}>image_not_supported</span>
-                  <span className="text-sm font-medium">No image uploaded</span>
+                  <span className="text-sm font-medium">
+                    {isJa ? "画像が未登録です" : "No image uploaded"}
+                  </span>
                 </div>
               )}
               {uploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-surface/80 backdrop-blur-sm">
-                  <div className="rounded-full bg-surface-container px-4 py-2 text-xs font-bold text-on-surface shadow-lg">Uploading…</div>
+                  <div className="rounded-full bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface shadow-lg">
+                    {isJa ? "アップロード中…" : "Uploading…"}
+                  </div>
                 </div>
               )}
               {editing && (
@@ -154,9 +166,13 @@ export default function MasterDetailDrawer({
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={uploading}
-                    className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                    className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50"
                   >
-                    {uploading ? "Uploading…" : record.imageURL ? "Update Image" : "Upload Image"}
+                    {uploading
+                      ? (isJa ? "アップロード中…" : "Uploading…")
+                      : record.imageURL
+                        ? (isJa ? "画像を更新" : "Update Image")
+                        : (isJa ? "画像をアップロード" : "Upload Image")}
                   </button>
                 </>
               )}
@@ -170,9 +186,70 @@ export default function MasterDetailDrawer({
 
                 return (
                   <div key={field.field} className={`rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 ${multiline ? "col-span-2" : ""}`}>
-                    <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-outline">{field.label}</div>
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-outline">{field.label}</div>
                     {editing ? (
-                      multiline ? (
+                      typeof value === 'object' && value !== null && !Array.isArray(value) ? (
+                        <div className="flex flex-col gap-3 mt-2">
+                          {Object.entries(value).map(([k, v]) => (
+                            <div key={k} className="flex flex-col gap-1">
+                              <label className="text-[10px] text-outline ml-1">{k}</label>
+                              {typeof v === 'object' && v !== null ? (
+                                (v.code !== undefined && v.name !== undefined) ? (
+                                  <div className="flex gap-2">
+                                    <input 
+                                      value={v.code ?? ""} 
+                                      onChange={(e) => {
+                                        const newVal = e.target.type === 'number' || !isNaN(e.target.value) ? Number(e.target.value) : e.target.value;
+                                        setDraft(cur => ({ 
+                                          ...cur, 
+                                          [field.field]: { ...cur[field.field], [k]: { ...v, code: newVal } }
+                                        }));
+                                      }}
+                                      className="w-1/3 rounded-xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                                      placeholder="Code"
+                                    />
+                                    <input 
+                                      value={v.name ?? ""} 
+                                      onChange={(e) => {
+                                        setDraft(cur => ({ 
+                                          ...cur, 
+                                          [field.field]: { ...cur[field.field], [k]: { ...v, name: e.target.value } }
+                                        }));
+                                      }}
+                                      className="w-2/3 rounded-xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                                      placeholder="Name"
+                                    />
+                                  </div>
+                                ) : (
+                                  <input 
+                                    value={JSON.stringify(v)}
+                                    readOnly
+                                    className="w-full rounded-xl border border-outline-variant/30 bg-surface-variant/30 px-2 py-1.5 text-xs text-on-surface outline-none cursor-not-allowed"
+                                  />
+                                )
+                              ) : (
+                                <input 
+                                  value={v ?? ""}
+                                  onChange={(e) => {
+                                    setDraft(cur => ({ 
+                                      ...cur, 
+                                      [field.field]: { ...cur[field.field], [k]: e.target.value }
+                                    }));
+                                  }}
+                                  className="w-full rounded-xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : Array.isArray(value) ? (
+                        <textarea
+                          value={value.join(', ')}
+                          onChange={(e) => setDraft((current) => ({ ...current, [field.field]: e.target.value.split(',').map(s => s.trim()) }))}
+                          rows={2}
+                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                        />
+                      ) : multiline ? (
                         <textarea
                           value={value}
                           onChange={(event) => setDraft((current) => ({ ...current, [field.field]: event.target.value }))}
@@ -188,7 +265,7 @@ export default function MasterDetailDrawer({
                         />
                       )
                     ) : (
-                      <div className="whitespace-pre-wrap break-words text-sm font-bold text-on-surface">
+                      <div className="whitespace-pre-wrap break-words text-sm font-semibold text-on-surface">
                         {formatMasterValue(record[field.field])}
                       </div>
                     )}

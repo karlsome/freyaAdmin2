@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import IconButton from "./IconButton";
 import MasterProductPickerModal from "./MasterProductPickerModal";
 import FieldOptionPickerModal from "./FieldOptionPickerModal";
+import { uploadMaintenanceImage, uploadMaterialLabelImage } from "../services/api";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -71,10 +74,34 @@ function addArrayItem(target, path, template) {
   items.push(template);
 }
 
-function buildDefaultArrayTemplate(items) {
+function buildDefaultArrayTemplate(items, path) {
+  if (path === "Maintenance_Data.records") {
+    return {
+      id: Date.now(),
+      startTime: "",
+      endTime: "",
+      comment: "",
+      timestamp: new Date().toISOString(),
+      photos: [],
+    };
+  }
+  if (String(path || "").endsWith("photos")) {
+    return "";
+  }
+
   const sample = items.find((item) => item != null);
   if (Array.isArray(sample)) return [];
-  if (isPlainObject(sample)) return {};
+  if (isPlainObject(sample)) {
+    const template = deepClone(sample);
+    Object.keys(template).forEach((key) => {
+      if (typeof template[key] === "string") template[key] = "";
+      else if (typeof template[key] === "number") template[key] = 0;
+      else if (typeof template[key] === "boolean") template[key] = false;
+      else if (Array.isArray(template[key])) template[key] = [];
+      else if (isPlainObject(template[key])) template[key] = {};
+    });
+    return template;
+  }
   if (typeof sample === "number") return 0;
   if (typeof sample === "boolean") return false;
   return "";
@@ -92,7 +119,7 @@ function inferFieldKind(path, value) {
   const leafKey = String(path || "").split(".").pop() || "";
   if (typeof value === "boolean") return "boolean";
   if (leafKey === "Date" || /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return "date";
-  if (["Time_start", "Time_end", "start", "end"].includes(leafKey) || /^\d{1,2}:\d{2}$/.test(String(value || ""))) return "time";
+  if (["Time_start", "Time_end", "start", "end", "startTime", "endTime"].includes(leafKey) || /^\d{1,2}:\d{2}$/.test(String(value || ""))) return "time";
   if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
   if (typeof value === "string" && value.length > 120) return "textarea";
   return "text";
@@ -157,10 +184,10 @@ export default function RecordEditModal({
   onSave,
   onSoftDelete,
   canSoftDelete = false,
-  saveLabel = "Save Changes",
-  softDeleteLabel = "Soft Delete",
-  noteLabel = "Edit Note",
-  notePlaceholder = "Enter the reason for this change...",
+  saveLabel,
+  softDeleteLabel,
+  noteLabel,
+  notePlaceholder,
   buildSections,
   resolveFieldKind,
   computeDraft,
@@ -170,6 +197,14 @@ export default function RecordEditModal({
   loadLinkedProductOptions,
   loadFieldPickerOptions,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
+  const effectiveSaveLabel = saveLabel || (isJa ? "変更を保存" : "Save Changes");
+  const effectiveSoftDeleteLabel = softDeleteLabel || (isJa ? "ゴミ箱へ移動" : "Soft Delete");
+  const effectiveNoteLabel = noteLabel || (isJa ? "変更理由 / コメント (必須)" : "Edit Note");
+  const effectiveNotePlaceholder = notePlaceholder || (isJa ? "変更理由を入力..." : "Enter the reason for this change...");
+
   const hiddenFieldSet = useMemo(() => {
     if (hiddenFields instanceof Set) return hiddenFields;
     return new Set(Array.isArray(hiddenFields) ? hiddenFields : []);
@@ -181,15 +216,19 @@ export default function RecordEditModal({
   const [fieldPickerState, setFieldPickerState] = useState({
     open: false,
     path: "",
-    label: "",
-    title: "",
     initialQuery: "",
   });
+  const [revealedKeys, setRevealedKeys] = useState(new Set());
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (!open || !record) {
       setDraft(null);
       setNote("");
+      setRevealedKeys(new Set());
       return;
     }
 
@@ -224,6 +263,8 @@ export default function RecordEditModal({
   if (!open || !draft) return null;
 
   function isHiddenPath(path) {
+    const leafKey = String(path || "").split(".").pop() || "";
+    if (leafKey === "id" || leafKey === "timestamp") return true;
     const rootKey = String(path || "").split(".")[0] || "";
     return hiddenFieldSet.has(path) || hiddenFieldSet.has(rootKey);
   }
@@ -246,7 +287,7 @@ export default function RecordEditModal({
     applyDraftMutation((nextDraft) => {
       const items = getPathValue(nextDraft, path);
       if (!Array.isArray(items)) return;
-      addArrayItem(nextDraft, path, buildDefaultArrayTemplate(items));
+      addArrayItem(nextDraft, path, buildDefaultArrayTemplate(items, path));
     });
   }
 
@@ -291,7 +332,7 @@ export default function RecordEditModal({
       path: item.path,
       label: item.label,
       title: item.pickerTitle || item.label,
-      initialQuery: currentValue,
+      initialQuery: "",
     });
   }
 
@@ -304,6 +345,63 @@ export default function RecordEditModal({
   }
 
   function renderPrimitiveField(path, label, value, options = {}) {
+    if (path === "材料ロット") {
+      const pills = (value || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+      const handleAddPill = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const val = e.target.value.trim();
+          if (val && !pills.includes(val)) {
+            const nextPills = [...pills, val];
+            handleFieldChange(path, nextPills.join(","), "text");
+          }
+          e.target.value = "";
+        }
+      };
+      
+      const handleBlurPill = (e) => {
+        const val = e.target.value.trim();
+        if (val && !pills.includes(val)) {
+          const nextPills = [...pills, val];
+          handleFieldChange(path, nextPills.join(","), "text");
+        }
+        e.target.value = "";
+      };
+
+      const handleRemovePill = (idx) => {
+        const nextPills = pills.filter((_, i) => i !== idx);
+        handleFieldChange(path, nextPills.join(","), "text");
+      };
+
+      return (
+        <div>
+          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 transition focus-within:border-primary/40 dark:bg-surface-container">
+            {pills.map((pill, idx) => (
+              <span key={idx} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+                {pill}
+                <button
+                  type="button"
+                  onClick={() => handleRemovePill(idx)}
+                  className="flex items-center justify-center rounded-full hover:bg-primary/20 hover:text-error transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              placeholder={pills.length === 0 ? "Add lot..." : ""}
+              onKeyDown={handleAddPill}
+              onBlur={handleBlurPill}
+              className="planner-data-text min-w-[100px] flex-1 bg-transparent text-on-surface outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
     const kind = options.inputKind
       || (typeof resolveFieldKind === "function" ? resolveFieldKind(path, value, schemaContext) : inferFieldKind(path, value));
     const imagePreview = isImageLikePath(path) && isImageUrl(value);
@@ -311,7 +409,7 @@ export default function RecordEditModal({
     if (kind === "auto") {
       return (
         <div>
-          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{label}</div>}
+          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
           <div className="planner-data-text rounded-2xl border border-primary/15 bg-primary/8 px-3 py-2.5 font-medium text-primary">
             {formatDisplayValue(value)}
           </div>
@@ -333,40 +431,131 @@ export default function RecordEditModal({
       );
     }
 
-    const inputClassName = "planner-data-text w-full rounded-2xl border border-separator/40 bg-white px-3 py-2.5 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container";
+    const inputClassName = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]";
 
     return (
       <div>
-        {options.hideLabel ? null : <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{label}</div>}
+        {options.hideLabel ? null : <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</div>}
         {imagePreview ? (
-          <div className="mb-2 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
-            <img src={value} alt={label} className="h-32 w-full object-contain bg-black/5" />
+          <div className="mb-2 w-full max-w-sm overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low transition-colors hover:bg-surface-container-high/50 cursor-pointer" onClick={() => setPhotoPreview({
+            eyebrow: "Record Photos",
+            displayName: label,
+            images: [{ url: value, label: label }],
+            activeIndex: 0
+          })}>
+            <img src={value} alt={label} className="h-48 w-full object-contain bg-black/5" />
           </div>
-        ) : null}
-
-        {kind === "textarea" ? (
-          <textarea
-            rows={3}
-            value={value ?? ""}
-            onChange={(event) => handleFieldChange(path, event.target.value, kind)}
-            className={inputClassName}
-          />
         ) : (
-          <input
-            type={kind === "date" ? "date" : kind === "time" ? "time" : kind === "number" || kind === "integer" ? "number" : "text"}
-            step={kind === "number" ? "0.01" : kind === "integer" ? "1" : undefined}
-            min={kind === "number" || kind === "integer" ? "0" : undefined}
-            value={kind === "number" || kind === "integer" ? (value ?? 0) : (value ?? "")}
-            onChange={(event) => handleFieldChange(path, event.target.value, kind)}
-            className={inputClassName}
-          />
+          kind === "textarea" ? (
+            <textarea
+              rows={3}
+              value={value ?? ""}
+              onChange={(event) => handleFieldChange(path, event.target.value, kind)}
+              className={inputClassName}
+            />
+          ) : (
+            <input
+              type={kind === "date" ? "date" : kind === "time" ? "time" : kind === "number" || kind === "integer" ? "number" : "text"}
+              step={kind === "number" ? "0.01" : kind === "integer" ? "1" : undefined}
+              min={kind === "number" || kind === "integer" ? "0" : undefined}
+              value={kind === "number" || kind === "integer" ? (value ?? 0) : (value ?? "")}
+              onChange={(event) => handleFieldChange(path, event.target.value, kind)}
+              className={inputClassName}
+            />
+          )
         )}
       </div>
     );
   }
 
   function renderStructuredNode(path, value, depth = 0) {
+    if (path.endsWith(".photos") || path === "materialLabelImages") {
+      const photos = Array.isArray(value) ? value.filter(Boolean) : [];
+      const isMaterialLabel = path === "materialLabelImages";
+      
+      const handlePhotoUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        try {
+          setUploadingImage(true);
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          
+          const payload = {
+            factory: draft.工場 || "Unknown",
+            equipment: draft.設備 || "Unknown",
+            date: draft.Date || new Date().toISOString().split('T')[0],
+            timestamp: Date.now(),
+            id: Date.now(),
+            base64,
+            sebanggo: draft.背番号 || "Unknown"
+          };
+          
+          const res = isMaterialLabel ? await uploadMaterialLabelImage(payload) : await uploadMaintenanceImage(payload);
+          if (res.url) {
+             applyDraftMutation((nextDraft) => {
+               const arr = getPathValue(nextDraft, path) || [];
+               setPathValue(nextDraft, path, [...arr, res.url]);
+             });
+          }
+        } catch (error) {
+          alert(`Error uploading image: ${error.message}`);
+        } finally {
+          setUploadingImage(false);
+          event.target.value = "";
+        }
+      };
+      
+      return (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {photos.map((url, idx) => (
+              <div key={idx} className="relative group rounded-xl overflow-hidden border border-outline-variant/30">
+                <img 
+                  src={url} 
+                  alt={isMaterialLabel ? "Material Label" : "Maintenance"} 
+                  className="w-full aspect-square object-cover cursor-pointer" 
+                  onClick={() => setPhotoPreview({
+                    eyebrow: "Record Photos",
+                    displayName: isMaterialLabel ? "材料ラベル画像" : "Maintenance Photos",
+                    images: photos.map((u, i) => ({ url: u, label: isMaterialLabel ? `材料ラベル ${i + 1}` : `Maintenance ${i + 1}` })),
+                    activeIndex: idx
+                  })}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingImage || busy}
+                  onClick={() => handleArrayRemove(path, idx)}
+                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-error/90 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </div>
+            ))}
+            
+            <label className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 aspect-square text-sm font-semibold text-primary transition ${(uploadingImage || busy) ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/10 cursor-pointer"}`}>
+               <span className="material-symbols-outlined text-[24px]">
+                 {uploadingImage ? "hourglass_empty" : "add_a_photo"}
+               </span>
+               <span className="text-[10px] uppercase tracking-wider text-center px-2">
+                 {uploadingImage
+                   ? (isJa ? "アップロード中..." : "Uploading...")
+                   : (isMaterialLabel ? (isJa ? "材料画像を添付" : "Attach Material Image") : (isJa ? "写真を添付" : "Attach Photo"))}
+               </span>
+               <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingImage || busy} />
+            </label>
+          </div>
+        </div>
+      );
+    }
+
     if (Array.isArray(value)) {
+      const isMaintenanceRecords = path === "Maintenance_Data.records";
       return (
         <div className="space-y-3">
           {value.length ? value.map((item, index) => {
@@ -375,17 +564,35 @@ export default function RecordEditModal({
 
             return (
               <div key={itemPath} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
-                  <button
-                    type="button"
-                    onClick={() => handleArrayRemove(path, index)}
-                    disabled={busy}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                </div>
+                {isMaintenanceRecords ? (
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                      {isJa ? `メンテナンス ${index + 1}` : `MAINTENANCE ${index + 1}`}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleArrayRemove(path, index)}
+                      className="text-error transition-opacity hover:opacity-80 flex items-center justify-center"
+                      title={isJa ? "行を削除" : "Remove Row"}
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                      {isJa ? `項目 ${index + 1}` : `Item ${index + 1}`}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleArrayRemove(path, index)}
+                      disabled={busy}
+                      className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isJa ? "削除" : "Remove"}
+                    </button>
+                  </div>
+                )}
 
                 {structured
                   ? renderStructuredNode(itemPath, item, depth + 1)
@@ -394,52 +601,121 @@ export default function RecordEditModal({
             );
           }) : (
             <div className="planner-data-text rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-4 py-4 text-on-surface-variant">
-              No items have been added yet.
+              {isJa ? "項目はまだ追加されていません。" : "No items have been added yet."}
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => handleArrayAdd(path)}
-            disabled={busy}
-            className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
-          >
-            Add Item
-          </button>
+          {isMaintenanceRecords ? (
+            <div className="flex justify-center mt-1">
+              <button
+                type="button"
+                onClick={() => handleArrayAdd(path)}
+                disabled={busy}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                {isJa ? "+ メンテナンス行を追加" : "+ Add Another Maintenance Row"}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleArrayAdd(path)}
+              disabled={busy}
+              className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+            >
+              {isJa ? "項目を追加" : "Add Item"}
+            </button>
+          )}
         </div>
       );
     }
 
     if (isPlainObject(value)) {
-      const entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
+      let entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
+
+      const isIncrementalGroup = path === "Break_Time_Data";
+      const hiddenKeys = [];
+
+      if (isIncrementalGroup) {
+        entries.sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+        const visibleEntries = [];
+        const hasData = (v) => Object.values(v).some((val) => val !== "" && val !== null && val !== undefined);
+        
+        entries.forEach(([k, v], i) => {
+          if (i === 0 || hasData(v) || revealedKeys.has(`${path}.${k}`)) {
+            visibleEntries.push([k, v]);
+          } else {
+            hiddenKeys.push(k);
+          }
+        });
+        entries = visibleEntries;
+      }
 
       if (!entries.length) {
         return (
           <div className="planner-data-text rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-4 py-4 text-on-surface-variant">
-            No editable fields are available in this group.
+            {isJa ? "このグループで編集可能な項目はありません。" : "No editable fields are available in this group."}
           </div>
         );
       }
 
       return (
-        <div className="grid gap-3 md:grid-cols-2">
-          {entries.map(([childKey, childValue]) => {
-            const childPath = `${path}.${childKey}`;
-            const structured = Array.isArray(childValue) || isPlainObject(childValue);
+        <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            {entries.map(([childKey, childValue]) => {
+              const childPath = `${path}.${childKey}`;
+              const structured = Array.isArray(childValue) || isPlainObject(childValue);
 
-            return (
-              <div key={childPath} className={structured ? "md:col-span-2" : ""}>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                  {structured ? (
-                    <>
-                      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{childKey}</div>
-                      {renderStructuredNode(childPath, childValue, depth + 1)}
-                    </>
-                  ) : renderPrimitiveField(childPath, childKey, childValue)}
+              return (
+                <div key={childPath} className={structured ? "md:col-span-2" : ""}>
+                  <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+                    {structured ? (
+                      <>
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{childKey}</div>
+                          {isIncrementalGroup && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applyDraftMutation((nextDraft) => {
+                                  Object.keys(childValue).forEach((k) => {
+                                    setPathValue(nextDraft, `${childPath}.${k}`, "");
+                                  });
+                                });
+                                setRevealedKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(childPath);
+                                  return next;
+                                });
+                              }}
+                              className="text-error transition-opacity hover:opacity-80 flex items-center justify-center"
+                              title={isJa ? "行を消去して削除" : "Clear & Remove Row"}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                        {renderStructuredNode(childPath, childValue, depth + 1)}
+                      </>
+                    ) : renderPrimitiveField(childPath, childKey, childValue)}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {isIncrementalGroup && hiddenKeys.length > 0 && (
+            <div className="flex justify-center mt-1">
+              <button
+                type="button"
+                onClick={() => setRevealedKeys((prev) => new Set(prev).add(`${path}.${hiddenKeys[0]}`))}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                {isJa
+                  ? `+ ${path === "Break_Time_Data" ? "休憩時間" : "メンテナンス"}行を追加`
+                  : `+ Add Another ${path === "Break_Time_Data" ? "Break Time" : "Maintenance"} Row`}
+              </button>
+            </div>
+          )}
         </div>
       );
     }
@@ -458,19 +734,19 @@ export default function RecordEditModal({
             { label: item.partNumberLabel, value: partNumberValue, focusField: "品番" },
             { label: item.serialNumberLabel, value: serialNumberValue, focusField: "背番号" },
           ].map((field) => (
-            <div key={field.focusField} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field.label}</div>
+            <div key={field.focusField} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-3.5 py-2.5">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{field.label}</div>
               <div className="flex items-center gap-2">
-                <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
+                <div className="min-h-[38px] flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-primary)]">
                   {formatDisplayValue(field.value)}
                 </div>
                 <button
                   type="button"
                   onClick={() => openLinkedPicker(field.focusField)}
                   disabled={busy || !linkedProductPaths || typeof loadLinkedProductOptions !== "function"}
-                  className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Change
+                  {isJa ? "変更" : "Change"}
                 </button>
               </div>
             </div>
@@ -483,18 +759,18 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{item.label}</div>
-          <div className="flex items-center gap-2 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-            <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{item.label}</div>
+          <div className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-3.5 py-2.5">
+            <div className="min-h-[38px] flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-primary)]">
               {formatDisplayValue(value)}
             </div>
             <button
               type="button"
               onClick={() => openFieldPicker(item)}
               disabled={busy || typeof loadFieldPickerOptions !== "function"}
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Change
+              {isJa ? "変更" : "Change"}
             </button>
           </div>
         </div>
@@ -505,7 +781,7 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{item.label}</div>
+          <div className="mb-3 mt-1 text-sm font-bold text-on-surface tracking-wide">{item.label}</div>
           {renderStructuredNode(item.path, value)}
         </div>
       );
@@ -521,38 +797,54 @@ export default function RecordEditModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" onClick={() => onClose?.()}>
-        <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
+      <div 
+        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" 
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      >
+        <div 
+          className="flex min-h-full items-center justify-center p-4 lg:p-6"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose?.();
+          }}
+        >
           <div
-            className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
-            onClick={(event) => event.stopPropagation()}
+            className="freya-card flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="border-b border-separator/35 px-6 py-5">
+            <div className="border-b border-[var(--border)] px-6 py-4 bg-[var(--surface-raised)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Edit Record</div>
-                  <h2 className="mt-1 text-xl font-black text-on-surface">{title}</h2>
-                  {subtitle ? <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p> : null}
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                    {isJa ? "レコード編集" : "Edit Record"}
+                  </div>
+                  <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)] leading-tight">{title}</h2>
+                  {subtitle ? <p className="mt-0.5 text-xs text-[var(--text-muted)] font-normal">{subtitle}</p> : null}
                 </div>
 
-                <IconButton
-                  icon="close"
+                <button
+                  type="button"
                   onClick={() => onClose?.()}
-                  variant="outlined"
-                  ariaLabel="Close dialog"
-                />
+                  aria-label="Close dialog"
+                  className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                </button>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {sections.map((section) => (
-                  <div key={section.key} className="rounded-2xl border border-outline-variant/15 bg-white/80 px-4 py-4 dark:bg-surface-container">
-                    <div className="mb-4 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>{section.icon || "edit_square"}</span>
+                  <div key={section.key} className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <div className="mb-3.5 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 18 }}>{section.icon || "edit_square"}</span>
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Section</div>
-                        <h3 className="text-base font-black text-on-surface">{section.title}</h3>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                          {isJa ? "セクション" : "Section"}
+                        </div>
+                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{section.title}</h3>
                       </div>
                     </div>
 
@@ -564,16 +856,16 @@ export default function RecordEditModal({
               </div>
             </div>
 
-            <div className="border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] xl:items-end">
+            <div className="border-t border-[var(--border)] bg-[var(--surface-raised)] px-6 py-3.5">
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] xl:items-end">
                 <div>
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{noteLabel}</div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{effectiveNoteLabel}</div>
                   <input
                     type="text"
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
-                    placeholder={notePlaceholder}
-                    className="planner-data-text h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                    placeholder={effectiveNotePlaceholder}
+                    className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
                   />
                 </div>
 
@@ -582,9 +874,9 @@ export default function RecordEditModal({
                     type="button"
                     disabled={busy}
                     onClick={() => onSoftDelete?.({ draft, note })}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2.5 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-9 rounded-[6px] border border-[var(--semantic-error)]/30 bg-[var(--semantic-error)]/10 px-4 text-xs font-semibold text-[var(--semantic-error)] transition hover:bg-[var(--semantic-error)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {softDeleteLabel}
+                    {effectiveSoftDeleteLabel}
                   </button>
                 ) : null}
 
@@ -592,24 +884,36 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy}
                   onClick={() => onClose?.()}
-                  className="rounded-2xl border border-separator/40 bg-white px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                  className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Cancel
+                  {isJa ? "キャンセル" : "Cancel"}
                 </button>
 
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || !note || note.trim() === ""}
                   onClick={() => onSave?.({ draft, note })}
-                  className="rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-9 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saveLabel}
+                  {effectiveSaveLabel}
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => setPhotoPreview((current) => {
+          if (!current) return current;
+          const images = Array.isArray(current.images) ? current.images : [];
+          const next = (Number.isInteger(current.activeIndex) ? current.activeIndex : 0) + direction;
+          if (next < 0 || next >= images.length) return current;
+          return { ...current, activeIndex: next };
+        })}
+      />
 
       <MasterProductPickerModal
         open={pickerState.open}

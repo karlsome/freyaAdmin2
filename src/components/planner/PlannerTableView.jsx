@@ -1,7 +1,11 @@
 import { formatDuration, sortScheduledProducts } from "../../utils/planner";
 import EmptyState from "../EmptyState";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function PlannerTableView({ scheduledProducts = [], onRemoveItem }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const items = sortScheduledProducts(scheduledProducts);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalBoxes = items.reduce((sum, item) => sum + Number(item.boxes || 0), 0);
@@ -9,67 +13,83 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
 
   if (!items.length) {
     return (
-      <EmptyState className="rounded-3xl bg-surface-container-low py-14">No products in the current plan.</EmptyState>
+      <EmptyState className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] py-14 text-xs text-[var(--text-muted)]">
+        {isJa ? "現在の計画に対象製品がありません。" : "No products in the current plan."}
+      </EmptyState>
     );
   }
 
+  const headings = isJa ? [
+    "設備",
+    "背番号",
+    "品番",
+    "品名",
+    "数量",
+    "箱数",
+    "開始時刻",
+    "所要時間",
+    "操作",
+  ] : [
+    "Equipment",
+    "背番号",
+    "品番",
+    "品名",
+    "Qty",
+    "Boxes",
+    "Start",
+    "Estimated",
+    "Actions",
+  ];
+
   return (
-    <div className="glass-card planner-data-text overflow-hidden rounded-3xl">
+    <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
       <div className="overflow-x-auto">
-        <table className="ui-table-data min-w-full">
-          <thead className="bg-surface-container-low border-b border-outline-variant/20">
+        <table className="min-w-full">
+          <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)]">
             <tr>
-              {[
-                "Equipment",
-                "背番号",
-                "品番",
-                "品名",
-                "Qty",
-                "Boxes",
-                "Start",
-                "Estimated",
-                "Actions",
-              ].map((label) => (
-                <th key={label} className="ui-table-heading px-4 py-3 text-left text-on-surface-variant">{label}</th>
+              {headings.map((label) => (
+                <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item._scheduleId} className="border-b border-outline-variant/10 transition hover:bg-primary/5">
-                <td className="px-4 py-3 font-bold text-on-surface">{item.equipment}</td>
-                <td className="px-4 py-3 text-on-surface">
+              <tr key={item._scheduleId} className="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]">
+                <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">{item.equipment}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-primary)]">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                     {item.背番号 || "-"}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-on-surface-variant">{item.品番 || "-"}</td>
-                <td className="px-4 py-3 text-on-surface-variant">{item.品名 || "-"}</td>
-                <td className="px-4 py-3 text-on-surface">{item.quantity}</td>
-                <td className="px-4 py-3 text-on-surface">{item.boxes}</td>
-                <td className="px-4 py-3 text-on-surface">{item.startTime}</td>
-                <td className="px-4 py-3 text-on-surface">{item.estimatedTime?.formattedTime || "-"}</td>
-                <td className="px-4 py-3 text-on-surface">
+                <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{item.品番 || "-"}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{item.品名 || "-"}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-primary)]">{item.quantity}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-primary)]">{item.boxes}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-primary)]">{item.startTime}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-primary)]">{item.estimatedTime?.formattedTime || "-"}</td>
+                <td className="px-4 py-3 text-xs">
                   <button
                     type="button"
                     onClick={() => onRemoveItem(item)}
-                    className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10"
+                    className="rounded-[6px] border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 transition-colors"
                   >
-                    Remove
+                    {isJa ? "削除" : "Remove"}
                   </button>
                 </td>
               </tr>
             ))}
           </tbody>
-          <tfoot className="bg-surface-container-low border-t border-outline-variant/20">
+          <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)]">
             <tr>
-              <td colSpan={4} className="px-4 py-3 font-black text-on-surface">Totals</td>
-              <td className="px-4 py-3 font-black text-on-surface">{totalQuantity}</td>
-              <td className="px-4 py-3 font-black text-on-surface">{totalBoxes}</td>
-              <td className="px-4 py-3 font-black text-on-surface">—</td>
-              <td className="px-4 py-3 font-black text-on-surface">{formatDuration(totalSeconds)}</td>
-              <td className="px-4 py-3 font-black text-on-surface">—</td>
+              <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">
+                {isJa ? "合計" : "Totals"}
+              </td>
+              <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">{totalQuantity}</td>
+              <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">{totalBoxes}</td>
+              <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">—</td>
+              <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">{formatDuration(totalSeconds)}</td>
+              <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">—</td>
             </tr>
           </tfoot>
         </table>

@@ -48,38 +48,53 @@ const DETAIL_HIDDEN_FIELDS = new Set([
 ]);
 
 export const APPROVAL_TABS = [
-  { key: "kensaDB", label: "Inspection" },
-  { key: "pressDB", label: "Press" },
-  { key: "SRSDB", label: "SRS" },
-  { key: "slitDB", label: "Slit" },
+  { key: "kensaDB", label: "Inspection", labelJa: "検査" },
+  { key: "pressDB", label: "Press", labelJa: "プレス" },
+  { key: "SRSDB", label: "SRS", labelJa: "SRS" },
+  { key: "slitDB", label: "Slit", labelJa: "スリット" },
 ];
 
 export const APPROVAL_VIEW_MODES = [
-  { key: "review", label: "Review" },
-  { key: "batch", label: "Batch" },
+  { key: "review", label: "Review", labelJa: "レビュー" },
+  { key: "batch", label: "Batch", labelJa: "一括承認" },
 ];
 
 export const APPROVAL_RANGE_MODES = [
-  { key: "current", label: "Current Day" },
-  { key: "all", label: "All History" },
+  { key: "current", label: "Current Day", labelJa: "当日" },
+  { key: "all", label: "All History", labelJa: "全期間" },
 ];
 
 export const APPROVAL_STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "pending", label: "Pending" },
-  { value: "hancho_approved", label: "Hancho Approved" },
-  { value: "fully_approved", label: "Fully Approved" },
-  { value: "correction_needed", label: "Correction Needed" },
-  { value: "correction_needed_from_kacho", label: "Kacho Correction Request" },
+  { value: "", label: "All Status", labelJa: "全ステータス" },
+  { value: "pending", label: "Pending", labelJa: "未承認" },
+  { value: "hancho_approved", label: "Hancho Approved", labelJa: "班長承認済" },
+  { value: "fully_approved", label: "Fully Approved", labelJa: "最終承認済" },
+  { value: "correction_needed", label: "Correction Needed", labelJa: "差戻し（修正待ち）" },
+  { value: "correction_needed_from_kacho", label: "Kacho Correction Request", labelJa: "課長差戻し" },
 ];
 
 export const APPROVAL_FILTER_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
+};
+
+export const APPROVAL_FILTER_OPERATOR_LABELS_JA = {
+  equals: "等しい",
+  not_equals: "等しくない",
+  contains: "含む",
+  in: "含む (複数)",
+  exists: "存在する",
+  not_exists: "存在しない",
+  greater: "より大きい",
+  less: "より小さい",
+  range: "範囲",
 };
 
 const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
@@ -88,38 +103,38 @@ const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
 
 const APPROVAL_COMMON_ADVANCED_FIELDS = [
   // Basic
-  { field: "品番", label: "品番", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "背番号", label: "背番号", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "モデル", label: "モデル", type: "select", group: "Basic", operators: ["equals", "in"], optionSource: "master-models" },
-  { field: "製造ロット", label: "製造ロット", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "材料ロット", label: "材料ロット", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "Date", label: "Date", type: "date", group: "Basic", operators: ["equals", "range"] },
+  { field: "品番", label: "品番", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "背番号", label: "背番号", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "モデル", label: "モデル", type: "select", group: "Basic", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "master-models" },
+  { field: "製造ロット", label: "製造ロット", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "材料ロット", label: "材料ロット", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "Date", label: "Date", type: "date", group: "Basic", operators: ["equals", "not_equals", "range", "exists", "not_exists"] },
   
   // Worker
-  { field: "Worker_Name", label: "Worker_Name", type: "select", group: "Worker", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  { field: "Worker_Name", label: "Worker_Name", type: "select", group: "Worker", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "collection-distinct" },
   
   // Equipment
-  { field: "設備", label: "設備", type: "select", group: "Equipment", operators: ["equals", "in"], optionSource: "collection-distinct" },
-  { field: "工場", label: "工場", type: "select", group: "Equipment", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  { field: "設備", label: "設備", type: "select", group: "Equipment", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "collection-distinct" },
+  { field: "工場", label: "工場", type: "select", group: "Equipment", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "collection-distinct" },
   
   // Time
-  { field: "Time_start", label: "Time_start", type: "time", group: "Time", operators: ["equals", "range", "greater", "less"] },
-  { field: "Time_end", label: "Time_end", type: "time", group: "Time", operators: ["equals", "range", "greater", "less"] },
+  { field: "Time_start", label: "Time_start", type: "time", group: "Time", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Time_end", label: "Time_end", type: "time", group: "Time", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
   
   // Quantity
-  { field: "Total", label: "Total", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Total_NG", label: "Total_NG", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Process_Quantity", label: "Process_Quantity", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Remaining_Quantity", label: "Remaining_Quantity", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Spare", label: "Spare", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  { field: "Total", label: "Total", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Total_NG", label: "Total_NG", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Process_Quantity", label: "Process_Quantity", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Remaining_Quantity", label: "Remaining_Quantity", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Spare", label: "Spare", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
   
-  // Performance  
-  { field: "Cycle_Time", label: "Cycle_Time", type: "number", group: "Performance", operators: ["equals", "range", "greater", "less"] },
+  // Performance
+  { field: "Cycle_Time", label: "Cycle_Time", type: "number", group: "Performance", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
   
   // Other
-  { field: "ScannedQR", label: "ScannedQR", type: "text", group: "Other", operators: ["equals", "contains"] },
-  { field: "Comment", label: "Comment", type: "textarea", group: "Other", operators: ["equals", "contains"] },
-  { field: "approvalStatus", label: "approvalStatus", type: "select", group: "Status", operators: ["equals", "in"], options: APPROVAL_STATUS_ADVANCED_OPTIONS },
+  { field: "ScannedQR", label: "ScannedQR", type: "text", group: "Other", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "Comment", label: "Comment", type: "textarea", group: "Other", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "approvalStatus", label: "approvalStatus", type: "select", group: "Status", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: APPROVAL_STATUS_ADVANCED_OPTIONS },
 ];
 
 const APPROVAL_TAB_ADVANCED_FIELDS = {
@@ -278,7 +293,11 @@ export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions =
 
     let clause = null;
 
-    if (row.operator === "range") {
+    if (row.operator === "exists") {
+      clause = { [row.field]: { $exists: true, $nin: ["", null] } };
+    } else if (row.operator === "not_exists") {
+      clause = { $or: [{ [row.field]: { $exists: false } }, { [row.field]: null }, { [row.field]: "" }] };
+    } else if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return;
       clause = {
         [row.field]: {
@@ -286,9 +305,7 @@ export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions =
           $lte: coerceApprovalFilterValue(row.valueTo, fieldDefinition),
         },
       };
-    }
-
-    if (row.operator === "in" && !clause) {
+    } else if (row.operator === "in") {
       const values = Array.isArray(row.value)
         ? row.value.filter(Boolean)
         : asString(row.value)
@@ -301,17 +318,22 @@ export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions =
       clause = {
         [row.field]: { $in: values.map((value) => coerceApprovalFilterValue(value, fieldDefinition)) },
       };
-    }
-
-    if (!clause) {
+    } else if (row.operator === "not_equals") {
       if (row.value === "" || row.value == null) return;
-
       const value = coerceApprovalFilterValue(row.value, fieldDefinition);
-
-      if (row.operator === "equals") clause = { [row.field]: value };
-      if (row.operator === "contains") clause = { [row.field]: { $regex: escapeRegex(row.value), $options: "i" } };
-      if (row.operator === "greater") clause = { [row.field]: { $gt: value } };
-      if (row.operator === "less") clause = { [row.field]: { $lt: value } };
+      clause = { [row.field]: { $ne: value } };
+    } else if (row.operator === "equals") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: coerceApprovalFilterValue(row.value, fieldDefinition) };
+    } else if (row.operator === "contains") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $regex: escapeRegex(row.value), $options: "i" } };
+    } else if (row.operator === "greater") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $gt: coerceApprovalFilterValue(row.value, fieldDefinition) } };
+    } else if (row.operator === "less") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $lt: coerceApprovalFilterValue(row.value, fieldDefinition) } };
     }
 
     if (!clause) return;
@@ -336,6 +358,16 @@ export function getActiveApprovalAdvancedFilters(rows = [], fieldDefinitions = [
     if (!row?.field || !row?.operator) return [];
     const fieldDefinition = fieldMap[row.field];
     if (!fieldDefinition) return [];
+
+    if (row.operator === "exists" || row.operator === "not_exists") {
+      return [{
+        id: row.id,
+        field: row.field,
+        label: fieldDefinition.label,
+        operator: APPROVAL_FILTER_OPERATOR_LABELS[row.operator] || row.operator,
+        value: "",
+      }];
+    }
 
     let renderedValue = "";
     if (row.operator === "range") {
@@ -459,14 +491,15 @@ export function getApprovalStatusKey(record = {}) {
   return record?.approvalStatus || "pending";
 }
 
-export function getApprovalStatusMeta(record = {}) {
+export function getApprovalStatusMeta(record = {}, isJa = false) {
   const statusKey = getApprovalStatusKey(record);
 
   switch (statusKey) {
     case "pending_delete":
       return {
         key: statusKey,
-        label: "Delete Pending",
+        label: isJa ? "削除申請中" : "Delete Pending",
+        labelJa: "削除申請中",
         badgeClassName: "bg-error/15 text-error",
         rowClassName: "bg-error/5",
         icon: "delete",
@@ -474,7 +507,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "hancho_approved":
       return {
         key: statusKey,
-        label: "Hancho Approved",
+        label: isJa ? "班長承認済" : "Hancho Approved",
+        labelJa: "班長承認済",
         badgeClassName: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
         rowClassName: "bg-sky-500/5",
         icon: "task_alt",
@@ -482,7 +516,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "fully_approved":
       return {
         key: statusKey,
-        label: "Fully Approved",
+        label: isJa ? "最終承認済" : "Fully Approved",
+        labelJa: "最終承認済",
         badgeClassName: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
         rowClassName: "",
         icon: "verified",
@@ -490,7 +525,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "correction_needed":
       return {
         key: statusKey,
-        label: "Correction Needed",
+        label: isJa ? "差戻し（修正待ち）" : "Correction Needed",
+        labelJa: "差戻し（修正待ち）",
         badgeClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
         rowClassName: "bg-rose-500/5",
         icon: "edit_note",
@@ -498,7 +534,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "correction_needed_from_kacho":
       return {
         key: statusKey,
-        label: "Kacho Correction",
+        label: isJa ? "課長差戻し" : "Kacho Correction",
+        labelJa: "課長差戻し",
         badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
         rowClassName: "bg-amber-500/5",
         icon: "assignment_late",
@@ -507,7 +544,8 @@ export function getApprovalStatusMeta(record = {}) {
     default:
       return {
         key: "pending",
-        label: "Pending",
+        label: isJa ? "未承認" : "Pending",
+        labelJa: "未承認",
         badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
         rowClassName: "bg-amber-500/5",
         icon: "schedule",
@@ -748,17 +786,17 @@ export function canApproveApproval(record = {}, authUser = {}) {
   return false;
 }
 
-export function getApproveActionLabel(record = {}, authUser = {}) {
+export function getApproveActionLabel(record = {}, authUser = {}, isJa = false) {
   const role = authUser?.role || "";
   const status = record?.approvalStatus || "pending";
 
   if (role === "班長" && status === "correction_needed_from_kacho") {
-    return "Fix Complete · Re-approve";
+    return isJa ? "修正完了・再承認" : "Fix Complete · Re-approve";
   }
 
-  if (role === "班長") return "Hancho Approve";
-  if (APPROVAL_SENIOR_ROLES.has(role)) return "Kacho Approve";
-  return "Approve";
+  if (role === "班長") return isJa ? "班長承認" : "Hancho Approve";
+  if (APPROVAL_SENIOR_ROLES.has(role)) return isJa ? "課長/部長承認" : "Kacho Approve";
+  return isJa ? "承認" : "Approve";
 }
 
 export function canRequestCorrection(record = {}, authUser = {}) {
@@ -778,12 +816,12 @@ export function canRequestCorrection(record = {}, authUser = {}) {
   return false;
 }
 
-export function getCorrectionActionLabel(record = {}, authUser = {}) {
+export function getCorrectionActionLabel(record = {}, authUser = {}, isJa = false) {
   if (authUser?.role === "班長" && record?.approvalStatus === "correction_needed_from_kacho") {
-    return "Request Factory Correction";
+    return isJa ? "現場への再修正依頼" : "Request Factory Correction";
   }
 
-  return "Request Correction";
+  return isJa ? "修正依頼（差戻し）" : "Request Correction";
 }
 
 export function canSoftDeleteApproval(record = {}, authUser = {}) {

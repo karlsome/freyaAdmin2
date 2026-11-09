@@ -1,0 +1,503 @@
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
+import Papa from "papaparse";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { fetchExportTemplates, saveExportTemplate } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
+
+const EXCLUDED_EXPORT_KEYS = new Set([
+  "_id",
+  "_source",
+  "__v",
+  "editHistory",
+  "uniqueID",
+  "materialLabelImages",
+  "materialLabelImageCount",
+  "初物チェック画像",
+  "終物チェック画像",
+  "材料ラベル画像",
+  "Break_Time_Data",
+  "Maintenance_Data",
+  "StopCall",
+  "Counters",
+]);
+
+function shouldExcludeKey(key, value) {
+  if (EXCLUDED_EXPORT_KEYS.has(key)) return true;
+  if (/画像|Image|Images|Photo/i.test(key)) return true;
+  if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:image/"))) return true;
+  return false;
+}
+
+let cachedFontBase64 = null;
+
+async function loadJapaneseFont(doc) {
+  try {
+    if (!cachedFontBase64) {
+      const fontUrl = `${import.meta.env.BASE_URL}fonts/NotoSansJP-Regular.ttf`;
+      const res = await fetch(fontUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buffer = await res.arrayBuffer();
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i += 8192) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, len)));
+      }
+      cachedFontBase64 = btoa(binary);
+    }
+    doc.addFileToVFS('NotoSansJP-Regular.ttf', cachedFontBase64);
+    doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
+    doc.setFont('NotoSansJP');
+    return true;
+  } catch (err) {
+    console.warn("Japanese font load failed, falling back to default font:", err);
+    return false;
+  }
+}
+
+function flattenObject(obj, prefix = '') {
+  const flattened = {};
+  for (const key in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+    
+    // Ignore internal, image, or technical tracking keys
+    if (shouldExcludeKey(key, obj[key])) continue;
+
+    // For 肥田瀬 non-defect disposal detail, flatten directly into clean category names
+    if (key === '非不良廃棄_詳細' && typeof obj[key] === 'object' && obj[key] !== null) {
+      const details = obj[key];
+      flattened["初回生産品"] = details["初回生産品"] ?? 0;
+      flattened["終物"] = details["終物"] ?? 0;
+      flattened["サンプル"] = details["サンプル"] ?? 0;
+      flattened["調整用"] = details["調整用"] ?? 0;
+      continue;
+    }
+
+    if (obj[key] === null || obj[key] === undefined) {
+      flattened[prefix + key] = '';
+    } else if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+      const nested = flattenObject(obj[key], prefix + key + '.');
+      Object.assign(flattened, nested);
+    } else if (Array.isArray(obj[key])) {
+      if (obj[key].length > 0 && typeof obj[key][0] === 'object') {
+        obj[key].forEach((item, index) => {
+          const nested = flattenObject(item, prefix + key + `[${index}].`);
+          Object.assign(flattened, nested);
+        });
+      } else {
+        const filtered = obj[key].filter(v => typeof v !== 'string' || (!v.startsWith('http') && !v.startsWith('data:')));
+        if (filtered.length > 0) {
+          flattened[prefix + key] = filtered.join(', ');
+        }
+      }
+    } else {
+      flattened[prefix + key] = obj[key];
+    }
+  }
+  return flattened;
+}
+
+export default function ExportOptionsModal({ data, onClose, processName = "Export" }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [headersState, setHeadersState] = useState({});
+
+  // Flatten data to find all unique headers
+  const allUniqueHeaders = useMemo(() => {
+    const headerSet = new Set();
+    data.forEach(item => {
+      const flat = flattenObject(item);
+      Object.keys(flat).forEach(k => headerSet.add(k));
+    });
+
+    const PRIORITY_ORDER = [
+      "Date", "日付", "Time_start", "開始時刻", "Time_end", "終了時刻",
+      "工場", "品番", "背番号", "設備", "Worker_Name", "作業者",
+      "Process_Quantity", "Total", "良品",
+      "非不良廃棄", "初回生産品", "終物", "サンプル", "調整用", "疵引処理数",
+      "Total_NG", "SRS_Total_NG", "不良率",
+      "Total_Work_Hours", "稼働時間", "Cycle_Time", "サイクルタイム",
+      "ショット数", "疵引不良", "加工不良", "その他", "Spare", "材料ロット", "Comment", "コメント"
+    ];
+    const priorityIndex = (h) => {
+      const idx = PRIORITY_ORDER.indexOf(h);
+      return idx === -1 ? 999 : idx;
+    };
+    return Array.from(headerSet).sort((a, b) => {
+      const pa = priorityIndex(a);
+      const pb = priorityIndex(b);
+      if (pa !== pb) return pa - pb;
+      return a.localeCompare(b, "ja");
+    });
+  }, [data]);
+
+  // Load templates on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await fetchExportTemplates(processName);
+        if (Array.isArray(response)) {
+          // Map DB schema to UI schema
+          const mapped = response.map(t => ({
+            id: t._id?.$oid ?? String(t._id),
+            name: t.templateName,
+            columns: t.selectedHeaders || []
+          }));
+          setTemplates(mapped);
+        }
+      } catch (e) {
+        console.error("Failed to load templates from DB", e);
+      }
+    }
+    load();
+  }, [processName]);
+
+  // Initialize header states
+  useEffect(() => {
+    if (selectedTemplateId) return; // Prevent overwriting if a template is active
+    
+    const initial = {};
+    allUniqueHeaders.forEach((h, i) => {
+      // Select all fields by default if no template is active
+      initial[h] = {
+        checked: true,
+        order: String(i + 1)
+      };
+    });
+    setHeadersState(initial);
+  }, [allUniqueHeaders, selectedTemplateId]);
+
+  const handleCheck = (header) => {
+    setHeadersState(prev => {
+      const isChecked = prev[header]?.checked;
+      if (isChecked) {
+        return { ...prev, [header]: { checked: false, order: "" } };
+      } else {
+        let maxOrder = 0;
+        Object.values(prev).forEach(v => {
+          if (v.checked && v.order && !isNaN(parseInt(v.order))) {
+            maxOrder = Math.max(maxOrder, parseInt(v.order));
+          }
+        });
+        return { ...prev, [header]: { checked: true, order: String(maxOrder + 1) } };
+      }
+    });
+  };
+
+  const handleOrderChange = (header, val) => {
+    setHeadersState(prev => ({
+      ...prev,
+      [header]: { ...prev[header], order: val }
+    }));
+  };
+
+  const selectAll = () => {
+    const next = { ...headersState };
+    let order = 1;
+    allUniqueHeaders.filter(h => h.toLowerCase().includes(searchQuery.toLowerCase())).forEach(h => {
+      next[h] = { checked: true, order: String(order++) };
+    });
+    setHeadersState(next);
+  };
+
+  const deselectAll = () => {
+    const next = { ...headersState };
+    allUniqueHeaders.filter(h => h.toLowerCase().includes(searchQuery.toLowerCase())).forEach(h => {
+      next[h] = { checked: false, order: "" };
+    });
+    setHeadersState(next);
+  };
+
+  const clearOrder = () => {
+    const next = { ...headersState };
+    Object.keys(next).forEach(h => {
+      next[h] = { ...next[h], order: "" };
+    });
+    setHeadersState(next);
+  };
+
+  const handleTemplateChange = (e) => {
+    const tid = e.target.value;
+    setSelectedTemplateId(tid);
+    if (!tid) return;
+
+    const t = templates.find(x => x.id === tid);
+    if (t) {
+      const next = {};
+      allUniqueHeaders.forEach(h => {
+        const found = t.columns.find(c => c.name === h);
+        if (found) {
+          next[h] = { checked: true, order: String(found.order) };
+        } else {
+          next[h] = { checked: false, order: "" };
+        }
+      });
+      setHeadersState(next);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    const name = window.prompt(isJa ? "テンプレート名を入力してください:" : "Enter template name:");
+    if (!name) return;
+
+    const columnsToSave = getOrderedColumns();
+    const headers = columnsToSave.map((c, i) => ({ name: c, order: i + 1 }));
+    
+    const dbPayload = {
+      templateName: name,
+      processType: processName,
+      selectedHeaders: headers,
+      createdBy: "freyaAdmin2",
+    };
+
+    try {
+      await saveExportTemplate(dbPayload);
+      
+      // Reload templates to get the real ID from DB
+      const response = await fetchExportTemplates(processName);
+      if (Array.isArray(response)) {
+        const mapped = response.map(t => ({
+          id: t._id?.$oid ?? String(t._id),
+          name: t.templateName,
+          columns: t.selectedHeaders || []
+        }));
+        setTemplates(mapped);
+        
+        // Auto-select the newly created template (matching by name and newest)
+        const newest = mapped.filter(t => t.name === name).pop();
+        if (newest) setSelectedTemplateId(newest.id);
+      }
+    } catch (error) {
+      console.error("Failed to save template", error);
+      alert(isJa ? "データベースへのテンプレート保存に失敗しました。" : "Failed to save template to database.");
+    }
+  };
+
+  const getOrderedColumns = () => {
+    const selected = Object.entries(headersState)
+      .filter(([_, v]) => v.checked)
+      .map(([k, v]) => ({ name: k, order: parseInt(v.order) || 9999 }));
+    
+    selected.sort((a, b) => a.order - b.order);
+    return selected.map(s => s.name);
+  };
+
+  const executeExportCSV = () => {
+    const cols = getOrderedColumns();
+    if (cols.length === 0) return alert(isJa ? "少なくとも1つの列を選択してください。" : "Please select at least one column.");
+
+    const flatData = data.map(row => flattenObject(row));
+    const csvData = flatData.map(row => {
+      const newRow = {};
+      cols.forEach(c => {
+        newRow[c] = row[c] ?? "";
+      });
+      return newRow;
+    });
+
+    const csv = Papa.unparse(csvData, { columns: cols });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${processName}_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.click();
+    URL.revokeObjectURL(url);
+    onClose();
+  };
+
+  const executeExportPDF = async () => {
+    const cols = getOrderedColumns();
+    if (cols.length === 0) return alert(isJa ? "少なくとも1つの列を選択してください。" : "Please select at least one column.");
+
+    const flatData = data.map(row => flattenObject(row));
+    const tableBody = flatData.map(row => cols.map(c => String(row[c] ?? "")));
+
+    // Initialize jsPDF in landscape
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    // Load Japanese font (cached after first load)
+    const hasJpFont = await loadJapaneseFont(doc);
+
+    // Auto-table with auto-scaling to fit the page
+    autoTable(doc, {
+      head: [cols],
+      body: tableBody,
+      styles: {
+        font: hasJpFont ? 'NotoSansJP' : undefined,
+        fontSize: 7.5,
+        overflow: 'ellipsize',
+        cellPadding: 1.5,
+      },
+      headStyles: {
+        font: hasJpFont ? 'NotoSansJP' : undefined,
+        fillColor: [66, 133, 244],
+        textColor: 255,
+      },
+      margin: { top: 15, left: 8, right: 8, bottom: 8 },
+      horizontalPageBreak: false,
+      didDrawPage: function (pageData) {
+        if (hasJpFont) doc.setFont('NotoSansJP');
+        doc.setFontSize(10);
+        doc.text(`${processName} Report`, pageData.settings.margin.left, 10);
+      }
+    });
+
+    doc.save(`${processName}_export_${new Date().toISOString().split('T')[0]}.pdf`);
+    onClose();
+  };
+
+  const filteredHeaders = allUniqueHeaders.filter(h => h.toLowerCase().includes(searchQuery.toLowerCase()));
+  const selectedCount = Object.values(headersState).filter(v => v.checked).length;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-separator/40 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-separator/40 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-on-surface">
+              {isJa ? "エクスポート設定" : "Export Options"}
+            </h3>
+            <p className="text-sm text-on-surface-variant mt-0.5">
+              {isJa ? "エクスポートする列と出力順を選択してください" : "Select columns to export and set their order"}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 text-outline hover:text-on-surface hover:bg-surface-container rounded-full transition-colors">
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+          
+          {/* Templates Section */}
+          <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="text-sm font-semibold text-primary flex-shrink-0">
+                {isJa ? "テンプレート" : "Templates"}
+              </label>
+              <select
+                value={selectedTemplateId}
+                onChange={handleTemplateChange}
+                className="flex-1 min-w-[200px] h-9 px-3 text-sm bg-white border border-primary/20 rounded-lg outline-none focus:border-primary transition-colors"
+              >
+                <option value="">{isJa ? "-- テンプレートを選択 --" : "-- Select Template --"}</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleSaveTemplate}
+                className="flex items-center gap-1.5 px-4 h-9 bg-primary text-on-primary text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
+                {isJa ? "テンプレート保存" : "Save Template"}
+              </button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="mb-4 relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
+            <input
+              type="text"
+              placeholder={isJa ? "列名を検索..." : "Search headers..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-10 pl-9 pr-4 rounded-xl border border-separator/40 bg-surface-container text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            />
+          </div>
+
+          {/* Controls */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={selectAll} className="text-sm font-semibold text-primary hover:underline">
+                {isJa ? "すべて選択" : "Select All"}
+              </button>
+              <span className="text-separator/60">|</span>
+              <button onClick={deselectAll} className="text-sm font-semibold text-primary hover:underline">
+                {isJa ? "すべて解除" : "Deselect All"}
+              </button>
+              <span className="text-separator/60">|</span>
+              <button onClick={clearOrder} className="text-sm font-semibold text-primary hover:underline">
+                {isJa ? "並び順をクリア" : "Clear Order"}
+              </button>
+            </div>
+            <span className="text-xs text-on-surface-variant font-medium">
+              {isJa ? `${allUniqueHeaders.length} 件中 ${selectedCount} 件選択中` : `${selectedCount} / ${allUniqueHeaders.length} selected`}
+            </span>
+          </div>
+          <p className="text-xs text-outline mb-3">
+            {isJa ? "出力順の数値を入力してください。チェックした列のみが出力されます。" : "Enter order numbers. Only checked items will be exported."}
+          </p>
+
+          {/* Headers List */}
+          <div className="border border-separator/40 rounded-xl overflow-hidden bg-surface-container/50">
+            {filteredHeaders.map(header => {
+              const state = headersState[header] || { checked: false, order: "" };
+              return (
+                <div key={header} className="flex items-center justify-between p-3 border-b border-separator/20 last:border-0 hover:bg-surface-container transition-colors">
+                  <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0 mr-4">
+                    <input
+                      type="checkbox"
+                      checked={state.checked}
+                      onChange={() => handleCheck(header)}
+                      className="w-4 h-4 rounded border-outline text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-on-surface font-medium truncate" title={header}>{header}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.order}
+                    onChange={(e) => handleOrderChange(header, e.target.value)}
+                    placeholder="-"
+                    className="w-14 h-8 text-center text-sm border border-separator/40 rounded-lg outline-none focus:border-primary/50 transition-colors disabled:opacity-50"
+                    disabled={!state.checked}
+                  />
+                </div>
+              );
+            })}
+            {filteredHeaders.length === 0 && (
+              <div className="p-6 text-center text-sm text-outline">
+                {isJa ? "検索に一致する列が見つかりません。" : "No headers match your search."}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-separator/40 flex justify-end gap-3 bg-surface-container/30">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl border border-separator/60 text-on-surface text-sm font-semibold hover:bg-surface-container transition-colors"
+          >
+            {isJa ? "キャンセル" : "Cancel"}
+          </button>
+          <button
+            onClick={executeExportCSV}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 text-sm font-semibold hover:bg-primary/15 transition-colors"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>csv</span>
+            {isJa ? "CSVエクスポート" : "Export CSV"}
+          </button>
+          <button
+            onClick={executeExportPDF}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>picture_as_pdf</span>
+            {isJa ? "PDFエクスポート" : "Export PDF"}
+          </button>
+        </div>
+
+      </div>
+    </div>,
+    document.body
+  );
+}

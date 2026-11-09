@@ -1,14 +1,12 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
-import { CHECKLIST_SUBMISSION_OPERATOR_LABELS } from "../utils/checklistSubmissions";
+import { getChecklistSubmissionOperatorLabels } from "../utils/checklistSubmissions";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function ChecklistSubmissionsFilterPanel({
   className = "",
   startDate,
   endDate,
-  rangeLabel,
-  scopeLabel,
-  appliedAdvancedFilterCount = 0,
   fieldDefinitions,
   advancedRows,
   onDateChange,
@@ -19,59 +17,96 @@ export default function ChecklistSubmissionsFilterPanel({
   onApplyAdvancedFilters,
   onClearAdvancedFilters,
 }) {
-  const appliedFilterLabel = appliedAdvancedFilterCount
-    ? `${appliedAdvancedFilterCount} advanced filter${appliedAdvancedFilterCount === 1 ? "" : "s"} applied`
-    : "No advanced filters applied";
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
+  function handlePresetRange(days) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(today);
+    start.setDate(today.getDate() - (days - 1));
+
+    const formatDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    onDateChange("startDate", formatDate(start));
+    onDateChange("endDate", formatDate(today));
+  }
+
+  function handleThisMonth() {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const formatDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    onDateChange("startDate", formatDate(start));
+    onDateChange("endDate", formatDate(end));
+  }
 
   return (
-    <div className={`glass-card rounded-2xl p-5 ${className}`.trim()}>
-      <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-4">
-        <FormField label="From Date">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) => onDateChange("startDate", event.target.value)}
-            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
-          />
-        </FormField>
+    <div className={`freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm relative z-20 ${className}`.trim()}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label={isJa ? "開始日" : "From Date"}>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => onDateChange("startDate", event.target.value)}
+              className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)]"
+            />
+          </FormField>
 
-        <FormField label="To Date">
-          <input
-            type="date"
-            value={endDate}
-            onChange={(event) => onDateChange("endDate", event.target.value)}
-            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
-          />
-        </FormField>
+          <FormField label={isJa ? "終了日" : "To Date"}>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => onDateChange("endDate", event.target.value)}
+              className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)]"
+            />
+          </FormField>
 
-        <div className="flex flex-col gap-1.5 xl:col-span-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Current Scope</span>
+          <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
+            <button
+              type="button"
+              onClick={() => handlePresetRange(7)}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+            >
+              {isJa ? "7日間" : "7 Days"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePresetRange(30)}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+            >
+              {isJa ? "30日間" : "30 Days"}
+            </button>
+            <button
+              type="button"
+              onClick={handleThisMonth}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+            >
+              {isJa ? "今月" : "This Month"}
+            </button>
             <button
               type="button"
               onClick={onResetDateRange}
-              className="text-[10px] font-bold uppercase tracking-wider text-primary transition hover:opacity-70"
+              className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              Reset Default 30d
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
+              {isJa ? "リセット" : "Reset"}
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>calendar_month</span>
-              {rangeLabel}
-            </span>
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>tune</span>
-              {scopeLabel}
-            </span>
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
-              {appliedFilterLabel}
-            </span>
-          </div>
-          <p className="text-xs leading-5 text-outline">
-            Use the date range for the timeline window. Advanced filters now cover machine scope, checklist form, schedule, operator, NG state, submission activity, counts, dates, and keyword search.
-          </p>
         </div>
       </div>
 
@@ -82,10 +117,14 @@ export default function ChecklistSubmissionsFilterPanel({
         onAddRow={onAddAdvancedRow}
         onRemoveRow={onRemoveAdvancedRow}
         onClearRows={onClearAdvancedFilters}
-        operatorLabels={CHECKLIST_SUBMISSION_OPERATOR_LABELS}
+        operatorLabels={getChecklistSubmissionOperatorLabels(isJa)}
         useOperatorLabelsInSelect
-        title="Advanced Filters"
-        activeSummaryDescription="Draft timeline conditions ready to apply."
+        selectFieldLabel={isJa ? "項目を選択" : "Select field"}
+        selectOperatorLabel={isJa ? "条件を選択" : "Select operator"}
+        title={isJa ? "詳細フィルター" : "Advanced Filters"}
+        addRowLabel={isJa ? "フィルター条件を追加" : "Add Filter Row"}
+        activeSummaryTitle={isJa ? "適用中のフィルター" : "Active Filters"}
+        activeSummaryDescription={isJa ? "適用待ちの詳細フィルター条件" : "Draft timeline conditions ready to apply."}
         chipTone="amber"
         variant="compact"
         framed
@@ -95,19 +134,19 @@ export default function ChecklistSubmissionsFilterPanel({
             <button
               type="button"
               onClick={onApplyAdvancedFilters}
-              className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-              Apply Advanced Filters
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>filter_alt</span>
+              {isJa ? "詳細フィルターを適用" : "Apply Advanced Filters"}
             </button>
 
             <button
               type="button"
               onClick={onClearAdvancedFilters}
-              className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-              Reset Advanced Filters
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>refresh</span>
+              {isJa ? "フィルターをリセット" : "Reset Advanced Filters"}
             </button>
           </>
         )}

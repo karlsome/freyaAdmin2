@@ -153,8 +153,8 @@ export default function EquipmentEventModal({
 
               {/* Equipment (read-only) */}
               <div className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備</p>
-                <p className="mt-0.5 text-sm font-bold text-on-surface">{equipment?.name || "—"}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備</p>
+                <p className="mt-0.5 text-sm font-semibold text-on-surface">{equipment?.name || "—"}</p>
                 {equipment?.["工場"] && (
                   <p className="text-[11px] text-on-surface-variant">{equipment["工場"]}</p>
                 )}
@@ -230,15 +230,15 @@ export default function EquipmentEventModal({
                 <button type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50">
+                  className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50">
                   {uploading ? (
                     <>
-                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                       アップロード中…
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
                       ファイルを添付
                     </>
                   )}
@@ -282,7 +282,7 @@ export default function EquipmentEventModal({
                     const selected = draft.tags.includes(tag);
                     return (
                       <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                        className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                           selected
                             ? "bg-primary text-on-primary shadow-sm"
                             : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"
@@ -300,11 +300,11 @@ export default function EquipmentEventModal({
               <p className="text-sm text-on-surface-variant">発生事案・カテゴリは必須です。</p>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={onClose}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container">
                   Cancel
                 </button>
                 <button type="submit" disabled={!hasData || submitting || uploading}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50">
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50">
                   {submitting ? "保存中…" : "事案を登録"}
                 </button>
               </div>

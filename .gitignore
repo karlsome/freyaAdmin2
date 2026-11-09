@@ -27,3 +27,7 @@ graphify-out/
 *.sw?
 .env
 .env.*
+
+# Generated graphify artifacts
+graphify-out/
+

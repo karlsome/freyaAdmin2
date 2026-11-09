@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import PageHeader from "../components/PageHeader";
@@ -31,6 +32,7 @@ import {
   NODA_PAGE_SIZE_OPTIONS,
   NODA_STATUS_CARDS,
   NODA_STATUS_OPTIONS,
+  NODA_STATUS_OPTIONS_JA,
   normalizeNodaStatistics,
   resolveNodaDisplayStatus,
 } from "../utils/noda";
@@ -46,20 +48,20 @@ function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "border-error/20 bg-error/10 text-error"
+    ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
     : flash.type === "warning"
-      ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+      ? "border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 text-[var(--status-warning)]"
+      : "border-[var(--status-normal)]/30 bg-[var(--status-normal)]/10 text-[var(--status-normal)]";
 
   return (
-    <div className={joinNodaClasses("mb-6 rounded-[24px] border px-5 py-4", tone)}>
+    <div className={joinNodaClasses("mb-6 rounded-[8px] border px-4 py-3 freya-card shadow-sm", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</p>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">Status</p>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
         </button>
       </div>
     </div>
@@ -69,13 +71,13 @@ function FlashBanner({ flash, onClose }) {
 
 function CompletedAtCell({ value }) {
   if (!value) {
-    return <span className="text-on-surface-variant">—</span>;
+    return <span className="text-[var(--text-muted)] font-mono text-xs">—</span>;
   }
 
   return (
-    <div className="min-w-0">
-      <div className="font-semibold text-on-surface">{formatNodaDate(value)}</div>
-      <div className="mt-1 text-xs text-on-surface-variant">{formatNodaTime(value)}</div>
+    <div className="min-w-0 font-mono text-xs">
+      <div className="font-semibold text-[var(--text-primary)]">{formatNodaDate(value)}</div>
+      <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">{formatNodaTime(value)}</div>
     </div>
   );
 }
@@ -120,6 +122,8 @@ function buildExportMatrix(requests = []) {
 }
 
 export default function NodaPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const authUser = readStoredAuthUser();
   const canManage = canManageNodaRequests(authUser);
   const requestIdRef = useRef(0);
@@ -211,7 +215,7 @@ export default function NodaPage() {
         setRows([]);
         setStats(EMPTY_NODA_STATS);
         setPagination(EMPTY_PAGINATION);
-        setError(loadError.message || "Failed to load Noda requests.");
+        setError(loadError.message || (isJa ? "野田リクエストの読み込みに失敗しました。" : "Failed to load Noda requests."));
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
           setLoading(false);
@@ -224,7 +228,7 @@ export default function NodaPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeStatus, deferredSearchValue, filters.backNumber, filters.dateFrom, filters.dateTo, filters.partNumber, filters.status, page, pageSize, refreshNonce, sort]);
+  }, [activeStatus, deferredSearchValue, filters.backNumber, filters.dateFrom, filters.dateTo, filters.partNumber, filters.status, isJa, page, pageSize, refreshNonce, sort]);
 
   function updateFilter(key, value) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -282,9 +286,9 @@ export default function NodaPage() {
       });
       const requests = await exportNodaRequests(filtersForExport);
       downloadCsvFile("noda-requests.csv", buildExportMatrix(requests));
-      setFlash({ type: "success", message: `Exported ${requests.length} Noda request${requests.length === 1 ? "" : "s"}.` });
+      setFlash({ type: "success", message: isJa ? `${requests.length} 件の野田リクエストをエクスポートしました。` : `Exported ${requests.length} Noda request${requests.length === 1 ? "" : "s"}.` });
     } catch (exportError) {
-      setFlash({ type: "error", message: exportError.message || "Failed to export Noda requests." });
+      setFlash({ type: "error", message: exportError.message || (isJa ? "野田リクエストのエクスポートに失敗しました。" : "Failed to export Noda requests.") });
     }
   }
 
@@ -300,11 +304,13 @@ export default function NodaPage() {
       const result = await runNodaInventoryReservation(actorName);
       setFlash({
         type: "success",
-        message: `Inventory check complete. ${result.updatedRequests || 0} request${result.updatedRequests === 1 ? " was" : "s were"} updated with ${result.totalReservations || 0} reservation${result.totalReservations === 1 ? "" : "s"}.`,
+        message: isJa
+          ? `在庫確認が完了しました。${result.updatedRequests || 0} 件のリクエストが更新され、${result.totalReservations || 0} 件の引当が行われました。`
+          : `Inventory check complete. ${result.updatedRequests || 0} request${result.updatedRequests === 1 ? " was" : "s were"} updated with ${result.totalReservations || 0} reservation${result.totalReservations === 1 ? "" : "s"}.`,
       });
       setRefreshNonce((current) => current + 1);
     } catch (inventoryError) {
-      setFlash({ type: "error", message: inventoryError.message || "Manual inventory check failed." });
+      setFlash({ type: "error", message: inventoryError.message || (isJa ? "手動在庫確認に失敗しました。" : "Manual inventory check failed.") });
     } finally {
       setCheckingInventory(false);
     }
@@ -313,7 +319,7 @@ export default function NodaPage() {
   const columns = useMemo(() => ([
     {
       key: "requestNumber",
-      label: "Request Number",
+      label: isJa ? "リクエスト番号" : "Request Number",
       width: 180,
       renderCell: (row) => (
         <button
@@ -322,7 +328,7 @@ export default function NodaPage() {
             event.stopPropagation();
             setDetailState({ open: true, requestId: row._id, mode: "view" });
           }}
-          className="text-left font-semibold text-primary transition hover:underline"
+          className="text-left font-mono font-semibold text-xs text-[var(--freya-blue)] hover:underline"
         >
           {row.requestNumber}
         </button>
@@ -333,68 +339,68 @@ export default function NodaPage() {
       key: "便",
       label: "便",
       width: 120,
-      renderCell: (row) => row.便 ? <span className="font-semibold text-primary">{row.便}</span> : <span className="text-on-surface-variant">—</span>,
+      renderCell: (row) => row.便 ? <span className="font-mono text-xs font-semibold text-[var(--text-primary)]">{row.便}</span> : <span className="text-[var(--text-muted)] font-mono text-xs">—</span>,
       disableCellWrapper: true,
     },
     {
       key: "納品書番号",
       label: "納品書番号",
       width: 160,
-      renderCell: (row) => row.納品書番号 ? <span className="font-semibold text-primary">{row.納品書番号}</span> : <span className="text-on-surface-variant">—</span>,
+      renderCell: (row) => row.納品書番号 ? <span className="font-mono text-xs font-semibold text-[var(--text-primary)]">{row.納品書番号}</span> : <span className="text-[var(--text-muted)] font-mono text-xs">—</span>,
       disableCellWrapper: true,
     },
     {
       key: "requestType",
-      label: "Type",
+      label: isJa ? "種別" : "Type",
       width: 130,
       renderCell: (row) => (
         <span className={joinNodaClasses(
-          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-[0.14em]",
+          "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider border",
           row.requestType === "bulk"
-            ? "bg-primary/12 text-primary"
-            : "bg-surface-container text-on-surface-variant"
+            ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+            : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]"
         )}>
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
             {row.requestType === "bulk" ? "stacked_email" : "article"}
           </span>
-          {row.requestType === "bulk" ? "Bulk" : "Single"}
+          {row.requestType === "bulk" ? (isJa ? "一括" : "Bulk") : (isJa ? "個別" : "Single")}
         </span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: isJa ? "ステータス" : "Status",
       width: 170,
       renderCell: (row) => {
-        const meta = getNodaStatusMeta(resolveNodaDisplayStatus(row));
+        const meta = getNodaStatusMeta(resolveNodaDisplayStatus(row), language);
         return <StatusChip icon={meta.icon} label={meta.label} className={meta.badgeClassName} />;
       },
       disableCellWrapper: true,
     },
     {
       key: "itemsSummary",
-      label: "Items",
+      label: isJa ? "品目" : "Items",
       sortable: false,
       width: 240,
       renderCell: (row) => {
-        const summary = getNodaItemsSummary(row);
+        const summary = getNodaItemsSummary(row, language);
         return (
           <div className="min-w-0">
-            <div className="font-semibold text-on-surface">{summary.title}</div>
-            <div className="mt-1 text-xs text-on-surface-variant">{summary.subtitle}</div>
+            <div className="font-semibold text-xs text-[var(--text-primary)]">{summary.title}</div>
+            <div className="mt-0.5 text-[11px] text-[var(--text-muted)] font-mono">{summary.subtitle}</div>
             {summary.warnings.length ? (
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {summary.warnings.map((warning) => (
                   <span
                     key={`${row._id}-${warning.label}`}
                     className={joinNodaClasses(
-                      "inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold",
+                      "inline-flex rounded-[4px] px-1.5 py-0.5 text-[10px] font-mono font-semibold border",
                       warning.tone === "danger"
-                        ? "bg-error/10 text-error"
+                        ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
                         : warning.tone === "warning"
-                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                          : "bg-surface-container text-on-surface-variant"
+                          ? "border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 text-[var(--status-warning)]"
+                          : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]"
                     )}
                   >
                     {warning.label}
@@ -409,19 +415,19 @@ export default function NodaPage() {
     },
     {
       key: "pickupDate",
-      label: "Pickup Date",
+      label: isJa ? "引取日" : "Pickup Date",
       sortKey: "pickupDate",
       width: 140,
-      renderCell: (row) => <span className="text-on-surface">{formatNodaDate(getNodaPickupDateValue(row))}</span>,
+      renderCell: (row) => <span className="text-[var(--text-primary)] font-mono text-xs">{formatNodaDate(getNodaPickupDateValue(row))}</span>,
       disableCellWrapper: true,
     },
     {
       key: "納入指示日",
-      label: "Deadline",
+      label: isJa ? "納入指示日" : "Deadline",
       sortKey: "納入指示日",
       width: 140,
       renderCell: (row) => (
-        <span className={joinNodaClasses("font-semibold", row.納入指示日 ? "text-error" : "text-on-surface-variant")}>
+        <span className={joinNodaClasses("font-mono text-xs font-semibold", row.納入指示日 ? "text-[var(--status-danger)]" : "text-[var(--text-muted)]")}>
           {formatNodaDate(row.納入指示日)}
         </span>
       ),
@@ -429,7 +435,7 @@ export default function NodaPage() {
     },
     {
       key: "completedAt",
-      label: "Completed",
+      label: isJa ? "完了日時" : "Completed",
       sortKey: "completedAt",
       width: 150,
       renderCell: (row) => <CompletedAtCell value={row.completedAt} />,
@@ -437,61 +443,75 @@ export default function NodaPage() {
     },
     {
       key: "actions",
-      label: "Actions",
+      label: isJa ? "操作" : "Actions",
       sortable: false,
       width: 150,
       align: "right",
       renderCell: (row) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <IconButton
             icon="visibility"
             onClick={(event) => { event.stopPropagation(); setDetailState({ open: true, requestId: row._id, mode: "view" }); }}
             variant="ghost"
-            size="md"
-            iconSize={18}
-            ariaLabel="View request"
+            size="sm"
+            iconSize={16}
+            ariaLabel={isJa ? "リクエストを表示" : "View request"}
+            className="rounded-[6px]"
           />
           {canManage ? (
             <IconButton
               icon="edit"
               onClick={(event) => { event.stopPropagation(); setDetailState({ open: true, requestId: row._id, mode: "edit" }); }}
               variant="ghost"
-              size="md"
-              iconSize={18}
-              ariaLabel="Edit request"
+              size="sm"
+              iconSize={16}
+              ariaLabel={isJa ? "リクエストを編集" : "Edit request"}
+              className="rounded-[6px]"
             />
           ) : null}
         </div>
       ),
       disableCellWrapper: true,
     },
-  ]), [canManage]);
+  ]), [canManage, isJa, language]);
+
+  const statusDotMap = {
+    all: undefined,
+    pending: "warning",
+    "in-progress": undefined,
+    completed: "complete",
+    "past-deadline": "defect",
+    "partial-inventory": "warning",
+    cancelled: "defect",
+  };
 
   return (
-    <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <div className="w-full">
         <PageHeader
-          eyebrow="Warehouse Workflow"
-          eyebrowClassName="tracking-[0.24em] text-primary"
-          title="Noda"
-          subtitle="Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."
+          eyebrow={isJa ? "倉庫ワークフロー" : "Warehouse Workflow"}
+          eyebrowClassName="tracking-[0.18em] text-[var(--freya-blue)]"
+          title={isJa ? "野田リクエスト" : "Noda"}
+          subtitle={isJa ? "野田倉庫のピッキング依頼の管理、FIFO在庫影響の確認、CSV一括発注のアップロード、GENからの残作業同期を行います。" : "Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."}
           subtitleClassName="max-w-3xl"
-          className="md:flex-row md:items-start md:justify-between"
+          className="md:flex-row md:items-start md:justify-between mb-6"
           actions={(
-            <>
+            <div className="flex items-center gap-2.5 flex-wrap">
               <button
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Refresh
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
+                {isJa ? "更新" : "Refresh"}
               </button>
               <button
                 type="button"
                 onClick={handleExport}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Export CSV
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>download</span>
+                {isJa ? "CSVエクスポート" : "Export CSV"}
               </button>
               {canManage ? (
                 <button
@@ -499,62 +519,70 @@ export default function NodaPage() {
                   onClick={handleManualInventoryCheck}
                   disabled={checkingInventory}
                   aria-busy={checkingInventory}
-                  className="inline-flex min-w-[168px] items-center justify-center gap-2 rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-w-[140px] items-center justify-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {checkingInventory ? (
                     <>
-                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>autorenew</span>
-                      Checking Inventory...
+                      <span className="material-symbols-outlined animate-spin text-[var(--freya-blue)]" style={{ fontSize: 16 }}>autorenew</span>
+                      {isJa ? "確認中..." : "Checking..."}
                     </>
-                  ) : "Check Inventory"}
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>inventory</span>
+                      {isJa ? "在庫確認" : "Check Inventory"}
+                    </>
+                  )}
                 </button>
               ) : null}
               {canManage ? (
                 <button
                   type="button"
                   onClick={() => setGenModalOpen(true)}
-                  className="rounded-2xl border border-primary/20 bg-primary/8 px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-primary/12"
+                  className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue)]/20 transition-colors shadow-2xs"
                 >
-                  Sync From GEN
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sync</span>
+                  {isJa ? "GENから同期" : "Sync From GEN"}
                 </button>
               ) : null}
               {canManage ? (
                 <button
                   type="button"
                   onClick={() => setAddModalOpen(true)}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                  className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-2xs"
                 >
-                  New Bulk Request
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                  {isJa ? "新規一括リクエスト" : "New Bulk Request"}
                 </button>
               ) : null}
-            </>
+            </div>
           )}
         />
 
         <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {NODA_STATUS_CARDS.map((card) => (
             <StatSummaryCard
               key={card.key}
+              variant="freya"
               icon={card.icon}
-              label={card.label}
+              label={isJa ? (card.labelJa || card.label) : card.label}
               value={stats[card.key] ?? 0}
-              subtitle={card.key === "all" ? "All tracked requests" : `Filter by ${card.label.toLowerCase()}`}
-              accent={card.accent}
+              subtitle={card.key === "all" ? (isJa ? "すべての追跡リクエスト" : "All tracked requests") : (isJa ? `${card.labelJa || card.label} でフィルター` : `Filter by ${card.label.toLowerCase()}`)}
+              statusDot={statusDotMap[card.key]}
               active={activeStatus === card.key}
               loading={loading}
               onClick={() => handleStatusCardClick(card.key)}
-              className="min-h-[128px]"
+              className="cursor-pointer"
             />
           ))}
         </div>
 
-        <div className="glass-card mb-6 rounded-[28px] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="freya-card rounded-[8px] p-5 mb-6 border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-black text-on-surface">Filters</h2>
-              <p className="mt-1 text-sm text-on-surface-variant">Refine the active request list by status, item, deadline, or search term.</p>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{isJa ? "フィルター" : "Filters"}</h2>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{isJa ? "ステータス、品目、期限、検索キーワードでリクエスト一覧を絞り込みます。" : "Refine the active request list by status, item, deadline, or search term."}</p>
             </div>
             <button
               type="button"
@@ -563,34 +591,34 @@ export default function NodaPage() {
                 setActiveStatus("all");
                 setPage(1);
               }}
-              className="rounded-2xl border border-outline-variant/25 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              Reset Filters
+              {isJa ? "フィルターをリセット" : "Reset Filters"}
             </button>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Status</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "ステータス" : "Status"}</span>
               <select
                 value={filters.status}
                 onChange={(event) => handleStatusSelectChange(event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               >
-                {NODA_STATUS_OPTIONS.map((option) => (
+                {(isJa ? NODA_STATUS_OPTIONS_JA : NODA_STATUS_OPTIONS).map((option) => (
                   <option key={option.value || "all"} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">品番</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">品番</span>
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               >
-                <option value="">All Part Numbers</option>
+                <option value="">{isJa ? "すべての品番" : "All Part Numbers"}</option>
                 {filterOptions.partNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -598,13 +626,13 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">背番号</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">背番号</span>
               <select
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               >
-                <option value="">All Serial Numbers</option>
+                <option value="">{isJa ? "すべての背番号" : "All Serial Numbers"}</option>
                 {filterOptions.backNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -612,33 +640,33 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Deadline From</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "納入指示日（開始）" : "Deadline From"}</span>
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(event) => updateFilter("dateFrom", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors font-mono"
               />
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Deadline To</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "納入指示日（終了）" : "Deadline To"}</span>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(event) => updateFilter("dateTo", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors font-mono"
               />
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "検索" : "Search"}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Request number, item, serial…"
-                className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                placeholder={isJa ? "リクエスト番号、品番、背番号…" : "Request number, item, serial…"}
+                className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </label>
           </div>
@@ -661,25 +689,25 @@ export default function NodaPage() {
             setPage(1);
           }}
           pageSizeOptions={NODA_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={isJa ? "件数" : "Rows"}
           rowKey={(row) => row._id}
           onRowClick={(row) => setDetailState({ open: true, requestId: row._id, mode: "view" })}
           getRowClassName={(row) => getNodaRowToneClass(row)}
           renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-            <span>{buildNodaPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+            <span className="font-mono text-xs">{buildNodaPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize }, language)}</span>
           )}
-          emptyTitle="No matching Noda requests"
-          emptyMessage="Adjust the filters or create a new bulk request."
+          emptyTitle={isJa ? "該当する野田リクエストがありません" : "No matching Noda requests"}
+          emptyMessage={isJa ? "フィルターを調整するか、新規一括リクエストを作成してください。" : "Adjust the filters or create a new bulk request."}
           layoutStorageKey="noda-table-layout"
           enableColumnResize
           enableColumnReorder
           stickyHeader
           stickyHeaderOffset={0}
-          className="glass-card mb-8 overflow-hidden rounded-[28px]"
-          topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-          bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-          rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-          rowsSelectClassName="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+          className="freya-card mb-6 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm"
+          topBarClassName="flex flex-col gap-4 border-b border-[var(--border)] px-5 py-3.5 bg-[var(--surface-subtle)] md:flex-row md:items-center md:justify-between"
+          bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-5 py-3.5 bg-[var(--surface-subtle)] md:flex-row md:items-center md:justify-between"
+          rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
+          rowsSelectClassName="h-7 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text-primary)] outline-none"
         />
 
         <NodaBulkRequestModal

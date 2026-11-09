@@ -4,6 +4,8 @@ import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
+import { SearchableSelect } from "../components/AdvancedFilterSection";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchFactoryStatusFactories,
   fetchFactoryStatusLogs,
@@ -64,22 +66,21 @@ function parseFactoriesParam(searchParams) {
 function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) {
   return (
     <StatSummaryCard
+      variant="freya"
       icon={icon}
       label={label}
       value={value}
       subtitle={subtitle}
       accent={accent}
       loading={loading}
-      valueClassName="planner-data-text text-2xl font-black tabular-nums"
-      labelClassName="planner-data-text text-[11px] font-semibold text-on-surface-variant"
-      subtitleClassName="planner-data-text text-[10px] text-outline"
-      iconClassName="shadow-none"
     />
   );
 }
 
 
 export default function FactoryStatusLogsPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [authUser] = useState(() => readStoredAuthUser());
@@ -112,7 +113,7 @@ export default function FactoryStatusLogsPage() {
   const deferredSessionId = useDeferredValue(filters.sessionID);
   const deferredSearch = useDeferredValue(filters.search);
   const selectedFactoriesKey = selectedFactories.join("||");
-  const selectionSummary = summarizeFactoryStatusSelection(selectedFactories);
+  const selectionSummary = summarizeFactoryStatusSelection(selectedFactories, language);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,118 +260,119 @@ export default function FactoryStatusLogsPage() {
   const columns = useMemo(() => ([
     {
       key: "timestamp",
-      label: "Timestamp",
+      label: isJa ? "タイムスタンプ" : "Timestamp",
       width: 220,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{formatFactoryStatusDateTime(row.timestamp)}</span>,
+      renderCell: (row) => <span className="text-xs font-mono font-semibold text-[var(--text-primary)]">{formatFactoryStatusDateTime(row.timestamp)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "factory",
-      label: "Factory",
+      label: isJa ? "工場" : "Factory",
       width: 140,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.factory || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-medium text-[var(--text-primary)]">{row.factory || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "equipment",
-      label: "Equipment",
+      label: isJa ? "設備" : "Equipment",
       width: 140,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.equipment || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-semibold text-[var(--text-primary)]">{row.equipment || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: isJa ? "ステータス" : "Status",
       width: 130,
       renderCell: (row) => {
-        const meta = getFactoryStatusLogStatusMeta(row.status);
-        return <StatusChip label={meta.label} className={`planner-data-text ${meta.badgeClassName}`} />;
+        const meta = getFactoryStatusLogStatusMeta(row.status, language);
+        return <StatusChip label={meta.label} className={`text-xs ${meta.badgeClassName}`} />;
       },
       disableCellWrapper: true,
     },
     {
       key: "action",
-      label: "Action",
+      label: isJa ? "アクション" : "Action",
       width: 280,
-      renderCell: (row) => <div className="planner-data-text whitespace-normal text-sm text-on-surface-variant">{row.action || "—"}</div>,
+      renderCell: (row) => <div className="whitespace-normal text-xs text-[var(--text-secondary)]">{row.action || "—"}</div>,
       disableCellWrapper: true,
     },
     {
       key: "workerName",
-      label: "Operator",
+      label: isJa ? "作業者" : "Operator",
       width: 160,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{getFactoryStatusOperatorName(row) || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-medium text-[var(--text-primary)]">{getFactoryStatusOperatorName(row) || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "partNumber",
-      label: "Part Number",
+      label: isJa ? "品番" : "Part Number",
       width: 180,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.partNumber || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-mono font-medium text-[var(--text-primary)]">{row.partNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "backNumber",
-      label: "Serial Number",
+      label: isJa ? "背番号" : "Serial Number",
       width: 150,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.backNumber || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-mono text-[var(--text-primary)]">{row.backNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "sessionID",
-      label: "Session ID",
+      label: isJa ? "セッションID" : "Session ID",
       width: 220,
-      renderCell: (row) => <span className="planner-data-text text-xs font-semibold text-on-surface-variant">{row.sessionID || "—"}</span>,
+      renderCell: (row) => <span className="text-[11px] font-mono text-[var(--text-muted)]">{row.sessionID || "—"}</span>,
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [isJa, language]);
 
   return (
-    <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
-      <div className="mx-auto max-w-[1600px]">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
+      <div className="w-full">
         <PageHeader
-          eyebrow="Live Operations"
-          eyebrowClassName="tracking-[0.24em] text-primary"
-          title="Factory Status Logs"
-          subtitle="Review tablet log history from tabletLogDB by factory, equipment, operator, and session. Use this full-page view for broader filtering beyond the quick equipment modal on Factory Status."
-          subtitleClassName="max-w-4xl"
+          eyebrow={isJa ? "リアルタイム運用" : "Live Operations"}
+          badge={isJa ? "ライブ" : "LIVE"}
+          title={isJa ? "工場ログ履歴" : "Factory Status Logs"}
+          subtitle={isJa
+            ? "tabletLogDB から工場・設備・作業者・セッションごとのタブレットログ履歴を確認します。工場ステータスページの簡易モーダルよりも詳細な条件で絞り込めます。"
+            : "Review tablet log history from tabletLogDB by factory, equipment, operator, and session. Use this full-page view for broader filtering beyond the quick equipment modal on Factory Status."}
           className="md:flex-row md:items-start md:justify-between"
           actions={(
             <>
               <button
                 type="button"
                 onClick={() => navigate("/factoryStatus")}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
               >
-                Back To Status
+                {isJa ? "ステータスへ戻る" : "Back To Status"}
               </button>
-              <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
-                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)]">
+                {generatedAt ? (isJa ? `更新日時 ${formatFactoryStatusDateTime(generatedAt)}` : `Updated ${formatFactoryStatusDateTime(generatedAt)}`) : (isJa ? "初回読み込み待機中..." : "Waiting for first load...")}
               </div>
               <button
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 disabled={loadingLogs || loadingFactories}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
               >
-                {loadingLogs ? "Refreshing..." : "Refresh"}
+                {loadingLogs ? (isJa ? "更新中..." : "Refreshing...") : (isJa ? "更新" : "Refresh")}
               </button>
             </>
           )}
         />
 
         {error ? (
-          <div className="planner-data-text mb-6 rounded-2xl border border-error/20 bg-error/10 px-5 py-4 text-sm text-error">
+          <div className="mb-4 rounded-[6px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-600 dark:text-red-400">
             {error}
           </div>
         ) : null}
 
-        <div className="dashboard-section mb-6 rounded-2xl p-5">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm mb-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-black text-on-surface">Log Scope</h2>
-              <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "フィルター" : "Filters"}</p>
+              <h2 className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">{isJa ? "ログ範囲" : "Log Scope"}</h2>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -378,32 +380,32 @@ export default function FactoryStatusLogsPage() {
                 type="button"
                 onClick={handleSelectAllFactories}
                 disabled={!factoryOptions.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
-                Select All
+                {isJa ? "すべて選択" : "Select All"}
               </button>
               <button
                 type="button"
                 onClick={handleClearFactories}
                 disabled={!selectedFactories.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
-                Clear
+                {isJa ? "クリア" : "Clear"}
               </button>
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
               >
-                Reset Filters
+                {isJa ? "フィルター解除" : "Reset Filters"}
               </button>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
+          <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Factories</span>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "工場一覧" : "Factories"}</span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
 
@@ -413,10 +415,10 @@ export default function FactoryStatusLogsPage() {
                       type="button"
                       onClick={() => toggleFactory(factory)}
                       className={joinClasses(
-                        "planner-data-text rounded-full border px-3 py-2 text-sm font-semibold transition",
+                        "rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-colors",
                         active
-                          ? "border-primary/30 bg-primary/10 text-primary"
-                          : "border-outline-variant/20 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container"
+                          ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] font-semibold"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                       )}
                     >
                       {factory}
@@ -424,15 +426,15 @@ export default function FactoryStatusLogsPage() {
                   );
                 })}
                 {!factoryOptions.length && !loadingFactories ? (
-                  <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
-                    No accessible factories found.
+                  <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                    {isJa ? "アクセス可能な工場がありません。" : "No accessible factories found."}
                   </div>
                 ) : null}
               </div>
             </div>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "日付" : "Date"}</span>
               <input
                 type="date"
                 value={date}
@@ -440,126 +442,111 @@ export default function FactoryStatusLogsPage() {
                   setDate(event.target.value);
                   setPage(1);
                 }}
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
-              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">Defaults to today and auto-refreshes every 60 seconds.</p>
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                {isJa ? "初期値は本日。60秒ごとに自動更新されます。" : "Defaults to today and auto-refreshes every 60 seconds."}
+              </p>
             </label>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5 border-t border-[var(--border)] pt-3">
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Equipment</span>
-              <input
-                type="text"
-                list="factory-status-log-equipment-options"
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "設備" : "Equipment"}</span>
+              <SearchableSelect
                 value={filters.equipment}
-                onChange={(event) => updateFilter("equipment", event.target.value)}
-                placeholder="Filter by equipment"
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                options={filterOptions.equipments}
+                onChange={({ value }) => updateFilter("equipment", value)}
+                placeholder={isJa ? "設備で絞り込み" : "Filter by equipment"}
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Operator</span>
-              <input
-                type="text"
-                list="factory-status-log-worker-options"
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "作業者" : "Operator"}</span>
+              <SearchableSelect
                 value={filters.workerName}
-                onChange={(event) => updateFilter("workerName", event.target.value)}
-                placeholder="Filter by operator"
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                options={filterOptions.workers}
+                onChange={({ value }) => updateFilter("workerName", value)}
+                placeholder={isJa ? "作業者で絞り込み" : "Filter by operator"}
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Status</span>
-              <select
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "ステータス" : "Status"}</span>
+              <SearchableSelect
                 value={filters.status}
-                onChange={(event) => updateFilter("status", event.target.value)}
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              >
-                <option value="">All statuses</option>
-                {filterOptions.statuses.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
+                options={filterOptions.statuses}
+                onChange={({ value }) => updateFilter("status", value)}
+                placeholder={isJa ? "すべてのステータス" : "All statuses"}
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
+              />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Session ID</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "セッションID" : "Session ID"}</span>
               <input
                 type="text"
                 value={filters.sessionID}
                 onChange={(event) => updateFilter("sessionID", event.target.value)}
-                placeholder="Filter by session"
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                placeholder={isJa ? "セッションで絞り込み" : "Filter by session"}
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "検索" : "Search"}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Action, part, serial..."
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                placeholder={isJa ? "アクション、品番、背番号..." : "Action, part, serial..."}
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </label>
           </div>
-
-          <datalist id="factory-status-log-equipment-options">
-            {filterOptions.equipments.map((equipment) => (
-              <option key={equipment} value={equipment} />
-            ))}
-          </datalist>
-
-          <datalist id="factory-status-log-worker-options">
-            {filterOptions.workers.map((worker) => (
-              <option key={worker} value={worker} />
-            ))}
-          </datalist>
         </div>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-6 grid gap-3 grid-cols-2 md:grid-cols-4">
           <SummaryCard
             icon="receipt_long"
-            label="Logs"
+            label={isJa ? "ログ件数" : "Logs"}
             value={formatFactoryStatusNumber(summary.totalLogs)}
-            subtitle="Matching current filters"
-            accent="bg-primary/10 text-primary"
+            subtitle={isJa ? "現在のフィルターに一致" : "Matching current filters"}
             loading={loadingLogs && !generatedAt}
           />
           <SummaryCard
             icon="precision_manufacturing"
-            label="Equipment"
+            label={isJa ? "設備数" : "Equipment"}
             value={formatFactoryStatusNumber(summary.equipmentCount)}
-            subtitle="Machines represented"
-            accent="bg-sky-500/10 text-sky-600 dark:text-sky-300"
+            subtitle={isJa ? "対象の設備数" : "Machines represented"}
             loading={loadingLogs && !generatedAt}
           />
           <SummaryCard
             icon="badge"
-            label="Operators"
+            label={isJa ? "作業者数" : "Operators"}
             value={formatFactoryStatusNumber(summary.workerCount)}
-            subtitle="Workers in current result set"
-            accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+            subtitle={isJa ? "結果内の作業者数" : "Workers in current result set"}
             loading={loadingLogs && !generatedAt}
           />
           <SummaryCard
             icon="fingerprint"
-            label="Sessions"
+            label={isJa ? "セッション数" : "Sessions"}
             value={formatFactoryStatusNumber(summary.sessionCount)}
-            subtitle="Distinct session IDs"
-            accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
+            subtitle={isJa ? "ユニークなセッションID" : "Distinct session IDs"}
             loading={loadingLogs && !generatedAt}
           />
         </div>
 
         {!selectedFactories.length && !loadingFactories ? (
-          <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-black text-on-surface">Choose at least one factory</h2>
-            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The log table appears after you select one or more factories.</p>
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+              {isJa ? "工場を1つ以上選択してください" : "Choose at least one factory"}
+            </h2>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {isJa ? "工場を選択するとログ一覧テーブルが表示されます。" : "The log table appears after you select one or more factories."}
+            </p>
           </div>
         ) : (
           <DataTable
@@ -579,26 +566,26 @@ export default function FactoryStatusLogsPage() {
               setPage(1);
             }}
             pageSizeOptions={FACTORY_STATUS_LOG_PAGE_SIZE_OPTIONS}
-            pageSizeLabel="Rows"
+            pageSizeLabel={isJa ? "件数" : "Rows"}
             rowKey={(row) => row.id}
             renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-              <span className="planner-data-text">{buildFactoryStatusLogPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+              <span className="text-xs text-[var(--text-secondary)] font-mono">{buildFactoryStatusLogPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize }, language)}</span>
             )}
-            emptyTitle="No matching tablet logs"
-            emptyMessage="Adjust the filters or refresh the page to load more tablet activity."
+            emptyTitle={isJa ? "一致するタブレットログがありません" : "No matching tablet logs"}
+            emptyMessage={isJa ? "フィルターを調整するか、最新データに更新してください。" : "Adjust the filters or refresh the page to load more tablet activity."}
             layoutStorageKey="factory-status-logs-table-layout"
             enableColumnResize
             enableColumnReorder
             stickyHeader
             stickyHeaderOffset={0}
-            tableClassName="ui-table-data min-w-full border-separate border-spacing-0"
-            className="glass-card overflow-hidden rounded-[28px]"
-            topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-            bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-            rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
+            tableClassName="ui-table-data min-w-full border-separate border-spacing-0 text-xs"
+            className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+            topBarClassName="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+            bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+            rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
           />
         )}
       </div>
-    </section>
+    </div>
   );
 }

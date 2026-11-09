@@ -1,0 +1,1500 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import DataTable from "../components/DataTable";
+import PageHeader from "../components/PageHeader";
+import ModalShell from "../components/ModalShell";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
+import { getAuthUser } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
+import {
+  BASE_URL,
+  deleteShisakuRequest,
+  fetchShisaku,
+  fetchShisakuRequestList,
+  fetchShisakuRequestGroupedList,
+  fetchAvailableShisakuForRequest,
+  registerShisakuRequest,
+  updateShisakuRequest,
+  bulkDeleteShisakuRequests,
+  reorderShisakuRequests,
+} from "../services/api";
+
+const EMPTY_ENTRY = {
+  name: "",
+  okuriPitch: "",
+  pcPerCycle: "",
+  color: "",
+  material: "",
+  boxType: "",
+  quantity: "",
+  dxfIndex: "",
+  pdfIndex: "",
+  pceIndex: "",
+};
+
+const ENTRY_FIELD_KEYS = ["name", "okuriPitch", "pcPerCycle", "color", "material", "boxType", "quantity"];
+
+function FlashBanner({ flash, onClose }) {
+  if (!flash) return null;
+
+  const tone = flash.type === "error"
+    ? "bg-[var(--status-danger)]/10 text-[var(--status-danger)] border-[var(--status-danger)]/20"
+    : flash.type === "success"
+      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+
+  return (
+    <div className={`mb-6 rounded-[8px] border px-4 py-3 ${tone}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.04em]">Status</div>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
+        </div>
+        <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SuggestInput({ type = "text", value, options, onChange, className }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const filteredOptions = useMemo(() => {
+    const query = String(value ?? "").trim().toLowerCase();
+    if (!query) return options;
+    return options.filter((option) => option.toLowerCase().includes(query));
+  }, [options, value]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function handlePointerDown(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+        className={`w-full ${className}`}
+      />
+      {open && filteredOptions.length > 0 && (
+        <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg">
+          {filteredOptions.map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange({ target: { value: option } });
+                  setOpen(false);
+                }}
+                className="block w-full truncate px-3 py-1.5 text-left text-xs font-mono text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
+              >
+                {option}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const inputClassName = "rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--freya-blue)] focus:outline-none transition-colors";
+
+export default function PrototypeRequestPage() {
+  const { shisakuId } = useParams();
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  
+  const [shisakuRecord, setShisakuRecord] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [flash, setFlash] = useState(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+
+  const [entries, setEntries] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`freya-prototype-requests-${shisakuId || "new"}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse saved requests from local storage", e);
+    }
+    return [{ ...EMPTY_ENTRY }];
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
+  const [totalPages, setTotalPages] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
+  const [sort, setSort] = useState({ column: "orderNumber", direction: 1 });
+
+  const [editMode, setEditMode] = useState(false);
+  const [selectedRequestIds, setSelectedRequestIds] = useState(new Set());
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [detailModalRecord, setDetailModalRecord] = useState(null);
+  const [submittedDetails, setSubmittedDetails] = useState(null);
+  const [submittedLoading, setSubmittedLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  useEffect(() => {
+    if (detailModalRecord?.shisakuSubmittedID && detailModalRecord?.status === 'completed') {
+      const fetchSubmitted = async () => {
+        setSubmittedLoading(true);
+        setSubmittedDetails(null);
+        try {
+          const res = await fetch(`${BASE_URL}api/shisaku-submitted/${detailModalRecord.shisakuSubmittedID}`);
+          if (res.ok) {
+            const data = await res.json();
+            setSubmittedDetails(data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch submitted details", e);
+        } finally {
+          setSubmittedLoading(false);
+        }
+      };
+      fetchSubmitted();
+    } else {
+      setSubmittedDetails(null);
+    }
+  }, [detailModalRecord]);
+
+  const [editModalRecord, setEditModalRecord] = useState(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editShisakuRecord, setEditShisakuRecord] = useState(null);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [availableShisakus, setAvailableShisakus] = useState([]);
+  const [selectedShisaku, setSelectedShisaku] = useState("");
+  const [shisakuSearchTerm, setShisakuSearchTerm] = useState("");
+  const [showShisakuSuggestions, setShowShisakuSuggestions] = useState(false);
+
+  const filteredAvailableShisakus = useMemo(() => {
+    if (!shisakuSearchTerm) return availableShisakus.slice(0, 20);
+    const lower = shisakuSearchTerm.toLowerCase();
+    return availableShisakus
+      .filter(s => s.shisakuNo?.toLowerCase().includes(lower))
+      .slice(0, 20);
+  }, [availableShisakus, shisakuSearchTerm]);
+
+  const draggedItemRef = useRef(null);
+  const draggedOverItemRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEditShisaku() {
+      if (!editModalRecord) {
+        setEditShisakuRecord(null);
+        return;
+      }
+      const parentId = editModalRecord.shisakudb_id?.$oid || editModalRecord.shisakudb_id;
+      if (!parentId) return;
+      try {
+        const data = await fetchShisaku(parentId);
+        if (!cancelled) setEditShisakuRecord(data);
+      } catch (e) {
+        console.error("Failed to load parent prototype for edit modal", e);
+      }
+    }
+    loadEditShisaku();
+    return () => { cancelled = true; };
+  }, [editModalRecord]);
+
+  useEffect(() => {
+    if (!flash) return undefined;
+    const timer = window.setTimeout(() => setFlash(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [flash]);
+
+  useEffect(() => {
+    localStorage.setItem(`freya-prototype-requests-${shisakuId || "new"}`, JSON.stringify(entries));
+  }, [entries, shisakuId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setError("");
+      try {
+        if (shisakuId) {
+          const shisakuData = await fetchShisaku(shisakuId);
+          if (cancelled) return;
+          
+          if (!shisakuData) {
+            setError("Prototype record not found.");
+            setLoading(false);
+            return;
+          }
+          setShisakuRecord(shisakuData);
+        } else {
+          setShisakuRecord(null);
+        }
+
+        if (shisakuId) {
+          const requestData = await fetchShisakuRequestList({
+            shisakudb_id: shisakuId,
+            page,
+            limit: pageSize,
+            sortColumn: sort.column,
+            sortDirection: sort.direction
+          });
+          if (cancelled) return;
+          setRecords(requestData?.rows || []);
+          setTotalPages(requestData?.pagination?.totalPages || 1);
+          setFilteredCount(requestData?.pagination?.totalCount || 0);
+        } else {
+          const groupedData = await fetchShisakuRequestGroupedList({
+            page,
+            limit: pageSize,
+            sortColumn: sort.column,
+            sortDirection: sort.direction
+          });
+          if (cancelled) return;
+          setRecords(groupedData?.rows || []);
+          setTotalPages(groupedData?.pagination?.totalPages || 1);
+          setFilteredCount(groupedData?.pagination?.totalCount || 0);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Error loading prototype requests:", err);
+        setError(err.message || "Failed to load prototype request data.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => { cancelled = true; };
+  }, [refreshNonce, shisakuId, page, pageSize, sort]);
+
+  function handleEntryChange(index, key, value) {
+    setEntries((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
+  }
+
+  function addEntryRow() {
+    setEntries((current) => [...current, { ...EMPTY_ENTRY }]);
+  }
+
+  function removeEntryRow(index) {
+    if (entries.length <= 1) return;
+    setEntries((current) => current.filter((_, i) => i !== index));
+  }
+
+  function resetEntry() {
+    setEntries([{ ...EMPTY_ENTRY }]);
+    localStorage.removeItem(`freya-prototype-requests-${shisakuId || "new"}`);
+  }
+
+  const handleDragStart = (e, index) => {
+    draggedItemRef.current = index;
+    // Set a timeout to delay the opacity change, so the drag image doesn't look transparent
+    setTimeout(() => {
+      e.target.style.opacity = '0.4';
+    }, 0);
+  };
+
+  const handleDragEnter = (e, index) => {
+    e.preventDefault();
+    draggedOverItemRef.current = index;
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); // Necessary to allow drop
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (draggedItemRef.current !== null && draggedOverItemRef.current !== null && draggedItemRef.current !== draggedOverItemRef.current) {
+      setEntries((current) => {
+        const newEntries = [...current];
+        const draggedItemContent = newEntries.splice(draggedItemRef.current, 1)[0];
+        newEntries.splice(draggedOverItemRef.current, 0, draggedItemContent);
+        return newEntries;
+      });
+    }
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    draggedItemRef.current = null;
+    draggedOverItemRef.current = null;
+  };
+
+  const fieldSuggestions = useMemo(() => {
+    const result = {};
+    for (const key of ENTRY_FIELD_KEYS) {
+      const values = new Set();
+      
+      // Inject parent prototype tags as base suggestions
+      if (key === "color" && shisakuRecord?.colors) {
+        shisakuRecord.colors.forEach(c => values.add(c));
+      } else if (key === "material" && shisakuRecord?.materials) {
+        shisakuRecord.materials.forEach(c => values.add(c));
+      } else if (key === "boxType" && shisakuRecord?.boxTypes) {
+        shisakuRecord.boxTypes.forEach(c => values.add(c));
+      }
+      
+      for (const item of entries) {
+        const value = String(item[key] ?? "").trim();
+        if (value) values.add(value);
+      }
+      result[key] = Array.from(values);
+    }
+    return result;
+  }, [entries, shisakuRecord]);
+
+  const canRegister = (
+    entries.every((item) =>
+      item.name.trim() &&
+      item.okuriPitch !== "" &&
+      item.pcPerCycle !== "" &&
+      item.color.trim() !== "" &&
+      item.material.trim() &&
+      item.boxType.trim() &&
+      item.quantity !== "" &&
+      item.pceIndex !== ""
+    ) &&
+    !submitting && shisakuRecord
+  );
+
+  async function handleRegister() {
+    if (!canRegister) return;
+    setSubmitting(true);
+
+    try {
+      const maxOrderNumber = filteredRecords.length > 0
+        ? Math.max(...filteredRecords.map((r) => r.orderNumber || 0))
+        : 0;
+
+      await Promise.all(entries.map((item, index) => {
+        const dxf = item.dxfIndex !== "" ? shisakuRecord.dxfLinks[item.dxfIndex] : null;
+        const pdfData = item.pdfIndex !== "" ? shisakuRecord.pdfLinks[item.pdfIndex] : null;
+        const pdf = pdfData 
+          ? {
+              ...pdfData,
+              jpgLink: pdfData.jpgLink || (shisakuRecord.pdfJpgLinks?.[item.pdfIndex]?.link || null)
+            }
+          : null;
+        const pce = item.pceIndex !== "" ? shisakuRecord.pcelinks[item.pceIndex] : null;
+        
+        return registerShisakuRequest({
+          name: item.name.trim(),
+          dxf,
+          pdf,
+          pce,
+          okuriPitch: Number(item.okuriPitch),
+          pcPerCycle: Number(item.pcPerCycle),
+          color: item.color.trim(),
+          material: item.material.trim(),
+          boxType: item.boxType.trim(),
+          quantity: Number(item.quantity),
+          shisakudb_id: shisakuId,
+          createdBy: getAuthUser()?.username || "",
+          orderNumber: maxOrderNumber + index + 1,
+        });
+      }));
+
+      setFlash({
+        type: "success",
+        message: entries.length > 1
+          ? `${entries.length} prototype requests registered successfully.`
+          : "Prototype request registered successfully.",
+      });
+      resetEntry();
+      localStorage.removeItem(`freya-prototype-requests-${shisakuId || "new"}`);
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Registration failed." });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(record) {
+    const id = record?._id?.$oid || record?._id;
+    if (!id) return;
+
+    const label = record.name || "this request";
+    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+    setDeletingId(id);
+    try {
+      await deleteShisakuRequest(id);
+      setFlash({ type: "success", message: `${label} deleted.` });
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to delete record." });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleEditSubmit(e) {
+    e.preventDefault();
+    setEditSubmitting(true);
+    try {
+      const id = editModalRecord?._id?.$oid || editModalRecord?._id;
+      
+      const dxf = editModalRecord.dxfIndex !== "" && editShisakuRecord ? editShisakuRecord.dxfLinks[editModalRecord.dxfIndex] : (editModalRecord.dxf || null);
+      const pdfData = editModalRecord.pdfIndex !== "" && editShisakuRecord ? editShisakuRecord.pdfLinks[editModalRecord.pdfIndex] : (editModalRecord.pdf || null);
+      const pdf = pdfData && editModalRecord.pdfIndex !== "" && editShisakuRecord
+        ? {
+            ...pdfData,
+            jpgLink: pdfData.jpgLink || (editShisakuRecord.pdfJpgLinks?.[editModalRecord.pdfIndex]?.link || null)
+          }
+        : pdfData;
+      const pce = editModalRecord.pceIndex !== "" && editShisakuRecord ? editShisakuRecord.pcelinks[editModalRecord.pceIndex] : (editModalRecord.pce || null);
+      
+      await updateShisakuRequest(id, {
+        name: editModalRecord.name.trim(),
+        dxf,
+        pdf,
+        pce,
+        okuriPitch: Number(editModalRecord.okuriPitch),
+        pcPerCycle: Number(editModalRecord.pcPerCycle),
+        color: editModalRecord.color.trim(),
+        material: editModalRecord.material.trim(),
+        boxType: editModalRecord.boxType.trim(),
+        quantity: Number(editModalRecord.quantity),
+        status: editModalRecord.status || "pending",
+      });
+
+      setFlash({ type: "success", message: "Prototype request updated successfully." });
+      setEditModalRecord(null);
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to update record." });
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleOpenCreateModal() {
+    setCreateModalOpen(true);
+    setSelectedShisaku("");
+    setShisakuSearchTerm("");
+    setShowShisakuSuggestions(false);
+    try {
+      const data = await fetchAvailableShisakuForRequest();
+      setAvailableShisakus(data || []);
+    } catch (e) {
+      setFlash({ type: "error", message: e.message || "Failed to load available prototypes" });
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedRequestIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedRequestIds.size} requests? This cannot be undone.`)) return;
+
+    try {
+      await bulkDeleteShisakuRequests(Array.from(selectedRequestIds));
+      setFlash({ type: "success", message: `${selectedRequestIds.size} requests deleted.` });
+      setSelectedRequestIds(new Set());
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to bulk delete records." });
+    }
+  }
+
+  async function handleRowReorder(sourceIndex, targetIndex) {
+    if (sourceIndex === targetIndex) return;
+    const newRecords = [...records];
+    const [moved] = newRecords.splice(sourceIndex, 1);
+    newRecords.splice(targetIndex, 0, moved);
+
+    setRecords(newRecords);
+
+    const baseOrder = (page - 1) * pageSize;
+    const updates = newRecords.map((r, i) => ({
+      id: r._id?.$oid || r._id,
+      orderNumber: baseOrder + i + 1,
+    }));
+
+    try {
+      await reorderShisakuRequests(updates);
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to reorder requests." });
+      setRefreshNonce((current) => current + 1);
+    }
+  }
+
+  const filteredRecords = records;
+  const groupedPrototypes = records;
+
+  const groupedColumns = useMemo(() => [
+    { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 200, renderCell: (r) => <span className="font-mono font-medium">試作{r.shisakuNo}</span> },
+    {
+      key: "status",
+      label: t("status"),
+      sortable: true,
+      width: 120,
+      renderCell: (r) => {
+        const status = r.parentStatus || "pending";
+        let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+        if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+        if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
+        return (
+          <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
+            {status}
+          </span>
+        );
+      },
+    },
+    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center", renderCell: (r) => <span className="font-mono">{r.totalRequests ?? 0}</span> },
+    { 
+      key: "latestDate", 
+      label: t("latestRequest"), 
+      sortable: true, 
+      width: 200,
+      renderCell: (r) => r.latestDate ? <span className="font-mono text-xs">{r.latestDate.toLocaleString()}</span> : "—"
+    },
+  ], []);
+
+  const columns = useMemo(() => {
+    const baseCols = [
+      { key: "index", label: "#", sortable: false, width: 60, align: "center", renderCell: (r, i) => <span className="font-mono text-[var(--text-muted)]">{r.orderNumber ?? (i + 1)}</span> },
+      { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 120, renderCell: (r) => <span className="font-mono">{r.shisakuNo || "—"}</span> },
+      { key: "name", label: t("partName"), sortable: true, width: 140, renderCell: (r) => <span className="font-mono font-medium">{r.name || "—"}</span> },
+      { key: "okuriPitch", label: t("okuriPitch"), sortable: true, width: 110, align: "center", renderCell: (r) => <span className="font-mono">{r.okuriPitch ?? "—"}</span> },
+      { key: "pcPerCycle", label: t("pcPerCycle"), sortable: true, width: 110, align: "center", renderCell: (r) => <span className="font-mono">{r.pcPerCycle ?? "—"}</span> },
+      { key: "color", label: t("color"), sortable: true, width: 120, renderCell: (r) => r.color || "—" },
+      { key: "material", label: t("material"), sortable: true, width: 120, renderCell: (r) => r.material || "—" },
+      { key: "boxType", label: t("boxType"), sortable: true, width: 120, renderCell: (r) => r.boxType || "—" },
+      { key: "quantity", label: t("quantityReq"), sortable: true, width: 100, align: "center", renderCell: (r) => <span className="font-mono font-semibold">{r.quantity ?? "—"}</span> },
+      {
+        key: "dxf",
+        label: t("dxf"),
+        sortable: true,
+        width: 100,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => (
+          r.dxf && r.dxf.link ? (
+            <a href={r.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">DXF</a>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">—</span>
+          )
+        ),
+      },
+      {
+        key: "pdf",
+        label: t("pdf"),
+        sortable: true,
+        width: 100,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => (
+          r.pdf && r.pdf.link ? (
+            <a href={r.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">PDF</a>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">—</span>
+          )
+        ),
+      },
+      {
+        key: "pce",
+        label: t("pce"),
+        sortable: true,
+        width: 100,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => (
+          r.pce && r.pce.link ? (
+            <a href={r.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">PCE</a>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">—</span>
+          )
+        ),
+      },
+      {
+        key: "status",
+        label: t("status"),
+        sortable: true,
+        width: 120,
+        renderCell: (r) => {
+          const status = r.status || "pending";
+          let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+          if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+          if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
+          return (
+            <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
+              {status}
+            </span>
+          );
+        },
+      },
+      { key: "createdBy", label: t("createdBy"), sortable: true, width: 120, renderCell: (r) => r.createdBy || "—" },
+      {
+        key: "createdAt",
+        label: t("timestamp"),
+        sortable: true,
+        width: 150,
+        renderCell: (r) => {
+          const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
+          return d ? <span className="font-mono text-xs">{d.toLocaleString()}</span> : "—";
+        },
+      },
+    ];
+
+    if (editMode) {
+      baseCols.unshift({
+        key: "selection",
+        label: (
+          <input 
+            type="checkbox" 
+            checked={records.length > 0 && selectedRequestIds.size === records.length}
+            onChange={(e) => {
+              if (e.target.checked) setSelectedRequestIds(new Set(records.map(r => r._id?.$oid || r._id)));
+              else setSelectedRequestIds(new Set());
+            }} 
+            className="cursor-pointer"
+          />
+        ),
+        sortable: false,
+        width: 40,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => {
+          const id = r._id?.$oid || r._id;
+          return (
+            <input 
+              type="checkbox" 
+              checked={selectedRequestIds.has(id)} 
+              onChange={(e) => {
+                const next = new Set(selectedRequestIds);
+                if (e.target.checked) next.add(id);
+                else next.delete(id);
+                setSelectedRequestIds(next);
+              }} 
+              onClick={(e) => e.stopPropagation()}
+              className="cursor-pointer"
+            />
+          );
+        }
+      });
+    }
+
+    return baseCols;
+  }, [deletingId, editMode, selectedRequestIds, records]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-3">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--freya-blue)]/30 border-t-[var(--freya-blue)]" />
+        <p className="text-xs font-medium text-[var(--text-muted)]">Loading requests...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-3 px-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--status-danger)]/10 text-[var(--status-danger)]">
+          <span className="material-symbols-outlined text-xl">error</span>
+        </div>
+        <p className="text-xs font-medium text-[var(--status-danger)]">{error}</p>
+        <button
+          onClick={() => navigate("/prototype")}
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+        >
+          Return to Prototypes
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
+      <div className="flex items-center justify-between">
+        <PageHeader
+          icon="assignment"
+          title={shisakuId ? `Prototype Request: ${shisakuRecord?.shisakuNo || shisakuId}` : "All Prototype Requests"}
+          description={shisakuId ? "Manage manufacturing requests for this prototype." : "View all prototype manufacturing requests."}
+        />
+        <div className="flex items-center gap-2.5">
+          {!shisakuId && (
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
+            >
+              {t("registerRequest")}
+            </button>
+          )}
+          {shisakuId && (
+            <button
+              onClick={() => navigate("/prototype")}
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              Back
+            </button>
+          )}
+        </div>
+      </div>
+
+      <FlashBanner flash={flash} onClose={() => setFlash(null)} />
+
+      <div className="flex flex-col gap-6">
+        {shisakuId && shisakuRecord && (
+        <section className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">New Request Entries</h3>
+          </div>
+
+          <div className="flex flex-col gap-3 pb-2">
+            {entries.map((item, index) => (
+              <div 
+                key={index} 
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragEnter={(e) => handleDragEnter(e, index)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                className="request-card relative rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5 shadow-2xs transition-shadow hover:shadow-xs"
+              >
+                {/* Header / Remove Button */}
+                <div className="mb-2.5 flex items-center justify-between border-b border-[var(--border)] pb-2">
+                  <h4 className="text-xs font-bold font-mono text-[var(--text-primary)] flex items-center gap-1">
+                    <span 
+                      className="material-symbols-outlined text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-grab active:cursor-grabbing p-0.5 rounded transition" 
+                      style={{ fontSize: 16 }}
+                      onMouseEnter={(e) => { e.currentTarget.closest('.request-card').draggable = true; }}
+                      onMouseLeave={(e) => { e.currentTarget.closest('.request-card').draggable = false; }}
+                    >
+                      drag_indicator
+                    </span>
+                    Request #{index + 1}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => removeEntryRow(index)}
+                    disabled={entries.length <= 1}
+                    className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[var(--text-muted)] transition hover:bg-[var(--status-danger)]/10 hover:text-[var(--status-danger)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
+                    title="Remove Request"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>close</span>
+                  </button>
+                </div>
+                
+                {/* Grid Layout for Fields */}
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
+                  {/* Top Row Fields */}
+                  <div className="md:col-span-1">
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Product Name</label>
+                    <SuggestInput value={item.name} options={fieldSuggestions.name} onChange={(e) => handleEntryChange(index, "name", e.target.value)} className={inputClassName + " w-full"} />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">DXF</label>
+                    <select
+                      value={item.dxfIndex}
+                      onChange={(e) => handleEntryChange(index, "dxfIndex", e.target.value)}
+                      className={inputClassName + " w-full"}
+                    >
+                      <option value="">None</option>
+                      {(shisakuRecord.dxfLinks || []).map((f, i) => (
+                        <option key={i} value={i}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">PDF</label>
+                    <select
+                      value={item.pdfIndex}
+                      onChange={(e) => handleEntryChange(index, "pdfIndex", e.target.value)}
+                      className={inputClassName + " w-full"}
+                    >
+                      <option value="">None</option>
+                      {(shisakuRecord.pdfLinks || []).map((f, i) => (
+                        <option key={i} value={i}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--status-danger)] uppercase tracking-wider flex items-center gap-1">PCE <span className="text-[10px]">*</span></label>
+                    <select
+                      value={item.pceIndex}
+                      onChange={(e) => handleEntryChange(index, "pceIndex", e.target.value)}
+                      className={inputClassName + " w-full"}
+                    >
+                      <option value="">Select PCE *</option>
+                      {(shisakuRecord.pcelinks || []).map((f, i) => (
+                        <option key={i} value={i}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Bottom Row Fields */}
+                  <div className="md:col-span-4 mt-1 grid grid-cols-2 gap-2.5 md:grid-cols-6 border-t border-[var(--border)] pt-2.5">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Pitch</label>
+                      <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Pc/Cycle</label>
+                      <SuggestInput type="number" value={item.pcPerCycle} options={fieldSuggestions.pcPerCycle || []} onChange={(e) => handleEntryChange(index, "pcPerCycle", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Color</label>
+                      <SuggestInput value={item.color} options={fieldSuggestions.color} onChange={(e) => handleEntryChange(index, "color", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Material</label>
+                      <SuggestInput value={item.material} options={fieldSuggestions.material} onChange={(e) => handleEntryChange(index, "material", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Box Type</label>
+                      <SuggestInput value={item.boxType} options={fieldSuggestions.boxType} onChange={(e) => handleEntryChange(index, "boxType", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Quantity</label>
+                      <SuggestInput type="number" value={item.quantity} options={fieldSuggestions.quantity} onChange={(e) => handleEntryChange(index, "quantity", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-center mt-2">
+              <button
+                type="button"
+                onClick={addEntryRow}
+                className="flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                Add Another Request Row
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-end gap-2.5 border-t border-[var(--border)] pt-4">
+            <button
+              type="button"
+              onClick={resetEntry}
+              disabled={submitting}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={handleRegister}
+              disabled={!canRegister}
+              className="flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50"
+            >
+              {submitting ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                  Registering...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>assignment_turned_in</span>
+                  Register Request
+                </>
+              )}
+            </button>
+          </div>
+        </section>
+        )}
+
+        <section>
+          <div className="mb-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{shisakuId ? t("prototypeRequests") : t("prototypesWithRequests")}</h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{shisakuId ? "Prototype requests created for this prototype." : "Select a prototype to view its requests."}</p>
+            </div>
+            
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {shisakuId && editMode && selectedRequestIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                  {t("deleteSelected")} ({selectedRequestIds.size})
+                </button>
+              )}
+              {shisakuId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditMode(!editMode);
+                    if (editMode) setSelectedRequestIds(new Set());
+                  }}
+                  className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition ${editMode ? 'bg-[var(--freya-blue)] text-white shadow-xs' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs'}`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editMode ? 'done' : 'edit'}</span>
+                  {editMode ? 'Done' : t("editList")}
+                </button>
+              )}
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
+                <input
+                  type="text"
+                  placeholder={shisakuId ? t("searchRequests") : t("searchPrototypes")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full md:w-64 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-8 pr-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--freya-blue)] focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+            {shisakuId ? (
+              <DataTable
+                rows={filteredRecords}
+                columns={columns}
+                enableRowReorder={editMode && !searchQuery}
+                onRowReorder={handleRowReorder}
+                defaultSort={{ column: "orderNumber", direction: 1 }}
+                sort={sort}
+                onSort={setSort}
+                page={page}
+                pageSize={pageSize}
+                filteredCount={filteredCount}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+                pageSizeOptions={[30, 50, 100]}
+                onRowClick={(r) => setDetailModalRecord(r)}
+                enableColumnResize
+                enableColumnReorder
+                layoutStorageKey="prototype-requests-table-v2"
+                stickyHeader
+              />
+            ) : (
+              <DataTable
+                rows={groupedPrototypes}
+                columns={groupedColumns}
+                defaultSort={{ column: "latestDate", direction: -1 }}
+                sort={sort}
+                onSort={setSort}
+                page={page}
+                pageSize={pageSize}
+                filteredCount={filteredCount}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+                pageSizeOptions={[30, 50, 100]}
+                onRowClick={(r) => navigate(`/prototype/request/${r.shisakudb_id}`)}
+                enableColumnResize
+                enableColumnReorder
+                layoutStorageKey="prototype-requests-grouped-table"
+                stickyHeader
+              />
+            )}
+          </div>
+        </section>
+      </div>
+
+      {detailModalRecord && (
+        <ModalShell
+          open={!!detailModalRecord}
+          onClose={() => setDetailModalRecord(null)}
+          title={detailModalRecord?.shisakuNo ? `${t("prototypeRequestDetails")} - 試作${detailModalRecord.shisakuNo}` : t("prototypeRequestDetails")}
+          maxWidth="max-w-xl"
+        >
+          <div className="px-6 py-4 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("prototypeNo")}</span>
+                <p className="text-xs font-mono font-medium text-[var(--text-primary)]">{detailModalRecord.shisakuNo || "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("name")}</span>
+                <p className="text-xs font-mono font-medium text-[var(--text-primary)]">{detailModalRecord.name || "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("okuriPitch")}</span>
+                <p className="text-xs font-mono text-[var(--text-primary)]">{detailModalRecord.okuriPitch ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("pcPerCycle")}</span>
+                <p className="text-xs font-mono text-[var(--text-primary)]">{detailModalRecord.pcPerCycle ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("color")}</span>
+                <p className="text-xs text-[var(--text-primary)]">{detailModalRecord.color || "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("material")}</span>
+                <p className="text-xs text-[var(--text-primary)]">{detailModalRecord.material || "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("boxType")}</span>
+                <p className="text-xs text-[var(--text-primary)]">{detailModalRecord.boxType || "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("quantityReq")}</span>
+                <p className="text-xs font-mono font-bold text-[var(--text-primary)]">{detailModalRecord.quantity ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("status")}</span>
+                <div>
+                  {(() => {
+                    const status = detailModalRecord.status || "pending";
+                    let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+                    if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+                    if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
+                    return (
+                      <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
+                        {status}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("registered")}</span>
+                <p className="text-xs font-mono text-[var(--text-primary)]">
+                  {detailModalRecord.createdAt 
+                    ? new Date(detailModalRecord.createdAt.$date || detailModalRecord.createdAt).toLocaleDateString()
+                    : "—"}
+                  {detailModalRecord.createdBy ? ` by ${detailModalRecord.createdBy}` : ""}
+                </p>
+              </div>
+            </div>
+
+            {submittedLoading && (
+              <div className="border-t border-[var(--border)] pt-3.5 mt-2">
+                <span className="text-xs text-[var(--text-muted)]">{t("loadingSubmittedDetails")}</span>
+              </div>
+            )}
+            
+            {!submittedLoading && submittedDetails && submittedDetails.requests && submittedDetails.requests[detailModalRecord.name] && (
+              <div className="border-t border-[var(--border)] pt-3.5 mt-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-2.5">{t("submittedDetails")}</span>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("timeStart")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].Time_start || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("timeEnd")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].Time_end || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("cycleTime")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].cycleTime || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("completedQty")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].quantity || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("completedByField")}</span>
+                    <p className="text-xs text-[var(--text-primary)]">{submittedDetails.createdBy || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("comment")}</span>
+                    <p className="text-xs text-[var(--text-primary)] whitespace-pre-wrap">{submittedDetails.requests[detailModalRecord.name].Comment || "—"}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t("photos")}</span>
+                  <div className="flex flex-wrap gap-3">
+                    {(() => {
+                      const sDetails = submittedDetails.requests[detailModalRecord.name];
+                      const images = [];
+                      if (sDetails.materialSidePhoto) images.push({ url: sDetails.materialSidePhoto, label: t("materialSide") });
+                      if (sDetails.releasePaperSidePhoto) images.push({ url: sDetails.releasePaperSidePhoto, label: t("releasePaper") });
+                      if (sDetails.materialLabelPhoto) images.push({ url: sDetails.materialLabelPhoto, label: t("materialLabel") });
+                      if (sDetails.issue) {
+                        Object.values(sDetails.issue).forEach((url, i) => images.push({ url, label: `${t("issues")} ${i + 1}` }));
+                      }
+
+                      if (images.length === 0) {
+                        return <span className="text-xs text-[var(--text-muted)] italic">{t("noPhotosAttached")}</span>;
+                      }
+
+                      return images.map((img, idx) => (
+                        <div key={idx}>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)] block mb-1">{img.label}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoPreview({
+                              eyebrow: "Prototype Request",
+                              displayName: `試作${detailModalRecord.shisakuNo} - ${detailModalRecord.name}`,
+                              subtitle: "Submitted Photos",
+                              images,
+                              activeIndex: idx
+                            })}
+                            className="block cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] rounded-[6px]"
+                          >
+                            <img src={img.url} alt={img.label} className="h-20 w-auto rounded-[6px] border border-[var(--border)] object-cover hover:opacity-80 transition" />
+                          </button>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="border-t border-[var(--border)] pt-3.5 mt-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-2">{t("linkedFiles")}</span>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {detailModalRecord.dxf && detailModalRecord.dxf.link ? (
+                  <a href={detailModalRecord.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>description</span>
+                    DXF: {detailModalRecord.dxf.name || "File"}
+                  </a>
+                ) : null}
+                
+                {detailModalRecord.pdf && detailModalRecord.pdf.link ? (
+                  <a href={detailModalRecord.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-rose-500 transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>picture_as_pdf</span>
+                    PDF: {detailModalRecord.pdf.name || "File"}
+                  </a>
+                ) : null}
+
+                {detailModalRecord.pdf && detailModalRecord.pdf.jpgLink ? (
+                  <a href={detailModalRecord.pdf.jpgLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image</span>
+                    JPG: {detailModalRecord.pdf.name ? detailModalRecord.pdf.name.replace(/\.pdf$/i, '.jpg') : "Preview"}
+                  </a>
+                ) : null}
+                
+                {detailModalRecord.pce && detailModalRecord.pce.link ? (
+                  <a href={detailModalRecord.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>data_object</span>
+                    PCE: {detailModalRecord.pce.name || "File"}
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-between rounded-b-[12px]">
+            <button
+              onClick={() => setDetailModalRecord(null)}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              {t("close")}
+            </button>
+            <button
+              onClick={() => {
+                setEditModalRecord({
+                  ...detailModalRecord,
+                  dxfIndex: "",
+                  pdfIndex: "",
+                  pceIndex: "",
+                });
+                setDetailModalRecord(null);
+              }}
+              className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+              {t("edit")}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {editModalRecord && (
+        <ModalShell
+          open={!!editModalRecord}
+          onClose={() => setEditModalRecord(null)}
+          title={editModalRecord?.shisakuNo ? `Edit Prototype Request - 試作${editModalRecord.shisakuNo}` : "Edit Prototype Request"}
+          maxWidth="max-w-2xl"
+        >
+          <form onSubmit={handleEditSubmit}>
+            <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("name")}</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.name}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, name: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("okuriPitch")}</label>
+                <input
+                  type="number"
+                  required
+                  value={editModalRecord.okuriPitch}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, okuriPitch: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("pcPerCycle")}</label>
+                <input
+                  type="number"
+                  required
+                  value={editModalRecord.pcPerCycle}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, pcPerCycle: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("color")}</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.color}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, color: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("material")}</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.material}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, material: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("boxType")}</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.boxType}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, boxType: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("quantityReq")}</label>
+                <input
+                  type="number"
+                  required
+                  value={editModalRecord.quantity}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, quantity: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("status")}</label>
+                <select
+                  value={editModalRecord.status || "pending"}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, status: e.target.value })}
+                  className={inputClassName + " w-full"}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in-progress">In-Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              
+              <div className="md:col-span-2 grid grid-cols-1 gap-4 border-t border-[var(--border)] pt-4 mt-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">DXF File</label>
+                  <select
+                    value={editModalRecord.dxfIndex}
+                    onChange={(e) => setEditModalRecord({ ...editModalRecord, dxfIndex: e.target.value })}
+                    className={inputClassName + " w-full"}
+                  >
+                    <option value="">Keep current ({editModalRecord.dxf ? editModalRecord.dxf.name : "None"})</option>
+                    {editShisakuRecord?.dxfLinks?.map((l, i) => (
+                      <option key={i} value={i}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">PDF File</label>
+                  <select
+                    value={editModalRecord.pdfIndex}
+                    onChange={(e) => setEditModalRecord({ ...editModalRecord, pdfIndex: e.target.value })}
+                    className={inputClassName + " w-full"}
+                  >
+                    <option value="">Keep current ({editModalRecord.pdf ? editModalRecord.pdf.name : "None"})</option>
+                    {editShisakuRecord?.pdfLinks?.map((l, i) => (
+                      <option key={i} value={i}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">PCE File</label>
+                  <select
+                    value={editModalRecord.pceIndex}
+                    onChange={(e) => setEditModalRecord({ ...editModalRecord, pceIndex: e.target.value })}
+                    className={inputClassName + " w-full"}
+                  >
+                    <option value="">Keep current ({editModalRecord.pce ? editModalRecord.pce.name : "None"})</option>
+                    {editShisakuRecord?.pcelinks?.map((l, i) => (
+                      <option key={i} value={i}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-between rounded-b-[12px]">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this record?")) {
+                    setEditModalRecord(null);
+                    handleDelete(editModalRecord);
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
+              >
+                {t("delete")}
+              </button>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditModalRecord(null)}
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50"
+                >
+                  {editSubmitting ? (
+                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
+                  )}
+                  {t("save")}
+                </button>
+              </div>
+            </div>
+          </form>
+        </ModalShell>
+      )}
+
+      <ModalShell
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Select Prototype"
+        maxWidth="max-w-xl"
+      >
+        <div className="px-6 py-5 flex flex-col gap-4 min-h-[300px]">
+          <div className="relative">
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+              Choose a prototype number to create requests for
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search prototype number..."
+                value={shisakuSearchTerm}
+                onChange={(e) => {
+                  setShisakuSearchTerm(e.target.value);
+                  setSelectedShisaku("");
+                  setShowShisakuSuggestions(true);
+                }}
+                onFocus={() => setShowShisakuSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowShisakuSuggestions(false), 200)}
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-2xs focus:border-[var(--freya-blue)] focus:outline-none"
+              />
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" style={{ fontSize: 16 }}>
+                search
+              </span>
+            </div>
+
+            {showShisakuSuggestions && availableShisakus.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-lg">
+                <ul className="max-h-60 overflow-y-auto py-1">
+                  {filteredAvailableShisakus.length > 0 ? (
+                    filteredAvailableShisakus.map(s => (
+                      <li
+                        key={s._id}
+                        className="cursor-pointer px-3.5 py-2 text-xs font-mono text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
+                        onClick={() => {
+                          setSelectedShisaku(s._id);
+                          setShisakuSearchTerm(s.shisakuNo);
+                          setShowShisakuSuggestions(false);
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[15px] text-[var(--freya-blue)]">
+                          {selectedShisaku === s._id ? 'radio_button_checked' : 'radio_button_unchecked'}
+                        </span>
+                        <span className="font-medium">試作{s.shisakuNo}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-3 text-xs text-[var(--text-muted)] italic text-center">
+                      No matching prototypes found
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {availableShisakus.length === 0 && (
+            <p className="text-xs font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-[6px] border border-amber-500/20">
+              There are no available prototypes without requests. Please register a new prototype first.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex justify-end gap-2.5 rounded-b-[12px]">
+          <button
+            onClick={() => setCreateModalOpen(false)}
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (selectedShisaku) {
+                navigate(`/prototype/request/${selectedShisaku}`);
+                setCreateModalOpen(false);
+              }
+            }}
+            disabled={!selectedShisaku}
+            className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Proceed
+          </button>
+        </div>
+      </ModalShell>
+
+      {/* Photo Preview Modal */}
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => setPhotoPreview((current) => {
+          if (!current) return current;
+          const images = Array.isArray(current.images) ? current.images : [];
+          const next = (Number.isInteger(current.activeIndex) ? current.activeIndex : 0) + direction;
+          if (next < 0 || next >= images.length) return current;
+          return { ...current, activeIndex: next };
+        })}
+      />
+    </div>
+  );
+}

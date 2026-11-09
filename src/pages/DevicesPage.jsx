@@ -3,6 +3,7 @@ import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import DeviceDetailModal from "../components/DeviceDetailModal";
 import { fetchAllIoTDevicesWithUsers } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const PAGE_SIZE_OPTIONS = [15, 50, 100];
 
@@ -25,7 +26,9 @@ function getDeviceDisplayName(device) {
 }
 
 function DeviceCard({ device, onClick }) {
-  const displayName = getDeviceDisplayName(device);
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const displayName = getDeviceDisplayName(device, isJa);
   const registeredBy = getRegisteredName(device);
   const factoryName = String(device?.factoryName || "—").trim() || "—";
   const photoCount = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean).length : 0;
@@ -34,36 +37,42 @@ function DeviceCard({ device, onClick }) {
     <button
       type="button"
       onClick={() => onClick?.(device)}
-      className="glass-card flex w-full flex-col gap-4 rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 active:scale-[0.99]"
+      className="freya-card flex w-full flex-col gap-3 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 text-left shadow-sm transition-all duration-150 hover:border-[var(--freya-blue)]/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--freya-blue)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Device</p>
-          <p className="mt-1 truncate text-base font-black text-on-surface">{displayName}</p>
-          <p className="mt-1 truncate font-mono text-[10px] text-outline">{device?.deviceId || "—"}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "デバイス" : "Device"}
+          </p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-[var(--text-primary)]">{displayName}</p>
+          <p className="mt-0.5 truncate font-mono text-[10px] text-[var(--text-muted)]">{device?.deviceId || "—"}</p>
         </div>
         {photoCount > 0 ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-mono font-medium text-[var(--freya-blue)]">
             <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
             {photoCount}
           </span>
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-          <div className="flex items-center gap-2 text-outline">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Factory</span>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-2.5">
+          <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>factory</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "工場" : "Factory"}
+            </span>
           </div>
-          <p className="mt-2 truncate text-sm font-semibold text-on-surface">{factoryName}</p>
+          <p className="mt-1 truncate text-xs font-semibold text-[var(--text-primary)]">{factoryName}</p>
         </div>
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-          <div className="flex items-center gap-2 text-outline">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Registered</span>
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-2.5">
+          <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>person</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "登録者" : "Registered"}
+            </span>
           </div>
-          <p className="mt-2 truncate text-sm font-semibold text-on-surface">{registeredBy}</p>
+          <p className="mt-1 truncate text-xs font-semibold text-[var(--text-primary)]">{registeredBy}</p>
         </div>
       </div>
     </button>
@@ -71,6 +80,8 @@ function DeviceCard({ device, onClick }) {
 }
 
 export default function DevicesPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -89,11 +100,11 @@ export default function DevicesPage() {
       setDevices(Array.isArray(result) ? result : []);
     } catch (loadError) {
       setDevices([]);
-      setError(loadError?.message || "Failed to load devices.");
+      setError(loadError?.message || (isJa ? "デバイスの読み込みに失敗しました。" : "Failed to load devices."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isJa]);
 
   useEffect(() => {
     void refresh();
@@ -166,50 +177,50 @@ export default function DevicesPage() {
   const tableColumns = useMemo(() => ([
     {
       key: "factory",
-      label: "Factory",
+      label: isJa ? "工場" : "Factory",
       sortKey: "factory",
       width: 160,
       renderCell: (row) => (
-        <span className="text-sm font-semibold text-on-surface">{row?.factoryName || "—"}</span>
+        <span className="text-xs font-semibold text-[var(--text-primary)]">{row?.factoryName || "—"}</span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "name",
-      label: "Name",
+      label: isJa ? "デバイス名" : "Name",
       sortKey: "name",
       width: 200,
       renderCell: (row) => (
-        <span className="text-sm font-semibold text-on-surface">{getDeviceDisplayName(row)}</span>
+        <span className="text-xs font-semibold text-[var(--text-primary)]">{getDeviceDisplayName(row)}</span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "deviceId",
-      label: "Device ID",
+      label: isJa ? "デバイスID" : "Device ID",
       sortKey: "deviceId",
       width: 200,
       renderCell: (row) => (
-        <span className="font-mono text-xs text-on-surface-variant">{row?.deviceId || "—"}</span>
+        <span className="font-mono text-xs text-[var(--text-secondary)]">{row?.deviceId || "—"}</span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "photos",
-      label: "Photos",
+      label: isJa ? "写真" : "Photos",
       sortable: false,
       width: 96,
       renderCell: (row) => {
         const count = Array.isArray(row?.imageURLs) ? row.imageURLs.filter(Boolean).length : 0;
         return (
-          <span className={`text-sm font-semibold ${count > 0 ? "text-on-surface" : "text-outline"}`}>{count}</span>
+          <span className={`font-mono text-xs font-medium ${count > 0 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>{count}</span>
         );
       },
       disableCellWrapper: true,
     },
     {
       key: "registeredBy",
-      label: "Registered By",
+      label: isJa ? "登録者" : "Registered By",
       sortKey: "registeredBy",
       width: 200,
       renderCell: (row) => {
@@ -217,8 +228,8 @@ export default function DevicesPage() {
         const username = row?.username ? `@${row.username}` : "";
         return (
           <div>
-            <span className="text-sm font-semibold text-on-surface">{name}</span>
-            {username ? <p className="text-[10px] text-outline">{username}</p> : null}
+            <span className="text-xs font-semibold text-[var(--text-primary)]">{name}</span>
+            {username ? <p className="font-mono text-[10px] text-[var(--text-muted)]">{username}</p> : null}
           </div>
         );
       },
@@ -226,25 +237,25 @@ export default function DevicesPage() {
     },
     {
       key: "createdAt",
-      label: "Created",
+      label: isJa ? "登録日" : "Created",
       sortKey: "createdAt",
       width: 132,
       renderCell: (row) => (
-        <span className="text-sm font-medium text-on-surface-variant">{formatDate(row?.createdAt)}</span>
+        <span className="font-mono text-xs text-[var(--text-secondary)]">{formatDate(row?.createdAt)}</span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "updatedAt",
-      label: "Updated",
+      label: isJa ? "更新日" : "Updated",
       sortKey: "updatedAt",
       width: 132,
       renderCell: (row) => (
-        <span className="text-sm font-medium text-on-surface-variant">{formatDate(row?.updatedAt)}</span>
+        <span className="font-mono text-xs text-[var(--text-secondary)]">{formatDate(row?.updatedAt)}</span>
       ),
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [isJa]);
 
   function handleSort(columnKey) {
     setSort((current) => {
@@ -260,92 +271,101 @@ export default function DevicesPage() {
   ), 0), [devices]);
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
         title={(
-          <>
-            <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>developer_board</span>
-            Devices
-          </>
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]">developer_board</span>
+            <span>{isJa ? "デバイス一覧" : "Devices"}</span>
+          </div>
         )}
-        titleClassName="flex items-center gap-3"
-        subtitle="Every registered IoT device across all factories"
+        subtitle={isJa ? "全工場の登録済みIoTデバイス" : "Every registered IoT device across all factories"}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
             type="button"
             onClick={refresh}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15 transition-all duration-150 disabled:opacity-50 active:scale-95"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
           >
             <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-            Refresh
+            {isJa ? "更新" : "Refresh"}
           </button>
         )}
       />
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="glass-card rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>developer_board</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Total Devices</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-1 text-[var(--text-muted)]">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>developer_board</span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "総デバイス数" : "Total Devices"}
+            </p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{devices.length}</p>
+          <p className="text-2xl font-mono font-bold text-[var(--text-primary)] leading-tight">{devices.length}</p>
         </div>
-        <div className="glass-card rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>factory</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Factories</p>
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-1 text-[var(--text-muted)]">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>factory</span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "対象工場数" : "Factories"}
+            </p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{factoryOptions.length}</p>
+          <p className="text-2xl font-mono font-bold text-[var(--text-primary)] leading-tight">{factoryOptions.length}</p>
         </div>
-        <div className="glass-card rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Photos</p>
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-1 text-[var(--text-muted)]">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>photo_library</span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "写真総数" : "Photos"}
+            </p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{totalPhotos}</p>
+          <p className="text-2xl font-mono font-bold text-[var(--text-primary)] leading-tight">{totalPhotos}</p>
         </div>
-        <div className="glass-card rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>filter_alt</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Showing</p>
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-1 text-[var(--text-muted)]">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>filter_alt</span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "表示件数" : "Showing"}
+            </p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{sortedDevices.length}</p>
+          <p className="text-2xl font-mono font-bold text-[var(--text-primary)] leading-tight">{sortedDevices.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="glass-card rounded-2xl p-4 mb-6 flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="flex-1 flex items-center gap-2 rounded-xl border border-separator/40 bg-surface px-4 py-2">
-          <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex-1 flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 focus-within:ring-1 focus-within:ring-[var(--freya-blue)] focus-within:border-[var(--freya-blue)] transition-colors">
+          <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
           <input
             type="text"
             value={searchTerm}
             onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }}
-            placeholder="Search by name, device ID, factory, or person…"
-            className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-outline focus:outline-none"
+            placeholder={isJa ? "名前、デバイスID、工場、登録者で検索…" : "Search by name, device ID, factory, or person…"}
+            className="flex-1 bg-transparent text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
           />
           {searchTerm ? (
             <button
               type="button"
               onClick={() => setSearchTerm("")}
-              className="rounded-xl p-2 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
-              title="Clear search"
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+              title={isJa ? "検索をクリア" : "Clear search"}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>close</span>
             </button>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Factory</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "工場" : "Factory"}
+          </span>
           <select
             value={factoryFilter}
             onChange={(event) => { setFactoryFilter(event.target.value); setPage(1); }}
-            className="rounded-xl border border-separator/40 bg-surface px-4 py-2 text-sm font-semibold text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
-            <option value="all">All</option>
+            <option value="all">{isJa ? "すべての工場" : "All Factories"}</option>
             {factoryOptions.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
@@ -354,31 +374,41 @@ export default function DevicesPage() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3 mb-6">
-          <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
+        <div className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-4 py-3 flex gap-2.5">
+          <span className="material-symbols-outlined text-[var(--status-danger)] flex-shrink-0" style={{ fontSize: 18 }}>report</span>
           <div>
-            <p className="text-sm font-bold text-on-surface">Failed to load devices</p>
-            <p className="text-xs text-on-surface-variant mt-1">{error}</p>
+            <p className="text-xs font-semibold text-[var(--text-primary)]">
+              {isJa ? "デバイスの読み込みに失敗しました" : "Failed to load devices"}
+            </p>
+            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{error}</p>
           </div>
         </div>
       ) : null}
 
       {/* Device cards */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">All Devices</p>
-          <span className="text-[10px] text-outline">{sortedDevices.length} {sortedDevices.length === 1 ? "device" : "devices"}</span>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "すべてのデバイス" : "All Devices"}
+          </p>
+          <span className="text-[11px] font-mono text-[var(--text-muted)]">
+            {sortedDevices.length} {isJa ? "台" : (sortedDevices.length === 1 ? "device" : "devices")}
+          </span>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="glass-card rounded-2xl h-44 animate-pulse" />
+              <div key={index} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] h-40 animate-pulse" />
             ))}
           </div>
         ) : sortedDevices.length === 0 ? (
-          <div className="glass-card rounded-2xl p-5 text-center">
-            <p className="text-sm font-semibold text-on-surface">No devices match the current filters.</p>
-            <p className="text-[11px] text-outline mt-1">Try clearing the search or selecting a different factory.</p>
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+            <p className="text-xs font-semibold text-[var(--text-primary)]">
+              {isJa ? "条件に一致するデバイスがありません。" : "No devices match the current filters."}
+            </p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-1">
+              {isJa ? "検索キーワードをクリアするか、別の工場を選択してください。" : "Try clearing the search or selecting a different factory."}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -394,11 +424,13 @@ export default function DevicesPage() {
       </div>
 
       {/* Data table */}
-      <div className="glass-card rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-on-surface">All Devices</h3>
-          <span className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">
-            {sortedDevices.length.toLocaleString()} rows
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            {isJa ? "すべてのデバイス" : "All Devices"}
+          </h3>
+          <span className="text-[11px] font-mono text-[var(--text-muted)]">
+            {sortedDevices.length.toLocaleString()} {isJa ? "件" : "rows"}
           </span>
         </div>
         <DataTable
@@ -415,11 +447,16 @@ export default function DevicesPage() {
           onPageChange={(nextPage) => setPage(nextPage)}
           onPageSizeChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={isJa ? "件数" : "Rows"}
           rowKey={(row) => `${row?.factoryName || ""}-${row?.deviceId || row?._id}`}
           onRowClick={(row) => setSelectedDevice(row)}
-          emptyTitle="No devices found"
-          emptyMessage="Adjust the filters above to view devices."
+          emptyTitle={isJa ? "デバイスが見つかりません" : "No devices found"}
+          emptyMessage={isJa ? "上記のフィルターを調整してデバイスを表示してください。" : "Adjust the filters above to view devices."}
+          className="overflow-hidden rounded-[8px] border border-[var(--border)]"
+          topBarClassName="mb-3 flex flex-wrap items-center justify-end gap-3 px-1"
+          bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-3 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+          rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)] cursor-pointer"
+          rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
         />
       </div>
 

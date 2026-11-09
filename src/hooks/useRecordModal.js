@@ -51,6 +51,8 @@ export function useRecordModal() {
       SOURCE_TO_PROC[record._source] ??
       record._process ??
       "";
+    
+    // Set optimistically (works great with projected summary records)
     setModalRecord(record);
     setModalProcess(proc);
     setSearchParams(
@@ -65,6 +67,20 @@ export function useRecordModal() {
       },
       { replace: false }
     );
+
+    // Fetch the full record in the background to ensure all heavy fields (images, arrays) are present
+    if (record["工場"] && record.Date && record.Time_start && record["品番"]) {
+      fetchRecordByKey(proc, { 
+        工場: record["工場"], 
+        Date: record.Date, 
+        Time_start: record.Time_start, 
+        品番: record["品番"] 
+      }).then((fullRecord) => {
+        if (fullRecord) {
+          setModalRecord(fullRecord);
+        }
+      });
+    }
   }
 
   function closeRecord() {

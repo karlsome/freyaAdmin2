@@ -34,9 +34,20 @@ export default {
         "separator":                "rgb(var(--c-separator) / <alpha-value>)",
       },
       fontFamily: {
-        headline: ["DM Sans", "sans-serif"],
-        body: ["DM Sans", "sans-serif"],
-        label: ["DM Sans", "sans-serif"],
+        headline: ["Inter", "system-ui", "sans-serif"],
+        body: ["Inter", "system-ui", "sans-serif"],
+        label: ["Inter", "system-ui", "sans-serif"],
+      },
+      // ─── Snow-style type scale ──────────────────────────────────────────────
+      // Named steps replace ad-hoc text-[10px]/[11px] literals. Inter reads
+      // "thin and precise" with negative tracking on the larger sizes.
+      fontSize: {
+        display:  ["1.875rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em",  fontWeight: "600" }], // 30px
+        h1:       ["1.5rem",   { lineHeight: "2rem",     letterSpacing: "-0.015em", fontWeight: "600" }], // 24px
+        h2:       ["1.125rem", { lineHeight: "1.625rem", letterSpacing: "-0.01em",  fontWeight: "600" }], // 18px
+        h3:       ["1rem",     { lineHeight: "1.5rem",   letterSpacing: "-0.01em",  fontWeight: "600" }], // 16px
+        caption:  ["0.75rem",  { lineHeight: "1rem" }],                                                   // 12px
+        overline: ["0.6875rem",{ lineHeight: "0.875rem", letterSpacing: "0.18em",  fontWeight: "600" }], // 11px
       },
       borderRadius: {
         DEFAULT: "0.25rem",

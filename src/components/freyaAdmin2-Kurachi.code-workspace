@@ -7,16 +7,10 @@
 			"path": "../../../Kurachi"
 		},
 		{
-			"path": "../../../FreyaAdmin"
-		},
-		{
-			"path": "../../../shotstack-studio-sdk"
-		},
-		{
-			"path": "../../../shotstack-studio-sdk-demos"
+			"path": "../../../ioT"
 		}
 	],
 	"settings": {
-		"liveServer.settings.multiRootWorkspaceName": "FreyaAdmin"
+		"liveServer.settings.multiRootWorkspaceName": "Kurachi"
 	}
 }
