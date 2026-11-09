@@ -2,13 +2,9 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
-  canDeployVideoManualProjects,
-  canEditVideoManualProjects,
-  canManageVideoManualPlaylists,
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
 } from "../services/videoManualApi";
-import { readStoredAuthUser } from "../utils/auth";
 
 const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
 
@@ -86,48 +82,29 @@ function ProjectCard({ project, onOpen }) {
     videoRef.current.currentTime = 0;
   }, [isHoveringPreview, previewUrl]);
 
+  const badge = previewStatus === "processing"
+    ? "Preview processing"
+    : previewStatus === "failed"
+      ? "Preview failed"
+      : !previewUrl && !thumbnailUrl
+        ? "No preview yet"
+        : "";
+
   return (
-    <article className="glass-card rounded-2xl p-4 card-hover-lift flex h-full flex-col gap-3">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-bold text-on-surface">{project?.title || "Untitled Project"}</h3>
-          <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">
-            {project?.description || "No project description yet."}
-          </p>
-        </div>
-
-        <div className="relative flex-shrink-0">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setShowInfo((value) => !value);
-            }}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-separator/50 bg-surface-container-low text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:text-primary"
-            aria-label="Project information"
-          >
-            <span className="text-xs font-black">i</span>
-          </button>
-
-          {showInfo ? (
-            <div className="absolute right-0 top-9 z-10 w-56 rounded-xl border border-separator/40 bg-surface px-3 py-3 shadow-lg">
-              <div className="space-y-2 text-xs text-on-surface-variant">
-                <p><span className="font-bold text-on-surface">Created by:</span> {project?.createdBy || "Unknown"}</p>
-                <p><span className="font-bold text-on-surface">Last edited:</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt)}</p>
-                <p><span className="font-bold text-on-surface">Deployed:</span> {deployedRevision}</p>
-                <p><span className="font-bold text-on-surface">Latest:</span> {latestRevision}</p>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <button
-        type="button"
+    <article className="glass-card rounded-2xl card-hover-lift group flex h-full flex-col overflow-hidden">
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onOpen(project)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpen(project);
+          }
+        }}
         onMouseEnter={() => setIsHoveringPreview(true)}
-        onMouseLeave={() => setIsHoveringPreview(false)}
-        className="relative mt-auto block aspect-video w-full overflow-hidden rounded-xl border border-separator/35 bg-surface-container-low"
+        onMouseLeave={() => { setIsHoveringPreview(false); setShowInfo(false); }}
+        className="relative block aspect-video w-full cursor-pointer overflow-hidden bg-surface-container-low outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         {thumbnailUrl ? (
           <img
@@ -137,8 +114,8 @@ function ProjectCard({ project, onOpen }) {
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
-            <span className="material-symbols-outlined" style={{ fontSize: 26 }}>movie</span>
+          <div className="flex h-full w-full items-center justify-center text-outline">
+            <span className="material-symbols-outlined" style={{ fontSize: 32 }}>movie</span>
           </div>
         )}
 
@@ -154,10 +131,47 @@ function ProjectCard({ project, onOpen }) {
           />
         ) : null}
 
-        <div className="absolute left-2 top-2 inline-flex items-center rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white">
-          {previewStatus === "processing" ? "Preview processing" : previewStatus === "failed" ? "Preview failed" : previewUrl ? "Hover to preview" : "No preview yet"}
+        {badge ? (
+          <div className="absolute left-2 top-2 inline-flex items-center rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white">
+            {badge}
+          </div>
+        ) : null}
+
+        <div className="absolute right-2 top-2">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowInfo((value) => !value);
+            }}
+            className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 ${showInfo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+            aria-label="Project information"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
+          </button>
+
+          {showInfo ? (
+            <div
+              onClick={(event) => event.stopPropagation()}
+              className="absolute right-0 top-9 z-10 w-56 cursor-default rounded-xl border border-separator/40 bg-surface px-3 py-3 shadow-lg"
+            >
+              <div className="space-y-2 text-xs text-on-surface-variant">
+                <p><span className="font-bold text-on-surface">Created by:</span> {project?.createdBy || "Unknown"}</p>
+                <p><span className="font-bold text-on-surface">Last edited:</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt)}</p>
+                <p><span className="font-bold text-on-surface">Deployed:</span> {deployedRevision}</p>
+                <p><span className="font-bold text-on-surface">Latest:</span> {latestRevision}</p>
+              </div>
+            </div>
+          ) : null}
         </div>
-      </button>
+      </div>
+
+      <div className="min-w-0 p-4">
+        <h3 className="truncate text-sm font-bold text-on-surface">{project?.title || "Untitled Project"}</h3>
+        <p className="mt-1 line-clamp-2 text-xs text-on-surface-variant">
+          {project?.description || "No description"}
+        </p>
+      </div>
     </article>
   );
 }
@@ -176,7 +190,6 @@ function EmptyState({ icon, title, description }) {
 
 export default function VideoManualPage() {
   const navigate = useNavigate();
-  const [authUser] = useState(() => readStoredAuthUser());
   const [playlists, setPlaylists] = useState([]);
   const [projects, setProjects] = useState([]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState("");
@@ -191,9 +204,6 @@ export default function VideoManualPage() {
   const deferredPlaylistQuery = useDeferredValue(playlistQuery);
   const deferredProjectQuery = useDeferredValue(projectQuery);
 
-  const canManagePlaylists = canManageVideoManualPlaylists(authUser?.role);
-  const canEditProjects = canEditVideoManualProjects(authUser?.role);
-  const canDeployProjects = canDeployVideoManualProjects(authUser?.role);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,39 +309,28 @@ export default function VideoManualPage() {
   return (
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <PageHeader
-        eyebrow="Shotstack Workspace"
         title="Video Manual"
-        subtitle="Phase 1 focuses on the React browser: playlists on the left, projects on the right, backed by the existing Shotstack API."
-        titleMeta={(
-          <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary">
-            Browser MVP
-          </span>
-        )}
+        subtitle="Pick a playlist, then open a project to edit it."
         actions={(
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setRefreshNonce((value) => value + 1)}
-              className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
-            >
-              Refresh Browser
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setRefreshNonce((value) => value + 1)}
+            className="inline-flex items-center gap-2 rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+            Refresh
+          </button>
         )}
       />
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <section className="dashboard-section rounded-2xl p-5 xl:col-span-4 2xl:col-span-3">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>folder_open</span>
-            </span>
+      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="dashboard-section rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
+          <div className="mb-3 flex items-center gap-2">
             <h2 className="text-sm font-bold text-on-surface">Playlists</h2>
-            <span className="ml-auto text-[10px] text-outline">{formatPlural(filteredPlaylists.length, "playlist")}</span>
+            <span className="ml-auto text-[10px] text-outline">{filteredPlaylists.length}</span>
           </div>
-          <p className="mb-4 ml-10 text-[11px] text-outline">The browser keeps the legacy project hierarchy, rebuilt with Freya Admin 2 styling and spacing rules.</p>
 
-          <label className="mb-4 flex items-center gap-2 rounded-xl border border-separator/40 bg-surface-container-low px-3 py-3 text-on-surface transition-all duration-150 focus-within:border-primary/30 focus-within:bg-surface">
+          <label className="mb-3 flex items-center gap-2 rounded-xl border border-separator/40 bg-surface-container-low px-3 py-2.5 text-on-surface transition-all duration-150 focus-within:border-primary/30 focus-within:bg-surface">
             <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
             <input
               value={playlistQuery}
@@ -342,31 +341,20 @@ export default function VideoManualPage() {
             />
           </label>
 
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            <div className="glass-card rounded-2xl px-4 py-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Role</div>
-              <div className="mt-1 text-sm font-semibold text-on-surface">{authUser?.role || "Viewer"}</div>
-            </div>
-            <div className="glass-card rounded-2xl px-4 py-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Access</div>
-              <div className="mt-1 text-sm font-semibold text-on-surface">{canManagePlaylists ? "Manage" : "Browse"}</div>
-            </div>
-          </div>
-
           {playlistsError ? (
-            <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
+            <div className="mb-3 flex gap-3 rounded-xl border border-error/20 bg-error/10 px-3 py-3">
               <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
               <div>
-                <p className="text-sm font-bold text-on-surface">Playlist load failed</p>
+                <p className="text-sm font-bold text-on-surface">Could not load playlists</p>
                 <p className="mt-1 text-xs text-on-surface-variant">{playlistsError}</p>
               </div>
             </div>
           ) : null}
 
-          <div className="space-y-3">
+          <div className="max-h-[calc(100vh-18rem)] space-y-1.5 overflow-y-auto scrollbar-hide">
             {playlistsLoading ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="h-[88px] rounded-xl bg-surface-container/70 animate-pulse" />
+              Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-12 rounded-xl bg-surface-container/70 animate-pulse" />
               ))
             ) : filteredPlaylists.length ? (
               filteredPlaylists.map((playlist) => {
@@ -377,61 +365,45 @@ export default function VideoManualPage() {
                     key={playlist?._id}
                     type="button"
                     onClick={() => setSelectedPlaylistId(String(playlist?._id || ""))}
-                    className={`w-full rounded-xl border px-3 py-3 text-left transition-all duration-150 ${isActive
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-150 ${isActive
                       ? "border-primary/25 bg-primary/10 shadow-[inset_3px_0_0_rgb(var(--c-primary))]"
-                      : "border-separator/35 bg-surface-container/45 hover:border-primary/30 hover:bg-surface-container hover:shadow-sm"
+                      : "border-transparent hover:bg-surface-container"
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${isActive ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>inventory_2</span>
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0 flex-1 truncate text-sm font-bold text-on-surface">{playlist?.name || "Untitled Playlist"}</div>
-                          <span className="inline-flex items-center rounded-full border border-separator/35 bg-surface px-3 py-1 text-[10px] font-bold text-on-surface-variant">
-                            {playlist?.privacy || "internal"}
-                          </span>
-                        </div>
-                        <p className="mt-2 line-clamp-2 text-sm font-medium text-on-surface-variant">
-                          {playlist?.description || "No playlist description yet."}
-                        </p>
-                        <div className="mt-3 flex items-center gap-2 text-[10px] text-outline">
-                          <span>{formatPlural(playlist?.projectCount || 0, "project")}</span>
-                          {playlist?.model ? <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1 text-[10px] font-bold text-on-surface-variant">{playlist.model}</span> : null}
-                        </div>
-                      </div>
-                    </div>
+                    <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>inventory_2</span>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-on-surface">{playlist?.name || "Untitled Playlist"}</span>
+                      <span className="block truncate text-[11px] text-outline">
+                        {formatPlural(playlist?.projectCount || 0, "project")}{playlist?.model ? ` · ${playlist.model}` : ""}
+                      </span>
+                    </span>
                   </button>
                 );
               })
             ) : (
               <EmptyState
                 icon="folder"
-                title="No accessible playlists"
-                description="The browser is wired to the real Shotstack API, but no playlists are currently visible for this account."
+                title={playlistQuery ? "No matching playlists" : "No playlists available"}
+                description={playlistQuery ? "Try a different search." : "There are no playlists for this account yet."}
               />
             )}
           </div>
-        </section>
+        </aside>
 
-        <section className="dashboard-section rounded-2xl p-5 xl:col-span-8 2xl:col-span-9">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>video_library</span>
-            </span>
-            <h2 className="text-sm font-bold text-on-surface">Projects</h2>
-            <span className="ml-auto text-[10px] text-outline">{formatPlural(filteredProjects.length, "project")}</span>
-          </div>
-          <p className="mb-4 ml-10 text-[11px] text-outline">
-            {selectedPlaylist
-              ? `${selectedPlaylist.name || "Selected playlist"} projects are loaded from the existing Video Manual Shotstack collections.`
-              : "Select a playlist to load its projects into the browser workspace."}
-          </p>
+        <section className="min-w-0">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-on-surface">
+                {selectedPlaylist?.name || "Projects"}
+              </h2>
+              <p className="text-xs text-outline">
+                {selectedPlaylist ? formatPlural(filteredProjects.length, "project") : "No playlist selected"}
+              </p>
+            </div>
 
-          <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <label className="flex items-center gap-2 rounded-xl border border-separator/40 bg-surface-container-low px-3 py-3 text-on-surface transition-all duration-150 focus-within:border-primary/30 focus-within:bg-surface">
+            <label className="flex w-full items-center gap-2 rounded-xl border border-separator/40 bg-surface-container-low px-3 py-2.5 text-on-surface transition-all duration-150 focus-within:border-primary/30 focus-within:bg-surface sm:w-72">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
                 value={projectQuery}
@@ -441,28 +413,13 @@ export default function VideoManualPage() {
                 type="search"
               />
             </label>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="glass-card rounded-2xl px-4 py-3 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Role</div>
-                <div className="mt-1 text-sm font-semibold text-on-surface">{authUser?.role || "Viewer"}</div>
-              </div>
-              <div className="glass-card rounded-2xl px-4 py-3 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Edit</div>
-                <div className="mt-1 text-sm font-semibold text-on-surface">{canEditProjects ? "Yes" : "No"}</div>
-              </div>
-              <div className="glass-card rounded-2xl px-4 py-3 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Deploy</div>
-                <div className="mt-1 text-sm font-semibold text-on-surface">{canDeployProjects ? "Yes" : "No"}</div>
-              </div>
-            </div>
           </div>
 
           {projectsError ? (
-            <div className="mb-5 rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
+            <div className="mb-5 flex gap-3 rounded-2xl border border-error/20 bg-error/10 px-4 py-4">
               <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
               <div>
-                <p className="text-sm font-bold text-on-surface">Project load failed</p>
+                <p className="text-sm font-bold text-on-surface">Could not load projects</p>
                 <p className="mt-1 text-xs text-on-surface-variant">{projectsError}</p>
               </div>
             </div>
@@ -471,17 +428,17 @@ export default function VideoManualPage() {
           {!selectedPlaylist && !playlistsLoading ? (
             <EmptyState
               icon="video_library"
-              title="Choose a playlist first"
-              description="The browser information architecture is in place. Pick a playlist from the left rail to load its projects."
+              title="Choose a playlist"
+              description="Select a playlist on the left to see its projects."
             />
           ) : projectsLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="h-[260px] rounded-2xl bg-surface-container/70 animate-pulse" />
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="h-[240px] rounded-2xl bg-surface-container/70 animate-pulse" />
               ))}
             </div>
           ) : filteredProjects.length ? (
-            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project?._id}
@@ -493,10 +450,8 @@ export default function VideoManualPage() {
           ) : (
             <EmptyState
               icon="movie_edit"
-              title={selectedPlaylist ? "No projects matched this search" : "No projects yet"}
-              description={selectedPlaylist
-                ? "Try a different project search, or choose another playlist from the left rail."
-                : "This playlist does not have any projects yet."}
+              title={projectQuery ? "No matching projects" : "No projects yet"}
+              description={projectQuery ? "Try a different search." : "This playlist doesn't have any projects yet."}
             />
           )}
         </section>
