@@ -131,6 +131,46 @@ export default function PlannerTimelineView({
   const [imagePreview, setImagePreview] = useState(null);
   const { language } = useLanguage();
   const isJa = language === "ja";
+
+  // ── Search: highlight the matching 背番号 / 品番, mute everything else, jump to the first hit ──
+  const scrollBoxRef = useRef(null);
+  const [searchText, setSearchText] = useState("");
+  const [hitIndex, setHitIndex] = useState(0);
+  const needle = searchText.trim().toLowerCase();
+  const isHit = (item) => Boolean(needle) && [item?.背番号, item?.品番].some((v) => String(v || "").toLowerCase().includes(needle));
+  const hitCount = needle
+    ? new Set([
+        ...scheduledProducts.filter(isHit).map((p) => `p${p._scheduleId}`),
+        ...actualBlocks.filter(isHit).map((b, i) => `a${b.equipment || ""}${b.startTime || i}`),
+      ]).size
+    : 0;
+  // Dimmed = a search is active and this item is not a hit
+  const mutedStyle = (item) => (needle && !isHit(item) ? { opacity: 0.18, filter: "grayscale(0.6)" } : {});
+
+  function scrollToHit(index) {
+    const box = scrollBoxRef.current;
+    if (!box) return;
+    const hits = box.querySelectorAll("[data-search-hit]");
+    if (!hits.length) return;
+    const el = hits[((index % hits.length) + hits.length) % hits.length];
+    const boxRect = box.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    box.scrollTo({
+      left: Math.max(0, box.scrollLeft + (elRect.left - boxRect.left) - LABEL_WIDTH - 80),
+      top: Math.max(0, box.scrollTop + (elRect.top - boxRect.top) - 90),
+      behavior: "smooth",
+    });
+    box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // Typing jumps to the first hit (after the highlight has rendered)
+  useEffect(() => {
+    if (!needle) return undefined;
+    setHitIndex(0);
+    const timer = setTimeout(() => scrollToHit(0), 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needle]);
   const renderT0Ref = useRef(performance.now());
   renderT0Ref.current = performance.now();
 
@@ -193,6 +233,43 @@ export default function PlannerTimelineView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-1 text-xs focus-within:border-[var(--freya-blue)]">
+            <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
+            <input
+              type="text"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && hitCount > 0) {
+                  event.preventDefault();
+                  const next = event.shiftKey ? hitIndex - 1 : hitIndex + 1;
+                  setHitIndex(next);
+                  scrollToHit(next);
+                } else if (event.key === "Escape") {
+                  setSearchText("");
+                }
+              }}
+              placeholder={isJa ? "背番号・品番を検索" : "Search 背番号 / part no."}
+              className="h-6 w-40 bg-transparent text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
+              aria-label={isJa ? "タイムライン検索" : "Search timeline"}
+            />
+            {needle ? (
+              <>
+                <span className={`font-mono text-[11px] font-semibold ${hitCount ? "text-[var(--freya-blue)]" : "text-[var(--status-danger)]"}`}>
+                  {hitCount ? `${(((hitIndex % hitCount) + hitCount) % hitCount) + 1}/${hitCount}` : "0"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchText("")}
+                  className="flex h-4 w-4 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                  aria-label={isJa ? "検索をクリア" : "Clear search"}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                </button>
+              </>
+            ) : null}
+          </div>
+
           {onOpenMachineStatusModal ? (
             <button
               type="button"
@@ -238,6 +315,7 @@ export default function PlannerTimelineView({
       {/* Bounded height so the grid scrolls inside itself: the time header (sticky top) and the equipment column (sticky left)
           stay in view like frozen panes in Excel. A sticky header cannot follow the page scroll from inside an overflow box. */}
       <div
+        ref={scrollBoxRef}
         className="overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)]"
         style={{ maxHeight: "calc(100vh - 200px)" }}
       >
@@ -367,7 +445,9 @@ export default function PlannerTimelineView({
                               }
                             }}
                             className="group relative cursor-move"
+                            data-search-hit={showLabel && isHit(product) ? "1" : undefined}
                             style={{
+                              ...mutedStyle(product),
                               width: SLOT_WIDTH,
                               backgroundColor: `${product.color}30`,
                               borderTop: edge,
@@ -376,6 +456,7 @@ export default function PlannerTimelineView({
                               borderLeft: edgeStyle(isTileStart, continuesBefore),
                               borderRight: edgeStyle(isTileEnd, continuesAfter),
                               boxShadow: [
+                                isHit(product) ? `inset 0 4px 0 #f59e0b, inset 0 -4px 0 #f59e0b` : "",
                                 isTileStart && !continuesBefore ? `inset 4px 0 0 ${product.color}` : "",
                                 isTileEnd && !continuesAfter ? `inset -4px 0 0 ${product.color}` : "",
                               ].filter(Boolean).join(", ") || "none",
@@ -495,7 +576,8 @@ export default function PlannerTimelineView({
                           <div
                             key={`${equipmentName}-actual-${slot}`}
                             className={`relative border-r border-[var(--border)] ${onActualBlockClick ? "cursor-pointer hover:brightness-95" : ""}`}
-                            style={{ width: SLOT_WIDTH, backgroundColor: `${color}30` }}
+                            data-search-hit={showLabel && isHit(block) ? "1" : undefined}
+                            style={{ ...mutedStyle(block), width: SLOT_WIDTH, backgroundColor: `${color}30`, ...(isHit(block) ? { boxShadow: "inset 0 4px 0 #f59e0b, inset 0 -4px 0 #f59e0b" } : {}) }}
                             onClick={() => onActualBlockClick?.(block)}
                             title={`${block.背番号} · ${block.totalQuantity} ${isJa ? "個 実績" : "pcs actual"}`}
                           >
@@ -513,7 +595,7 @@ export default function PlannerTimelineView({
                           <div
                             key={`${equipmentName}-actual-${slot}`}
                             className={`relative border-r border-amber-400/40 bg-amber-400/15 ${onInProgressClick ? "cursor-pointer hover:bg-amber-400/25" : ""}`}
-                            style={{ width: SLOT_WIDTH }}
+                            style={{ ...mutedStyle(inProgress), width: SLOT_WIDTH }}
                             onClick={() => onInProgressClick?.(equipmentName, slot, inProgress)}
                             title={`${inProgress.背番号 || inProgress.品番} ${isJa ? "進行中" : "in progress"}`}
                           >
