@@ -5,7 +5,6 @@ import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
 import MasterTabNav from "../components/MasterTabNav";
 import PageHeader from "../components/PageHeader";
-import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
 import FactoryEquipmentRealTable from "../components/factoryStatus/FactoryEquipmentRealTable";
 import FactoryStatusLogsModal from "../components/factoryStatus/FactoryStatusLogsModal";
@@ -64,20 +63,6 @@ function joinClasses(...classes) {
 }
 
 
-function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) {
-  return (
-    <StatSummaryCard
-      variant="freya"
-      icon={icon}
-      label={label}
-      value={value}
-      subtitle={subtitle}
-      accent={accent}
-      loading={loading}
-    />
-  );
-}
-
 export default function FactoryStatusPage() {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -114,7 +99,6 @@ export default function FactoryStatusPage() {
       return prev && prev.pieces === totals.pieces && prev.ng === totals.ng ? current : { ...current, [factory]: totals };
     });
   };
-  const livePiecesAll = selectedFactories.reduce((sum, f) => sum + (liveByFactory[f]?.pieces || 0), 0);
   const rateOf = (actual, goal) => (goal > 0 ? Math.round((actual / goal) * 1000) / 10 : 0);
   const [logsModalState, setLogsModalState] = useState({ open: false, factory: "", equipment: "" });
 
@@ -546,51 +530,6 @@ export default function FactoryStatusPage() {
 
         {activeTab === "live-status" && (
           <div className="mt-4 space-y-6">
-            <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-              <SummaryCard
-                icon="flag"
-                label={isJa ? "目標数" : "Goal"}
-                value={formatFactoryStatusNumber(summary.totalGoalQuantity)}
-                subtitle={isJa ? "選択中の工場" : "Selected factories"}
-                loading={loadingSnapshot && !generatedAt}
-              />
-              <SummaryCard
-                icon="precision_manufacturing"
-                label={isJa ? "実績数" : "Actual"}
-                value={formatFactoryStatusNumber(summary.totalActualQuantity + livePiecesAll)}
-                subtitle={livePiecesAll > 0 ? (isJa ? `提出済み + 稼働中 約${formatFactoryStatusNumber(livePiecesAll)}個` : `Submitted + ~${formatFactoryStatusNumber(livePiecesAll)} running now`) : (isJa ? "pressDB 本日分" : "Today from pressDB")}
-                loading={loadingSnapshot && !generatedAt}
-              />
-              <SummaryCard
-                icon="trending_up"
-                label={isJa ? "達成率" : "Achievement"}
-                value={`${rateOf(summary.totalActualQuantity + livePiecesAll, summary.totalGoalQuantity).toLocaleString()}%`}
-                subtitle={isJa ? "目標比" : "Goal vs actual"}
-                loading={loadingSnapshot && !generatedAt}
-              />
-              <SummaryCard
-                icon="play_circle"
-                label={isJa ? "稼働設備" : "Active Machines"}
-                value={formatFactoryStatusNumber(summary.activeMachines)}
-                subtitle={isJa ? "セッション進行中" : "Live sessions in progress"}
-                loading={loadingSnapshot && !generatedAt}
-              />
-              <SummaryCard
-                icon="schedule"
-                label={isJa ? "停滞設備" : "Stale Machines"}
-                value={formatFactoryStatusNumber(summary.staleMachines)}
-                subtitle={isJa ? "稼働中だが未更新" : "Active but not recently updated"}
-                loading={loadingSnapshot && !generatedAt}
-              />
-              <SummaryCard
-                icon="pause_circle"
-                label={isJa ? "停止設備" : "Idle Machines"}
-                value={formatFactoryStatusNumber(summary.idleMachines)}
-                subtitle={isJa ? `${formatFactoryStatusNumber(summary.activeSessions)} 件の稼働セッション` : `${formatFactoryStatusNumber(summary.activeSessions)} active sessions`}
-                loading={loadingSnapshot && !generatedAt}
-              />
-            </div>
-
             {!selectedFactories.length && !loadingFactories ? (
               <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">
