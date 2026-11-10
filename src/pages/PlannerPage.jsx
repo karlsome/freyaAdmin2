@@ -296,6 +296,25 @@ export default function PlannerPage() {
   }, [mainTab]);
 
   const productColors = buildProductColorMap(products, [...goals, ...scheduledProducts]);
+
+  // Submitted production of the plan date per 背番号 (pressDB, the same rows as the "Actual" lane): good = processed - NG.
+  const producedBySerial = useMemo(() => {
+    const totals = {};
+    actualBlocks.forEach((block) => {
+      (block.records || []).forEach((record) => {
+        const serial = record?.背番号;
+        if (!serial) return;
+        const processed = Number(record?.Process_Quantity) || 0;
+        const ng = Number(record?.Total_NG) || 0;
+        const entry = totals[serial] || { good: 0, ng: 0, processed: 0 };
+        entry.processed += processed;
+        entry.ng += ng;
+        entry.good += Math.max(0, processed - ng);
+        totals[serial] = entry;
+      });
+    });
+    return totals;
+  }, [actualBlocks]);
   const filteredGoals = filterGoals(goals, goalSearch);
   const outOfSyncCount = useMemo(() => {
     return goals.reduce((count, goal) => {
@@ -1585,6 +1604,7 @@ export default function PlannerPage() {
             products={products}
             productColors={productColors}
             scheduledProducts={scheduledProducts}
+            producedBySerial={producedBySerial}
             goalSearch={goalSearch}
             importing={csvReading}
             smartSchedulingBusy={smartPreviewLoading}

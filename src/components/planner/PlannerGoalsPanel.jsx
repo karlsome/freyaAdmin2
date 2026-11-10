@@ -8,6 +8,7 @@ export default function PlannerGoalsPanel({
   products = [],
   productColors = {},
   scheduledProducts = [],
+  producedBySerial = {},
   goalSearch,
   importing,
   smartSchedulingBusy,
@@ -157,6 +158,7 @@ export default function PlannerGoalsPanel({
         goals={goals}
         currentDate={currentDate}
         scheduledProducts={scheduledProducts}
+        producedBySerial={producedBySerial}
         products={products}
         productColors={productColors}
         onDeleteGoal={onDeleteGoal}

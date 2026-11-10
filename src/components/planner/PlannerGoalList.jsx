@@ -7,7 +7,7 @@ import {
 } from "../../utils/planner";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, onDeleteGoal, onScheduleGoal, onReconcileSingleGoal }) {
+function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, produced = null, onDeleteGoal, onScheduleGoal, onReconcileSingleGoal }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -83,6 +83,33 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
           <div className="mt-1 text-[11px] text-[var(--text-secondary)] font-mono freya-tabular">
             {Number(goal.scheduledQuantity || 0)} / {Number(goal.targetQuantity || 0)} {isJa ? "個" : "pcs"}
           </div>
+          {produced !== null ? (
+            <div
+              className="mt-2"
+              title={isJa
+                ? "作業者が提出済みの生産実績（良品数）です。まだ提出されていない作業中の分は含みません。"
+                : "Good pieces already submitted by workers. Work still in progress and not yet submitted is not included."}
+            >
+              <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                  {isJa ? "生産済み" : "Produced"}
+                </span>
+                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                  {Number(goal.targetQuantity || 0) > 0 ? Math.round((produced / Number(goal.targetQuantity)) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-[var(--surface-subtle)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-500"
+                  style={{ width: `${Math.min(100, Number(goal.targetQuantity || 0) > 0 ? (produced / Number(goal.targetQuantity)) * 100 : 0)}%` }}
+                />
+              </div>
+              <div className="mt-1 text-[11px] text-[var(--text-secondary)] font-mono freya-tabular">
+                {produced} / {Number(goal.targetQuantity || 0)} {isJa ? "個" : "pcs"}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div>
@@ -134,6 +161,7 @@ export default function PlannerGoalList({
   goals = [],
   currentDate,
   scheduledProducts = [],
+  producedBySerial = {},
   products = [],
   productColors = {},
   onDeleteGoal,
@@ -146,6 +174,21 @@ export default function PlannerGoalList({
   const sortedGoals = sortGoals(goals);
   const goalsByDate = groupGoalsByDate(sortedGoals);
   const dateGroups = Object.keys(goalsByDate).sort((left, right) => left.localeCompare(right));
+
+  // Submitted production only exists for the plan date. When one 背番号 has several goals that day, fill the goals in
+  // list order up to their target; whatever is left over goes to the last one.
+  const producedByGoal = {};
+  const leftover = {};
+  Object.entries(producedBySerial).forEach(([serial, entry]) => { leftover[serial] = entry.good; });
+  const todaysGoals = (goalsByDate[currentDate] || []).filter((goal) => goal.背番号);
+  todaysGoals.forEach((goal, index) => {
+    const serial = goal.背番号;
+    const isLastForSerial = !todaysGoals.slice(index + 1).some((other) => other.背番号 === serial);
+    const left = leftover[serial] || 0;
+    const take = isLastForSerial ? left : Math.min(left, Number(goal.targetQuantity || 0));
+    producedByGoal[goal._id] = take;
+    leftover[serial] = left - take;
+  });
 
   if (!sortedGoals.length) {
     return (
@@ -182,6 +225,7 @@ export default function PlannerGoalList({
                 scheduledProducts={scheduledProducts}
                 products={products}
                 productColors={productColors}
+                produced={goal.date === currentDate ? (producedByGoal[goal._id] ?? 0) : null}
                 onDeleteGoal={onDeleteGoal}
                 onScheduleGoal={onScheduleGoal}
                 onReconcileSingleGoal={onReconcileSingleGoal}
