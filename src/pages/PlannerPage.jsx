@@ -277,9 +277,6 @@ export default function PlannerPage() {
   const [publishedRestoring, setPublishedRestoring] = useState(false);
 
   function handleMainTabChange(nextTab) {
-    const t0 = performance.now();
-    console.log(`⏱️ [Planner] Tab button clicked: current="${mainTab}" -> target="${nextTab}" at ${t0.toFixed(1)}ms`);
-    console.time(`⏱️ [Planner] Total tab transition to "${nextTab}"`);
     const nextParams = new URLSearchParams(searchParams);
     if (nextTab === "goals") {
       nextParams.delete("tab");
@@ -287,15 +284,7 @@ export default function PlannerPage() {
       nextParams.set("tab", nextTab);
     }
     setSearchParams(nextParams, { replace: true });
-    console.log(`⏱️ [Planner] setSearchParams completed in ${(performance.now() - t0).toFixed(1)}ms`);
   }
-
-  useEffect(() => {
-    console.log(`🎯 [Planner] Active tab rendered: "${mainTab}"`);
-    try {
-      console.timeEnd(`⏱️ [Planner] Total tab transition to "${mainTab}"`);
-    } catch {}
-  }, [mainTab]);
 
   const productColors = buildProductColorMap(products, [...goals, ...scheduledProducts]);
 
@@ -395,7 +384,6 @@ export default function PlannerPage() {
     const activeRangeEnd = nextEndDate && nextEndDate >= nextDate ? nextEndDate : "";
 
     if (!nextFactory) {
-      console.log("ℹ️ [Planner API] No factory selected, resetting planner state.");
       setEquipment([]);
       setGoals([]);
       setScheduledProducts([]);
@@ -408,8 +396,6 @@ export default function PlannerPage() {
     }
 
     const requestId = ++requestIdRef.current;
-    console.log(`🔄 [Planner API #${requestId}] Loading data for factory="${nextFactory}", date="${nextDate}"`);
-    console.time(`⏱️ [Planner API #${requestId}] Total data fetch`);
     setDataLoading(true);
 
     try {
@@ -424,19 +410,8 @@ export default function PlannerPage() {
       ]);
 
       if (requestId !== requestIdRef.current) {
-        console.warn(`⚠️ [Planner API #${requestId}] Stale response ignored (current is #${requestIdRef.current})`);
         return;
       }
-
-      console.timeEnd(`⏱️ [Planner API #${requestId}] Total data fetch`);
-      console.log(`✅ [Planner API #${requestId}] Received:`, {
-        equipment: nextEquipment.length,
-        products: nextProducts.length,
-        goals: nextGoals.length,
-        plans: nextPlans.length,
-        actualRows: actualRows.length,
-        inProgressRows: inProgressRows.length,
-      });
 
       const nextColorMap = buildProductColorMap(nextProducts, nextGoals);
       const currentPlan = Array.isArray(nextPlans) && nextPlans.length ? nextPlans[0] : null;
