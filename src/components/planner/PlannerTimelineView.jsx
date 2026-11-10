@@ -15,6 +15,7 @@ import {
   timeToMinutes,
 } from "../../utils/planner";
 import { useLanguage } from "../../contexts/LanguageContext";
+import SensorDevicePhotoPreviewModal from "../SensorDevicePhotoPreviewModal";
 
 const SLOT_WIDTH = 56;
 const LABEL_WIDTH = 132;
@@ -62,6 +63,7 @@ export default function PlannerTimelineView({
   onInProgressClick,
 }) {
   const [infoPopover, setInfoPopover] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const renderT0Ref = useRef(performance.now());
@@ -416,6 +418,10 @@ export default function PlannerTimelineView({
         </div>
       </div>
 
+      {imagePreview ? (
+        <SensorDevicePhotoPreviewModal preview={imagePreview} onClose={() => setImagePreview(null)} />
+      ) : null}
+
       {infoPopover ? (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setInfoPopover(null)} />
@@ -426,7 +432,23 @@ export default function PlannerTimelineView({
             {(() => {
               const imageURL = infoPopover.product.imageURL || getMatchingProduct(infoPopover.product, products)?.imageURL;
               return imageURL ? (
-                <a href={imageURL} target="_blank" rel="noreferrer" className="mb-2 block">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const item = infoPopover.product;
+                    const master = getMatchingProduct(item, products);
+                    setImagePreview({
+                      displayName: item.品番 || item.背番号 || "Product Image",
+                      eyebrow: "Product Reference Image",
+                      subtitle: [master?.モデル, master?.品名 || item.品名].filter(Boolean).join(" • "),
+                      images: [{ url: imageURL, label: item.品番 || item.背番号 || "Product Image" }],
+                      activeIndex: 0,
+                    });
+                    setInfoPopover(null);
+                  }}
+                  className="mb-2 block w-full cursor-zoom-in"
+                  title={isJa ? "クリックで拡大" : "Click to enlarge"}
+                >
                   <img
                     src={imageURL}
                     alt={infoPopover.product.背番号}
@@ -434,7 +456,7 @@ export default function PlannerTimelineView({
                     onError={(event) => { event.currentTarget.parentElement.style.display = "none"; }}
                     className="h-24 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] object-contain"
                   />
-                </a>
+                </button>
               ) : null;
             })()}
             <div className="flex items-center gap-2">
