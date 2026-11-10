@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useNavigate, useParams } from "react-router-dom";
-import { Canvas, Controls, Edit, Timeline, UIController, VideoExporter } from "@shotstack/shotstack-studio";
+import { Canvas, Controls, Edit, Timeline, UIController } from "@shotstack/shotstack-studio";
 import VideoManualAddElementsSidebar, { ELEMENT_DRAG_MIME } from "../components/videoManual/VideoManualAddElementsSidebar";
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
 import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
@@ -62,7 +62,6 @@ import {
   canDeployVideoManualProjects,
   createVideoManualRevision,
   deployVideoManualRenderedRevision,
-  deployVideoManualUploadedRevision,
   deployVideoManualRevision,
   fetchVideoManualPlaylistAssetRecycleBin,
   fetchVideoManualRenderStatus,
@@ -1751,58 +1750,6 @@ export default function VideoManualProjectEditorPage() {
     throw new Error("Render timeout after 10 minutes.");
   }, []);
 
-  const exportRevisionSnapshotAsBlob = useCallback(async (snapshot, onProgress = null) => {
-    if (typeof VideoEncoder === "undefined") {
-      throw new Error("This browser cannot create an MP4 fallback because WebCodecs is not available.");
-    }
-
-    const { template, isPlaceholder: exportIsEmpty } = prepareEditForEditor(snapshot?.edit);
-    if (exportIsEmpty) throw new Error("Nothing to export yet. Add a video or element to the timeline first.");
-    const outputSize = template?.output?.size || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size;
-    const outputFps = Number(template?.output?.fps) || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps;
-    const liveEdit = editRef.current;
-    const liveCanvas = canvasRef.current;
-    const liveWasPlaying = liveEdit?.isPlaying === true;
-    const tempRoot = document.createElement("div");
-
-    tempRoot.setAttribute("data-shotstack-studio", "");
-    tempRoot.style.position = "fixed";
-    tempRoot.style.left = "-20000px";
-    tempRoot.style.top = "0";
-    tempRoot.style.width = `${outputSize?.width || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size.width}px`;
-    tempRoot.style.height = `${outputSize?.height || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size.height}px`;
-    tempRoot.style.opacity = "0";
-    tempRoot.style.pointerEvents = "none";
-    tempRoot.style.overflow = "hidden";
-
-    let exportEdit = null;
-    let exportCanvas = null;
-    let exporter = null;
-
-    try {
-      liveEdit?.pause?.();
-      liveCanvas?.pauseTicker?.();
-      document.body.prepend(tempRoot);
-
-      exportEdit = new Edit(template);
-      exportCanvas = new Canvas(exportEdit);
-      await exportCanvas.load();
-      await exportEdit.load();
-
-      exporter = new VideoExporter(exportEdit, exportCanvas);
-      // Report progress through our own export modal instead of the SDK's built-in overlay (they used to stack).
-      exporter.configureProgress?.({ showOverlay: false, onProgress });
-      return await exporter.exportBlob(outputFps);
-    } finally {
-      try { exporter?.dispose?.(); } catch { /* Ignore fallback exporter cleanup errors. */ }
-      try { exportCanvas?.dispose?.(); } catch { /* Ignore fallback canvas cleanup errors. */ }
-      try { exportEdit?.dispose?.(); } catch { /* Ignore fallback edit cleanup errors. */ }
-      tempRoot.remove();
-      liveCanvas?.resumeTicker?.();
-      if (liveWasPlaying) liveEdit?.play?.();
-    }
-  }, []);
-
   const ensureRevisionForExport = useCallback(async () => {
     if (revisionPreview) {
       throw new Error("Back to current before exporting.");
@@ -1877,7 +1824,6 @@ export default function VideoManualProjectEditorPage() {
     try {
       const fullRevision = revision?.snapshot ? revision : await fetchVideoManualRevision(revisionId);
       let deployData = null;
-      let usedLocalFallback = false;
 
       deployData = await deployVideoManualRevision(projectId, revisionId, {
         reuseExistingDeployment: true,
@@ -1890,7 +1836,6 @@ export default function VideoManualProjectEditorPage() {
 
       if (!deployData) {
         const snapshot = fullRevision?.snapshot || {};
-        const deployFileName = buildVideoManualDeploymentFileName(snapshot.title || project?.title || "Video Manual", fullRevision?.revisionNumber);
 
         setDeploymentStatus({
           type: "info",
@@ -1902,72 +1847,37 @@ export default function VideoManualProjectEditorPage() {
 
         const editJson = prepareVideoManualEditForRender(snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, snapshot.assetSourceMap || {});
 
-        try {
-          setDeploymentStatus({
-            type: "info",
-            status: "LOCAL_EXPORT",
-            title: "Rendering locally",
-            message: "Generating the deployment MP4 in the browser.",
-            progress: null,
-          });
-
-          const exportedBlob = await exportRevisionSnapshotAsBlob(snapshot, (percent, text) => {
-            setDeploymentStatus({
-              type: "info",
-              status: "LOCAL_EXPORT",
-              title: "Rendering locally",
-              message: `${text || "Exporting..."} ${percent}%`,
-              progress: percent,
-            });
-          });
-          usedLocalFallback = true;
-
-          setDeploymentStatus({
-            type: "info",
-            status: "UPLOADING",
-            title: "Uploading local export",
-            message: "The browser export finished. Saving the final MP4 to Firebase Storage.",
-            progress: null,
-          });
-
-          deployData = await deployVideoManualUploadedRevision(projectId, revisionId, exportedBlob, {
-            fileName: deployFileName,
-            mimeType: "video/mp4",
-          });
-        } catch (localExportError) {
-          const primaryMessage = localExportError?.message || "Local browser export failed.";
-
-          setDeploymentStatus({
-            type: "info",
-            status: "SUBMITTING",
-            title: "Trying Shotstack",
-            message: "The browser export failed, so the app is trying the Shotstack sandbox instead.",
-            progress: null,
-          });
-
-          try {
-            const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
-            const renderId = renderStart?.renderId;
-            if (!renderId) throw new Error("Render request did not return a render id.");
-
-            const renderResult = await waitForVideoManualRender(renderId);
-
-            setDeploymentStatus({
-              type: "info",
-              status: "UPLOADING",
-              title: "Uploading render",
-              message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
-              progress: null,
-            });
-
-            deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
-              renderId,
-              downloadUrl: renderResult?.downloadUrl || null,
-            });
-          } catch (shotstackError) {
-            throw new Error(t("{primary} Shotstack fallback also failed: {message}", { primary: primaryMessage, message: shotstackError?.message || t("Unknown error.") }));
-          }
+        // All deployments are rendered online by Shotstack (users' PCs are too weak to render locally).
+        if (prepareEditForEditor(snapshot.edit).isPlaceholder) {
+          throw new Error("Nothing to export yet. Add a video or element to the timeline first.");
         }
+
+        setDeploymentStatus({
+          type: "info",
+          status: "SUBMITTING",
+          title: "Sending to Shotstack",
+          message: "Submitting the revision to Shotstack for online rendering.",
+          progress: null,
+        });
+
+        const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
+        const renderId = renderStart?.renderId;
+        if (!renderId) throw new Error("Render request did not return a render id.");
+
+        const renderResult = await waitForVideoManualRender(renderId);
+
+        setDeploymentStatus({
+          type: "info",
+          status: "UPLOADING",
+          title: "Uploading render",
+          message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
+          progress: null,
+        });
+
+        deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
+          renderId,
+          downloadUrl: renderResult?.downloadUrl || null,
+        });
       }
 
       const nextProject = await fetchVideoManualProject(projectId);
@@ -1996,7 +1906,7 @@ export default function VideoManualProjectEditorPage() {
         fileName: resolvedFileName,
       });
 
-      return { deployData, nextProject, fullRevision, usedLocalFallback };
+      return { deployData, nextProject, fullRevision };
     } catch (error) {
       setDeploymentStatus({
         type: "error",
@@ -2009,7 +1919,7 @@ export default function VideoManualProjectEditorPage() {
     } finally {
       setRevisionActionId("");
     }
-  }, [apiBaseUrl, exportRevisionSnapshotAsBlob, loadRevisionHistory, project?.title, projectId, revisionHistory.open, waitForVideoManualRender]);
+  }, [apiBaseUrl, loadRevisionHistory, project?.title, projectId, revisionHistory.open, waitForVideoManualRender]);
 
   const handleToolbarBack = useCallback(() => {
     if (exportInFlightRef.current || exportBusy) {
@@ -2036,7 +1946,7 @@ export default function VideoManualProjectEditorPage() {
     if (!window.confirm(t("Deploy {name} to the factory side?", { name: getRevisionDisplayName(revision, t) }))) return;
 
     try {
-      const { deployData, fullRevision, usedLocalFallback } = await runRevisionDeployment(revision, {
+      const { deployData, fullRevision } = await runRevisionDeployment(revision, {
         reasonLabel: "Deployment",
         showHistoryAfter: true,
         actionId: `${revisionId}:deploy`,
@@ -2044,11 +1954,7 @@ export default function VideoManualProjectEditorPage() {
         buildCompletionMessage: (resolvedName) => t("{name} is now live on the factory side.", { name: resolvedName }),
       });
 
-      showNotice(
-        usedLocalFallback
-          ? t("Deployed {name} using the browser export fallback.", { name: deployData?.revisionName || getRevisionDisplayName(fullRevision, t) })
-          : t("Deployed {name}.", { name: deployData?.revisionName || getRevisionDisplayName(fullRevision, t) })
-      );
+      showNotice(t("Deployed {name}.", { name: deployData?.revisionName || getRevisionDisplayName(fullRevision, t) }));
     } catch (error) {
       showNotice(error.message || "Deployment failed.", "error");
     }
@@ -2083,7 +1989,7 @@ export default function VideoManualProjectEditorPage() {
       });
       setExportModalOpen(true);
 
-      const { deployData, fullRevision, usedLocalFallback } = await runRevisionDeployment(revision, {
+      const { deployData, fullRevision } = await runRevisionDeployment(revision, {
         reasonLabel: "Export",
         showHistoryAfter: false,
         actionId: "export",
@@ -2094,11 +2000,7 @@ export default function VideoManualProjectEditorPage() {
 
       const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision, t);
 
-      showNotice(
-        usedLocalFallback
-          ? t("{name} is ready using the browser export fallback.", { name: resolvedName })
-          : t("{name} is ready.", { name: resolvedName })
-      );
+      showNotice(t("{name} is ready.", { name: resolvedName }));
     } catch (error) {
       if (exportModalWasOpened) {
         setDeploymentStatus({
