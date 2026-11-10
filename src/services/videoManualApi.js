@@ -409,3 +409,37 @@ export function uploadVideoManualPlaylistAsset(playlistId, file, { onProgress = 
     xhr.send(file);
   });
 }
+export async function duplicateVideoManualProject(projectId, { targetPlaylistId = null, title = "" } = {}) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}/duplicate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetPlaylistId: targetPlaylistId || undefined, title: title || undefined }),
+  });
+}
+
+export async function fetchVideoManualProjectTrash(playlistId) {
+  if (!playlistId) return [];
+
+  const data = await request(`api/video-manuals-studio/playlists/${playlistId}/trash`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function restoreVideoManualProject(projectId) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}/restore`, { method: "POST" });
+}
+
+export async function permanentlyDeleteVideoManualProject(projectId) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}/permanent`, { method: "DELETE" });
+}

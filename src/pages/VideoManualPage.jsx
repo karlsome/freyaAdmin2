@@ -2,12 +2,15 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import VideoManualCopyProjectModal from "../components/videoManual/VideoManualCopyProjectModal";
+import VideoManualProjectTrashModal from "../components/videoManual/VideoManualProjectTrashModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import {
   canEditVideoManualProjects,
   createVideoManualProject,
   deleteVideoManualProject,
+  duplicateVideoManualProject,
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
   patchVideoManualProject,
@@ -132,7 +135,7 @@ function InfoPopover({ anchorRef, onClose, children }) {
   );
 }
 
-function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete }) {
+function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo }) {
   const { t } = useLanguage();
   const [showInfo, setShowInfo] = useState(false);
   const [isHoveringPreview, setIsHoveringPreview] = useState(false);
@@ -222,6 +225,28 @@ function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete }) 
               title={t("Edit project")}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+            </button>
+          ) : null}
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); onDuplicate(project); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100"
+              aria-label={t("Duplicate")}
+              title={t("Duplicate")}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_copy</span>
+            </button>
+          ) : null}
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); onCopyTo(project); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100"
+              aria-label={t("Copy to playlist")}
+              title={t("Copy to playlist")}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>drive_file_move</span>
             </button>
           ) : null}
           {canDelete ? (
@@ -413,12 +438,15 @@ export default function VideoManualPage() {
   const [editingProject, setEditingProject] = useState(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [copyingProject, setCopyingProject] = useState(null);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [notice, setNotice] = useState("");
   const authRole = String(readStoredAuthUser()?.role || "");
   const canEditProjects = canEditVideoManualProjects(authRole);
   const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
 
   async function handleDeleteProject(project) {
-    if (!window.confirm(t("Delete project \"{title}\"? It will be removed from this list.", { title: project?.title || "" }))) return;
+    if (!window.confirm(t("Move project \"{title}\" to the recycle bin? You can restore it from there.", { title: project?.title || "" }))) return;
     setActionError("");
     try {
       await deleteVideoManualProject(project._id);
@@ -427,6 +455,23 @@ export default function VideoManualPage() {
       setActionError(error.message || t("Failed to delete project."));
     }
   }
+
+  async function handleDuplicateProject(project) {
+    setActionError("");
+    try {
+      const copy = await duplicateVideoManualProject(project._id);
+      setProjects((current) => [...current, { ...copy, _id: copy?._id || copy?.insertedId }]);
+      setNotice(t("Duplicated as \"{title}\".", { title: copy?.title || "" }));
+    } catch (error) {
+      setActionError(error.message || t("Failed to duplicate project."));
+    }
+  }
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = window.setTimeout(() => setNotice(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     rememberPlaylistId(selectedPlaylistId);
@@ -638,6 +683,17 @@ export default function VideoManualPage() {
             {canEditProjects ? (
               <button
                 type="button"
+                onClick={() => setTrashOpen(true)}
+                disabled={!selectedPlaylist}
+                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl border border-separator/40 bg-surface-container-low px-3.5 py-2.5 text-xs font-bold text-on-surface transition-all duration-150 hover:bg-surface-container active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                {t("Recycle bin")}
+              </button>
+            ) : null}
+            {canEditProjects ? (
+              <button
+                type="button"
                 onClick={() => setCreatingProject(true)}
                 disabled={!selectedPlaylist}
                 className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
@@ -692,6 +748,8 @@ export default function VideoManualPage() {
                   canDelete={canDeleteProjects}
                   onEdit={setEditingProject}
                   onDelete={handleDeleteProject}
+                  onDuplicate={handleDuplicateProject}
+                  onCopyTo={setCopyingProject}
                 />
               ))}
             </div>
@@ -709,6 +767,39 @@ export default function VideoManualPage() {
         <div className="fixed bottom-6 left-1/2 z-[360] -translate-x-1/2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-lg" onClick={() => setActionError("")}>
           {actionError}
         </div>
+      ) : null}
+
+      {notice ? (
+        <div className="fixed bottom-6 left-1/2 z-[360] -translate-x-1/2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-lg" onClick={() => setNotice("")}>
+          {notice}
+        </div>
+      ) : null}
+
+      {trashOpen && selectedPlaylistId ? (
+        <VideoManualProjectTrashModal
+          playlistId={selectedPlaylistId}
+          canRestore={canEditProjects}
+          canPurge={canDeleteProjects}
+          onClose={() => setTrashOpen(false)}
+          onRestored={(restored) => {
+            setNotice(t("Restored \"{title}\".", { title: restored?.title || "" }));
+            fetchVideoManualPlaylistProjects(selectedPlaylistId).then(setProjects).catch(() => {});
+          }}
+        />
+      ) : null}
+
+      {copyingProject ? (
+        <VideoManualCopyProjectModal
+          project={copyingProject}
+          playlists={playlists}
+          currentPlaylistId={selectedPlaylistId}
+          onClose={() => setCopyingProject(null)}
+          onCopied={(copy, targetPlaylist) => {
+            setCopyingProject(null);
+            setNotice(t("Copied \"{title}\" to {playlist}.", { title: copy?.title || "", playlist: targetPlaylist?.name || "" }));
+            setRefreshNonce((value) => value + 1);
+          }}
+        />
       ) : null}
 
       {creatingProject && selectedPlaylistId ? (
