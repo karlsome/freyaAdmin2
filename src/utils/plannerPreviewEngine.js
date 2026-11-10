@@ -1127,3 +1127,84 @@ export function getPreviewTimeSlots(scheduleUntilMinutes) {
 export function priorityRowMapOf(priorityRows = []) {
   return new Map((priorityRows || []).map((row) => [String(row?.id || "").trim(), row]).filter(([id]) => id));
 }
+
+// ─── Export (copy-to-clipboard JSON) ────────────────────────────────────────
+
+export function buildScheduleExport(ctx, preview = {}, simulation, mode = "auto", meta = {}) {
+  if (!simulation) return null;
+  const assignments = normalizeAssignments(ctx, simulation.assignments || []).map((assignment, index) => ({
+    index: index + 1,
+    draftId: draftIdOf(assignment) || null,
+    equipment: String(assignment.equipment || "").trim(),
+    startTime: String(assignment.startTime || "").trim(),
+    endTime: minutesToTime(assignmentEndMinutes(ctx, assignment)),
+    requestNumber: String(assignment.requestNumber || "").trim(),
+    requestNumberLabel: String(assignment.requestNumberLabel || assignment.requestNumber || "").trim(),
+    背番号: String(assignment.背番号 || "").trim(),
+    品番: String(assignment.品番 || "").trim(),
+    品名: String(assignment.品名 || "").trim(),
+    モデル: String(assignment.モデル || "").trim(),
+    quantity: Number(assignment.quantity || 0),
+    boxes: assignment.boxes === null || assignment.boxes === undefined ? null : Number(assignment.boxes),
+    previewSource: String(assignment.previewSource || "").trim(),
+    usedPreferredMachine: assignment.usedPreferredMachine === true,
+    groupedRequestNumbers: Array.isArray(assignment.groupedRequestNumbers) ? assignment.groupedRequestNumbers : [],
+    sourceRowIds: Array.isArray(assignment.sourceRowIds) ? assignment.sourceRowIds : [],
+    eligibleMachines: (ctx.rowByKey.get(productKey(assignment))?.eligibleMachines || [])
+      .map((machine) => String(machine?.equipment || machine?.設備 || "").trim())
+      .filter(Boolean),
+    estimatedTime: assignment.estimatedTime
+      ? {
+        totalSeconds: Number(assignment.estimatedTime.totalSeconds || 0),
+        formattedTime: String(assignment.estimatedTime.formattedTime || "").trim(),
+        cyclesNeeded: Number.isFinite(Number(assignment.estimatedTime.cyclesNeeded)) ? Number(assignment.estimatedTime.cyclesNeeded) : null,
+      }
+      : null,
+  }));
+
+  const equipmentList = Array.from(new Set(assignments.map((a) => a.equipment).filter(Boolean))).sort((l, r) => l.localeCompare(r));
+
+  return {
+    exportType: "production-planner-preview-schedule",
+    mode: mode === "draft" ? "draft" : "auto",
+    draftSource: meta.draftSource || null,
+    factory: String(preview.factory || meta.factory || "").trim(),
+    targetDate: String(preview.targetDate || meta.date || "").trim(),
+    generatedAt: preview.generatedAt || null,
+    scheduleUntilTime: ctx.scheduleUntilTime,
+    priorityRowCount: Number(preview.summary?.priorityRowCount || 0),
+    totalShortfallQuantity: Number(preview.summary?.totalShortfallQuantity || 0),
+    assignmentCount: assignments.length,
+    equipmentList,
+    exceptions: Array.isArray(simulation.exceptions) ? simulation.exceptions : [],
+    assignments,
+    scheduleByMachine: Object.fromEntries(equipmentList.map((eq) => [eq, assignments.filter((a) => a.equipment === eq)])),
+  };
+}
+
+export async function copyTextToClipboard(text = "") {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (error) {
+    console.warn("Clipboard API copy failed, falling back to execCommand.", error);
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "readonly");
+  textarea.style.cssText = "position:fixed;top:-9999px;left:-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch (error) {
+    console.warn("execCommand copy failed.", error);
+  }
+  document.body.removeChild(textarea);
+  return copied;
+}

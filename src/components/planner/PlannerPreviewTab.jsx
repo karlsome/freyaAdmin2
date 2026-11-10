@@ -7,7 +7,9 @@ import {
   blockLabel,
   buildBasisRows,
   buildDraftSimulation,
+  buildScheduleExport,
   buildSimulation,
+  copyTextToClipboard,
   createPreviewContext,
   draftIdOf,
   getInsertOptions,
@@ -216,6 +218,20 @@ export default function PlannerPreviewTab({
     notify(isJa
       ? `${blockLabel(result.assignment, "Block")} を ${result.assignment.equipment} の ${result.assignment.startTime} に追加しました。`
       : `${blockLabel(result.assignment, "Block")} added at ${result.assignment.startTime} on ${result.assignment.equipment}.`, "success");
+  }
+
+  async function handleCopyJson(mode) {
+    const simulation = mode === "draft" ? draftSim : autoSim;
+    const data = simulation ? buildScheduleExport(ctx, preview || {}, simulation, mode, { factory: factoryName, date: planDate }) : null;
+    const label = mode === "draft" ? (isJa ? "下書き" : "Draft") : (isJa ? "自動" : "Auto");
+    if (!data || data.assignmentCount === 0) {
+      notify(isJa ? `出力できる${label}スケジュールがありません。` : `No ${label} schedule is available to export yet.`, "warning");
+      return;
+    }
+    const copied = await copyTextToClipboard(JSON.stringify(data, null, 2));
+    notify(copied
+      ? (isJa ? `${label}スケジュールJSONをクリップボードにコピーしました。` : `${label} schedule JSON copied to clipboard.`)
+      : (isJa ? `${label}JSONをコピーできませんでした。` : `Unable to copy ${label} JSON to the clipboard.`), copied ? "success" : "error");
   }
 
   async function handleSave() {
@@ -579,6 +595,16 @@ export default function PlannerPreviewTab({
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{isEditing ? "lock_open" : "edit_calendar"}</span>
               {isEditing ? (isJa ? "編集を終了" : "Stop Editing") : (isJa ? "下書きを編集" : "Edit Draft")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleCopyJson(effectiveView)}
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+              title={isJa ? "表示中のスケジュールをJSONでコピー" : "Copy the schedule on screen as JSON"}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>data_object</span>
+              {isJa ? "JSONコピー" : "Copy JSON"}
             </button>
 
             {draft !== null && (
