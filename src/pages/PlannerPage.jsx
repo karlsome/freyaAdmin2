@@ -437,7 +437,8 @@ export default function PlannerPage() {
     if (!factoryName) return;
 
     const customBreaks = breaksSignature(nextBreaks) !== breaksSignature(breakDefaultsRef.current);
-    if (!nextProducts.length && !nextUnavailable?.length && !customBreaks) {
+    const hasBrokenMachines = Object.values(normalizeUnavailableMap(nextUnavailable)).some((entry) => entry?.isUnavailable);
+    if (!nextProducts.length && !hasBrokenMachines && !customBreaks) {
       await deletePlannerPlanByFactoryDate(factoryName, planDate);
       setCurrentPlanId("");
       return;
