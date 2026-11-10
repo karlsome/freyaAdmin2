@@ -74,6 +74,7 @@ export default function PlannerTimelineView({
 }) {
   const [infoPopover, setInfoPopover] = useState(null);
   const draggingIdRef = useRef(null);
+  const [blockedSlot, setBlockedSlot] = useState(null); // `${equipment}|${slot}` the dragged tile cannot go to
 
   // While a tile is dragged: allow the drop only where it would not overlap another schedule.
   // Not calling preventDefault (and dropEffect "none") makes the browser show the not-allowed cursor.
@@ -84,11 +85,14 @@ export default function PlannerTimelineView({
       event.preventDefault();
       return;
     }
+    const key = `${equipmentName}|${slot}`
     const conflict = hasSchedulingConflict({ ...item, equipment: equipmentName, startTime: slot }, scheduledProducts, breaks, { ignoreScheduleId: id });
     if (conflict.hasConflict) {
       event.dataTransfer.dropEffect = "none";
+      setBlockedSlot((current) => (current === key ? current : key));
       return;
     }
+    setBlockedSlot((current) => (current === null ? current : null));
     event.dataTransfer.dropEffect = "move";
     event.preventDefault();
   }
@@ -319,11 +323,12 @@ export default function PlannerTimelineView({
                               event.dataTransfer.setData("application/planner-item", JSON.stringify({ scheduleId: product._scheduleId }));
                               event.dataTransfer.effectAllowed = "move";
                             }}
-                            onDragEnd={() => { draggingIdRef.current = null; }}
+                            onDragEnd={() => { draggingIdRef.current = null; setBlockedSlot(null); }}
                             onDragOver={(event) => handleSlotDragOver(event, equipmentName, slot)}
                             onDrop={(event) => {
                               event.preventDefault();
                               draggingIdRef.current = null;
+                              setBlockedSlot(null);
                               const payload = dropPayload(event);
                               if (payload?.scheduleId) {
                                 onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
@@ -346,6 +351,9 @@ export default function PlannerTimelineView({
                             }}
                             title={`${product.背番号} · ${product.quantity} pcs`}
                           >
+                            {blockedSlot === `${equipmentName}|${slot}` ? (
+                              <div className="pointer-events-none absolute inset-0 z-20 cursor-not-allowed bg-red-500/40 ring-2 ring-inset ring-red-600" />
+                            ) : null}
                             {continuesBefore && !showLabel ? (
                               <div className="pointer-events-none absolute inset-0 flex items-end px-1.5 pb-1 text-xs font-bold" style={{ color: darkenHex(product.color, 0.45) }}>
                                 ‹ {product.背番号}
@@ -400,6 +408,7 @@ export default function PlannerTimelineView({
                           onDrop={(event) => {
                             event.preventDefault();
                             draggingIdRef.current = null;
+                            setBlockedSlot(null);
                             const payload = dropPayload(event);
                             if (payload?.scheduleId) {
                               onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
@@ -414,6 +423,9 @@ export default function PlannerTimelineView({
                           <span className={`material-symbols-outlined absolute inset-0 flex items-center justify-center transition ${isBroken ? "text-red-400/0 group-hover:text-red-500/80" : "text-[var(--freya-blue)]/0 group-hover:text-[var(--freya-blue)]/70"}`} style={{ fontSize: 16 }}>
                             {isBroken ? "report_problem" : "add_circle"}
                           </span>
+                          {blockedSlot === `${equipmentName}|${slot}` ? (
+                            <span className="pointer-events-none absolute inset-0 z-20 cursor-not-allowed bg-red-500/40 ring-2 ring-inset ring-red-600" />
+                          ) : null}
                           {onAddBreak ? (
                             <span
                               role="button"
