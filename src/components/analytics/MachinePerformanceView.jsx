@@ -9,6 +9,7 @@ import {
 } from "./equipmentAnalyticsUtils";
 import MachineCard from "./MachineCard";
 import MachineComparisonChart from "./MachineComparisonChart";
+import MachineGraphView from "./MachineGraphView";
 import MachineDetailModal from "./MachineDetailModal";
 import MachineSelectorModal from "./MachineSelectorModal";
 import { AnalyticsKpiCard } from "./AnalyticsKpiCards";
@@ -514,7 +515,7 @@ export default function MachinePerformanceView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px] text-[var(--freya-blue)]">
-              {groupByFactory ? "domain" : "grid_view"}
+              {groupByFactory ? "domain" : "monitoring"}
             </span>
             <h3 className="text-sm font-bold text-[var(--text-primary)]">
               {isJa ? "設備別稼働カード (工場別)" : "Machine Performance Cards"}
@@ -570,10 +571,10 @@ export default function MachinePerformanceView() {
                     ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-xs"
                     : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
-                title={isJa ? "フラットなグリッドで一覧表示" : "Flat Grid"}
+                title={isJa ? "設備ごとのグラフと表を表示" : "Graph view: chart and table per machine"}
               >
-                <span className="material-symbols-outlined text-[15px]">grid_view</span>
-                <span>{isJa ? "フラット" : "Flat"}</span>
+                <span className="material-symbols-outlined text-[15px]">monitoring</span>
+                <span>{isJa ? "グラフ表示" : "Graph View"}</span>
               </button>
             </div>
           </div>
@@ -759,20 +760,8 @@ export default function MachinePerformanceView() {
             })}
           </div>
         ) : (
-          /* ── Flat Grid View ── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {displayedCards.map((item) => (
-              <MachineCard
-                key={item.machine}
-                machine={item.machine}
-                factory={item.factory}
-                analytics={item.analytics}
-                maxFleetShots={fleetSummary.maxShots}
-                onClick={() => setActiveMachineDetail(item.machine)}
-                isJa={isJa}
-              />
-            ))}
-          </div>
+          /* ── Graph View: chart + table per machine ── */
+          <MachineGraphView cards={displayedCards} isJa={isJa} />
         )}
       </div>
 
