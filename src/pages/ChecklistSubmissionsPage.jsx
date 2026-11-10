@@ -780,6 +780,8 @@ function ScheduleLaneLegendCell({ schedules, compact = false }) {
 }
 
 function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSelect, schedule, submissions }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") {
@@ -856,13 +858,13 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
                         )}
                         {submission.record?.skipped && (
                           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-                            Skipped
+                            {isJa ? "スキップ" : "Skipped"}
                           </span>
                         )}
                       </div>
                       {submission.record?.skipped && (
                         <p className="mt-2 text-xs text-amber-700">
-                          Skipped by {submission.record.skippedBy || "leader"}{submission.record.skipReason ? ` — ${submission.record.skipReason}` : ""}
+                          {isJa ? "リーダーによりスキップ" : "Skipped by"}: {submission.record.skippedBy || (isJa ? "リーダー" : "leader")}{submission.record.skipReason ? ` — ${isJa ? "理由" : "Reason"}: ${submission.record.skipReason}` : ""}
                         </p>
                       )}
                       <div className="mt-3 flex flex-wrap gap-3 text-xs text-outline">
