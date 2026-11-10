@@ -1159,12 +1159,44 @@ export default function VideoManualProjectEditorPage() {
     edit.__vmfaAnimatedLiveUpdateInterceptor = true;
   }, [readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh]);
 
+  // The editor handlers below are re-created on every render. The init effect must NOT depend on them
+  // (or on `project`), otherwise saving/exporting/deploying (which refreshes `project`) tears the whole
+  // SDK down and builds a second one on top of the old timeline DOM, which leaves the timeline frozen.
+  const editorHandlersRef = useRef({});
+  editorHandlersRef.current = {
+    fitTimelineToEdit,
+    installAnimatedLiveUpdateInterceptor,
+    readClipAt,
+    rememberAnimatedClipStateByLocation,
+    scheduleTimelineKeyframeRefresh,
+    syncAnimatedClipUpdateFromEvent,
+    syncEditorSettings,
+    syncSelectedClip,
+    syncSelectedClipFromDocument,
+    syncSteps,
+  };
+  const projectRef = useRef(project);
+  projectRef.current = project;
+  const projectLoaded = Boolean(project);
+
   useEffect(() => {
-    if (!project || sdkInitialized.current) return undefined;
+    const initialProject = projectRef.current;
+    if (!initialProject || sdkInitialized.current) return undefined;
     if (!studioElRef.current || !timelineElRef.current) return undefined;
 
+    const fitTimelineToEdit = (...args) => editorHandlersRef.current.fitTimelineToEdit(...args);
+    const installAnimatedLiveUpdateInterceptor = (...args) => editorHandlersRef.current.installAnimatedLiveUpdateInterceptor(...args);
+    const readClipAt = (...args) => editorHandlersRef.current.readClipAt(...args);
+    const rememberAnimatedClipStateByLocation = (...args) => editorHandlersRef.current.rememberAnimatedClipStateByLocation(...args);
+    const scheduleTimelineKeyframeRefresh = (...args) => editorHandlersRef.current.scheduleTimelineKeyframeRefresh(...args);
+    const syncAnimatedClipUpdateFromEvent = (...args) => editorHandlersRef.current.syncAnimatedClipUpdateFromEvent(...args);
+    const syncEditorSettings = (...args) => editorHandlersRef.current.syncEditorSettings(...args);
+    const syncSelectedClip = (...args) => editorHandlersRef.current.syncSelectedClip(...args);
+    const syncSelectedClipFromDocument = (...args) => editorHandlersRef.current.syncSelectedClipFromDocument(...args);
+    const syncSteps = (...args) => editorHandlersRef.current.syncSteps(...args);
+
     sdkInitialized.current = true;
-    const { template, isPlaceholder: startsEmpty } = prepareEditForEditor(project.edit);
+    const { template, isPlaceholder: startsEmpty } = prepareEditForEditor(initialProject.edit);
     let cancelled = false;
     let edit;
     let canvas;
@@ -1178,6 +1210,7 @@ export default function VideoManualProjectEditorPage() {
         try { unsubscribe?.(); } catch { /* Ignore SDK listener cleanup errors. */ }
       });
       try { controls?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
+      try { timeline?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
       try { ui?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
       try { canvas?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
       try { edit?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
@@ -1283,7 +1316,7 @@ export default function VideoManualProjectEditorPage() {
       uiRef.current = null;
       setSelectedClip(null);
     };
-  }, [fitTimelineToEdit, installAnimatedLiveUpdateInterceptor, project, readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh, syncAnimatedClipUpdateFromEvent, syncEditorSettings, syncSelectedClip, syncSelectedClipFromDocument, syncSteps]);
+  }, [projectLoaded, projectId]);
 
   const getPlaybackTime = useCallback(() => {
     const playbackTime = Number(editRef.current?.playbackTime || 0);
