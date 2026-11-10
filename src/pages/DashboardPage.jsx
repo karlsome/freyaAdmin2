@@ -164,8 +164,9 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
     machineIds.forEach((id) => {
       const m = machinesById[id];
       counts[effectiveStatus(m)] += 1;
-      pieces += m?.pieces || 0;
     });
+    // Pieces per UNIT: machines running together share one piece count, so summing every machine counted pairs twice
+    units.forEach((u) => { pieces += u.pieces || 0; });
     const goal = data?.goal || 0;
     return {
       counts,
@@ -175,7 +176,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
       goal,
       goalPct: goal > 0 ? Math.round((pieces / goal) * 100) : null,
     };
-  }, [machineIds, machinesById, data]);
+  }, [machineIds, machinesById, units, data]);
 
   const selected = selectedId ? machinesById[selectedId] || { id: selectedId, status: "off" } : null;
   // Inspection tables (IT1 / IT2) have their own drawer inside the twin panel
