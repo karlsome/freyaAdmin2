@@ -24,6 +24,15 @@ function getEquipmentAvailabilityFlag(equipment, items = []) {
   return items.some((item) => item.equipment !== equipment && equipmentConflicts(equipment, item.equipment));
 }
 
+// Darker shade of a tile colour so the label stays readable on the pale fill
+function darkenHex(hex, amount = 0.45) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const ch = (v) => Math.round(v * (1 - amount)).toString(16).padStart(2, "0");
+  return `#${ch((n >> 16) & 255)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
+}
+
 function getActualBlockForSlot(slotMinutes, equipment, actualBlocks = []) {
   return actualBlocks.find((item) => {
     if (item.equipment !== equipment) return false;
@@ -290,15 +299,20 @@ export default function PlannerTimelineView({
                               backgroundColor: `${product.color}30`,
                               borderTop: edge,
                               borderBottom: edge,
-                              borderLeft: isTileStart ? `4px solid ${product.color}` : "none",
-                              borderRight: isTileEnd ? `4px solid ${product.color}` : "none",
+                              // 2px white gap, then the 4px coloured edge, so same-colour neighbours still separate
+                              borderLeft: isTileStart ? "2px solid var(--surface, #fff)" : "none",
+                              borderRight: isTileEnd ? "2px solid var(--surface, #fff)" : "none",
+                              boxShadow: [
+                                isTileStart ? `inset 4px 0 0 ${product.color}` : "",
+                                isTileEnd ? `inset -4px 0 0 ${product.color}` : "",
+                              ].filter(Boolean).join(", ") || "none",
                               boxSizing: "border-box",
                             }}
                             title={`${product.背番号} · ${product.quantity} pcs`}
                           >
                             {showLabel ? (
                               <>
-                                <div className="absolute inset-0 flex items-end justify-center px-1 pb-1 text-xs font-bold" style={{ color: product.color }}>
+                                <div className="absolute inset-0 flex items-end justify-center px-1 pb-1 text-xs font-bold" style={{ color: darkenHex(product.color, 0.45) }}>
                                   {product.背番号}
                                 </div>
                                 <button
