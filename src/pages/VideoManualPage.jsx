@@ -215,6 +215,16 @@ function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete, on
           </div>
         ) : null}
 
+        {project?.deployedRevisionId ? (
+          <div
+            className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm"
+            title={`${t("vmDeployedLabel")} ${deployedRevision}`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check_circle</span>
+            {t("Deployed")}
+          </div>
+        ) : null}
+
         <div className="absolute right-2 top-2 flex items-center gap-1">
           {canEdit ? (
             <button
