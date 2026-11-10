@@ -14,6 +14,14 @@ import { STATUS_THEME, formatAgo, formatNumber, statusLabel } from "../twin/twin
  * Machines running together (OZNC04 <-> OZNC06) are one row with one piece count.
  * Only meaningful for the current production day: for any other date it renders `fallback` (the log based table).
  */
+// A counter only counts if its last cycle happened on the plan date (the DB keeps the last value forever, e.g. 55 from September)
+function counterIsCurrent(machine, factory, date) {
+  if (!machine?.lastCycleAt) return false;
+  const zone = factory === "SCNA" ? "America/Los_Angeles" : "Asia/Tokyo";
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(machine.lastCycleAt));
+  return day >= date;
+}
+
 const runGood = (run) => (run.good != null ? Number(run.good) || 0 : Math.max(0, (Number(run.pieces) || 0) - (Number(run.ng) || 0)));
 
 export default function FactoryEquipmentRealTable({ factory, date, refreshNonce = 0, onLiveTotals, isJa, fallback = null }) {
@@ -78,7 +86,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
         : activeRuns.reduce((sum, r) => sum + (Number(r.shots) || 0), 0);
       const runningSerial = hasLive ? liveMs[0].背番号 : (activeRuns[0]?.sebanggo || "");
       const runningHinban = (twin.machines || []).find((m) => unit.ids.includes(m.id) && m.sebanggo === runningSerial)?.hinban || "";
-      const counters = unit.ids.map((id) => byId[id]?.cycle).filter((c) => c !== null && c !== undefined);
+      const counters = unit.ids.map((id) => (counterIsCurrent(byId[id], factory, date) ? byId[id]?.cycle : null));
       const lastCycle = Math.min(...unit.ids.map((id) => byId[id]?.secondsSinceCycle ?? Infinity));
       return {
         ...unit,
@@ -97,7 +105,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
         sessionID: hasLive ? liveMs[0].sessionID || "" : "",
       };
     });
-  }, [twin, live]);
+  }, [twin, live, factory, date]);
 
   // Tell the page how many live (unsubmitted) pieces/NG this factory has, so its header chips include them
   const showingReal = Boolean(twin) && !failed && (!twin.productionDate || twin.productionDate === date);
@@ -187,7 +195,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                   ) : "—"}
                 </td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-right font-mono font-bold text-[var(--freya-blue)] freya-tabular">{formatNumber(row.total)}</td>
-                <td className="border-t border-[var(--border)] px-3 py-2.5 font-mono text-[var(--text-secondary)] whitespace-nowrap">{row.counters.length ? row.counters.join(" / ") : "—"}</td>
+                <td className="border-t border-[var(--border)] px-3 py-2.5 font-mono text-[var(--text-secondary)] whitespace-nowrap">{row.counters.some((c) => c !== null && c !== undefined) ? row.counters.map((c) => (c ?? "—")).join(" / ") : "—"}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-[var(--text-muted)] whitespace-nowrap">{formatAgo(row.lastCycle, isJa)}</td>
               </tr>
             );
