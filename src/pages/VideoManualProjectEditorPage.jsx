@@ -2682,7 +2682,7 @@ export default function VideoManualProjectEditorPage() {
       ) : (
         <div ref={editorBodyRef} className={`relative flex min-h-0 flex-1 flex-col ${timelineResizing ? "select-none" : ""}`}>
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
-            <VideoManualStepsPanel steps={steps} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
+            <VideoManualStepsPanel steps={steps} playbackTime={playbackTime} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">

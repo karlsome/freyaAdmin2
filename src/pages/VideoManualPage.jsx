@@ -93,7 +93,7 @@ function ProjectCard({ project, onOpen }) {
         : "";
 
   return (
-    <article className="glass-card rounded-2xl card-hover-lift group flex h-full flex-col overflow-hidden">
+    <article className="glass-card rounded-xl card-hover-lift group flex h-full flex-col overflow-hidden">
       <div
         role="button"
         tabIndex={0}
@@ -168,9 +168,9 @@ function ProjectCard({ project, onOpen }) {
         </div>
       </div>
 
-      <div className="min-w-0 p-4">
-        <h3 className="truncate text-sm font-bold text-on-surface">{project?.title || t("vmUntitledProject")}</h3>
-        <p className="mt-1 line-clamp-2 text-xs text-on-surface-variant">
+      <div className="min-w-0 px-3 py-2">
+        <h3 className="truncate text-[13px] font-bold text-on-surface">{project?.title || t("vmUntitledProject")}</h3>
+        <p className="mt-0.5 line-clamp-1 text-[11px] text-on-surface-variant">
           {project?.description || t("vmNoDescription")}
         </p>
       </div>
@@ -435,13 +435,13 @@ export default function VideoManualPage() {
               description={t("vmChoosePlaylistDesc")}
             />
           ) : projectsLoading ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
               {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="h-[240px] rounded-2xl bg-surface-container/70 animate-pulse" />
+                <div key={index} className="h-[150px] rounded-xl bg-surface-container/70 animate-pulse" />
               ))}
             </div>
           ) : filteredProjects.length ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
               {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project?._id}
