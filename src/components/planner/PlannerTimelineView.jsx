@@ -4,6 +4,7 @@ import {
   getBrokenDownEquipmentCount,
   getEquipmentUnavailableInfo,
   getFirstVisibleSlotMinutes,
+  getMatchingProduct,
   getProductForSlot,
   getScheduledSpan,
   getTimelineSlots,
@@ -52,6 +53,7 @@ export default function PlannerTimelineView({
   onStartTimeChange,
   onOpenMachineStatusModal,
   onSlotSelect,
+  products = [],
   onAddBreak,
   onEditBreak,
   onMoveScheduledItem,
@@ -419,8 +421,22 @@ export default function PlannerTimelineView({
           <div className="fixed inset-0 z-40" onClick={() => setInfoPopover(null)} />
           <div
             className="fixed z-50 w-56 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 text-xs shadow-lg"
-            style={{ left: Math.max(8, Math.min(infoPopover.x, window.innerWidth - 232)), top: Math.min(infoPopover.y, window.innerHeight - 190) }}
+            style={{ left: Math.max(8, Math.min(infoPopover.x, window.innerWidth - 232)), top: Math.min(infoPopover.y, window.innerHeight - 300) }}
           >
+            {(() => {
+              const imageURL = infoPopover.product.imageURL || getMatchingProduct(infoPopover.product, products)?.imageURL;
+              return imageURL ? (
+                <a href={imageURL} target="_blank" rel="noreferrer" className="mb-2 block">
+                  <img
+                    src={imageURL}
+                    alt={infoPopover.product.背番号}
+                    loading="lazy"
+                    onError={(event) => { event.currentTarget.parentElement.style.display = "none"; }}
+                    className="h-24 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] object-contain"
+                  />
+                </a>
+              ) : null;
+            })()}
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: infoPopover.product.color }} />
               <span className="font-bold text-[var(--text-primary)]">{infoPopover.product.背番号}</span>

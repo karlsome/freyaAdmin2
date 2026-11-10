@@ -1689,6 +1689,7 @@ export default function PlannerPage() {
             {viewTab === "timeline" ? (
               <PlannerTimelineView
                 equipment={equipment}
+                products={products}
                 scheduledProducts={scheduledProducts}
                 actualBlocks={actualBlocks}
                 inProgressMap={inProgressMap}

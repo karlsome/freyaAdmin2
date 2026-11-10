@@ -127,6 +127,7 @@ export async function fetchPlannerProducts() {
         モデル: 1,
         pcPerCycle: 1,
         "秒数(1pcs何秒)": 1,
+        imageURL: 1,
       },
       limit: 20000,
     },
