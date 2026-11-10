@@ -101,6 +101,21 @@ export default function FactoryStatusPage() {
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [error, setError] = useState("");
   const [refreshNonce, setRefreshNonce] = useState(0);
+  // Live (unsubmitted) pieces/NG per factory, reported by the real equipment table: { [factory]: { pieces, ng } }
+  const [liveByFactory, setLiveByFactory] = useState({});
+  const handleLiveTotals = (factory, totals) => {
+    setLiveByFactory((current) => {
+      const prev = current[factory];
+      if (!totals) {
+        if (!prev) return current;
+        const { [factory]: _removed, ...rest } = current;
+        return rest;
+      }
+      return prev && prev.pieces === totals.pieces && prev.ng === totals.ng ? current : { ...current, [factory]: totals };
+    });
+  };
+  const livePiecesAll = selectedFactories.reduce((sum, f) => sum + (liveByFactory[f]?.pieces || 0), 0);
+  const rateOf = (actual, goal) => (goal > 0 ? Math.round((actual / goal) * 1000) / 10 : 0);
   const [logsModalState, setLogsModalState] = useState({ open: false, factory: "", equipment: "" });
 
   const selectionSummary = summarizeFactoryStatusSelection(selectedFactories, language);
@@ -542,14 +557,14 @@ export default function FactoryStatusPage() {
               <SummaryCard
                 icon="precision_manufacturing"
                 label={isJa ? "実績数" : "Actual"}
-                value={formatFactoryStatusNumber(summary.totalActualQuantity)}
-                subtitle={isJa ? "pressDB 本日分" : "Today from pressDB"}
+                value={formatFactoryStatusNumber(summary.totalActualQuantity + livePiecesAll)}
+                subtitle={livePiecesAll > 0 ? (isJa ? `提出済み + 稼働中 約${formatFactoryStatusNumber(livePiecesAll)}個` : `Submitted + ~${formatFactoryStatusNumber(livePiecesAll)} running now`) : (isJa ? "pressDB 本日分" : "Today from pressDB")}
                 loading={loadingSnapshot && !generatedAt}
               />
               <SummaryCard
                 icon="trending_up"
                 label={isJa ? "達成率" : "Achievement"}
-                value={`${summary.achievementRate.toLocaleString()}%`}
+                value={`${rateOf(summary.totalActualQuantity + livePiecesAll, summary.totalGoalQuantity).toLocaleString()}%`}
                 subtitle={isJa ? "目標比" : "Goal vs actual"}
                 loading={loadingSnapshot && !generatedAt}
               />
@@ -618,16 +633,16 @@ export default function FactoryStatusPage() {
 
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                     <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "目標" : "Goal"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "実績" : "Actual"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.actualQuantity)}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "良品" : "Good"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.goodQuantity)}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "不良" : "NG"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.ngQuantity)}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "進捗" : "Progress"}</span> <span className="font-mono freya-tabular font-semibold text-[var(--freya-blue)]">{group.overview.achievementRate.toLocaleString()}%</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "実績" : "Actual"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.actualQuantity + (liveByFactory[group.factory]?.pieces || 0))}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "良品" : "Good"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.goodQuantity + Math.max(0, (liveByFactory[group.factory]?.pieces || 0) - (liveByFactory[group.factory]?.ng || 0)))}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "不良" : "NG"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.ngQuantity + (liveByFactory[group.factory]?.ng || 0))}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "進捗" : "Progress"}</span> <span className="font-mono freya-tabular font-semibold text-[var(--freya-blue)]">{rateOf(group.overview.actualQuantity + (liveByFactory[group.factory]?.pieces || 0), group.goal.totalTargetQuantity).toLocaleString()}%</span></span>
                   </div>
 
                   <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
                     <div
                       className="h-full rounded-full bg-[var(--freya-blue)] transition-all duration-300"
-                      style={{ width: `${Math.min(group.overview.achievementRate, 100)}%` }}
+                      style={{ width: `${Math.min(rateOf(group.overview.actualQuantity + (liveByFactory[group.factory]?.pieces || 0), group.goal.totalTargetQuantity), 100)}%` }}
                     />
                   </div>
 
@@ -645,7 +660,7 @@ export default function FactoryStatusPage() {
                   date={date}
                   refreshNonce={refreshNonce}
                   isJa={isJa}
-                  onRowClick={(equipment) => openLogsForEquipment(group.factory, equipment)}
+                  onLiveTotals={handleLiveTotals}
                   fallback={(
                   <DataTable
                     columns={columns}

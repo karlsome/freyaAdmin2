@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchRecordByKey } from "../../services/api";
 import { fetchDigitalTwin, fetchLiveProductionMachines } from "../../services/digitalTwinApi";
+import RecordDetailModal from "../RecordDetailModal";
+import { PlannerInProgressModal } from "../planner/PlannerSessionModals";
 import { buildUnits } from "../panels/twinUnits";
 import { STATUS_THEME, formatAgo, formatNumber, statusLabel } from "../twin/twinTheme";
 
@@ -11,10 +14,29 @@ import { STATUS_THEME, formatAgo, formatNumber, statusLabel } from "../twin/twin
  * Machines running together (OZNC04 <-> OZNC06) are one row with one piece count.
  * Only meaningful for the current production day: for any other date it renders `fallback` (the log based table).
  */
-export default function FactoryEquipmentRealTable({ factory, date, refreshNonce = 0, onRowClick, isJa, fallback = null }) {
+export default function FactoryEquipmentRealTable({ factory, date, refreshNonce = 0, onLiveTotals, isJa, fallback = null }) {
   const [twin, setTwin] = useState(null);
   const [live, setLive] = useState([]);
   const [failed, setFailed] = useState(false);
+  const [recordModal, setRecordModal] = useState(null); // submitted pressDB record (same modal as the factory overview)
+  const [sessionModal, setSessionModal] = useState(null); // in-progress tablet session
+  const [notice, setNotice] = useState("");
+  const liveTotalsRef = useRef(onLiveTotals);
+  useEffect(() => { liveTotalsRef.current = onLiveTotals; });
+
+  async function openSubmittedRun(run) {
+    setNotice("");
+    const record = await fetchRecordByKey("Press", { 工場: factory, Date: date, Time_start: run.start, 品番: run.hinban });
+    if (record) setRecordModal(record);
+    else setNotice(isJa ? `${run.sebanggo} の提出記録が見つかりません` : `Could not find the submitted record for ${run.sebanggo}`);
+  }
+
+  function openInProgress(row) {
+    if (!row.sessionID) return;
+    const now = new Date();
+    const slot = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    setSessionModal({ equipment: row.fullLabel, slot, session: { sessionID: row.sessionID } });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -69,9 +91,19 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
         counters,
         lastCycle: Number.isFinite(lastCycle) ? lastCycle : null,
         source: hasLive ? liveMs[0].source : null,
+        sessionID: hasLive ? liveMs[0].sessionID || "" : "",
       };
     });
   }, [twin, live]);
+
+  // Tell the page how many live (unsubmitted) pieces/NG this factory has, so its header chips include them
+  const showingReal = Boolean(twin) && !failed && (!twin.productionDate || twin.productionDate === date);
+  const liveGross = showingReal ? rows.reduce((sum, r) => sum + r.inProgress, 0) : 0;
+  const liveNg = showingReal ? rows.reduce((sum, r) => sum + r.ng, 0) : 0;
+  useEffect(() => {
+    liveTotalsRef.current?.(factory, { pieces: liveGross, ng: liveNg });
+    return () => liveTotalsRef.current?.(factory, null);
+  }, [factory, liveGross, liveNg]);
 
   // The live numbers only exist for the current production day
   if (failed || (twin && twin.productionDate && twin.productionDate !== date)) return fallback;
@@ -106,11 +138,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
           {rows.map((row) => {
             const theme = STATUS_THEME[row.status] || STATUS_THEME.off;
             return (
-              <tr
-                key={row.id}
-                onClick={() => onRowClick?.(row.ids[0])}
-                className="cursor-pointer border-t border-[var(--border)] hover:bg-[var(--surface-hover)]"
-              >
+              <tr key={row.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)]">
                 <td className="border-t border-[var(--border)] px-3 py-2.5 font-semibold text-[var(--text-primary)] whitespace-nowrap">{row.fullLabel}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider" style={{ color: theme.color, background: `${theme.color}1f` }}>
@@ -121,7 +149,13 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)]">{row.worker || "—"}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5">
                   {row.runningSerial && row.inProgress > 0 ? (
-                    <div>
+                    <button
+                      type="button"
+                      onClick={() => openInProgress(row)}
+                      disabled={!row.sessionID}
+                      title={row.sessionID ? (isJa ? "進行中セッションの詳細を表示" : "View the in-progress session") : undefined}
+                      className={`text-left ${row.sessionID ? "cursor-pointer rounded-[4px] px-1 -mx-1 hover:bg-amber-500/10" : "cursor-default"}`}
+                    >
                       <div className="font-mono font-semibold text-amber-600 dark:text-amber-400">
                         {row.runningSerial} · {formatNumber(row.inProgress)} {isJa ? "個" : "pcs"}
                       </div>
@@ -129,20 +163,22 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                         {formatNumber(row.cycles)} {isJa ? "サイクル" : "cycles"}{row.ng > 0 ? ` · NG ${formatNumber(row.ng)}` : ""}
                         {row.source === "submitted-shots" ? "" : row.source ? " · start" : ""}
                       </div>
-                    </div>
+                    </button>
                   ) : "—"}
                 </td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5">
                   {row.runs.length ? (
                     <div className="flex flex-wrap gap-1">
                       {row.runs.map((run, index) => (
-                        <span
+                        <button
+                          type="button"
                           key={`${run.sebanggo}-${run.start}-${index}`}
-                          title={`${run.start}–${run.end} · ${run.shots} ${isJa ? "ショット" : "shots"}`}
-                          className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)]"
+                          onClick={() => openSubmittedRun(run)}
+                          title={`${run.start}–${run.end} · ${run.shots} ${isJa ? "ショット" : "shots"} — ${isJa ? "提出記録を表示" : "view submitted record"}`}
+                          className="cursor-pointer rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)] hover:border-emerald-500/50 hover:bg-emerald-500/10"
                         >
                           {run.sebanggo} <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(run.pieces)}</span>
-                        </span>
+                        </button>
                       ))}
                     </div>
                   ) : "—"}
@@ -164,6 +200,9 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
           </tr>
         </tfoot>
       </table>
+      {notice ? <div className="border-t border-[var(--border)] px-3 py-2 text-xs text-[var(--status-danger)]">{notice}</div> : null}
+      {recordModal ? <RecordDetailModal record={recordModal} processName="Press" onClose={() => setRecordModal(null)} /> : null}
+      {sessionModal ? <PlannerInProgressModal target={sessionModal} onClose={() => setSessionModal(null)} /> : null}
     </div>
   );
 }
