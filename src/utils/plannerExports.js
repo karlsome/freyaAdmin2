@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server.browser";
 import PlannerScheduleDetailCard from "../components/planner/PlannerScheduleDetailCard";
+import { LanguageProvider } from "../contexts/LanguageContext";
 import {
   DEFAULT_BREAKS,
   PLANNER_CONFIG,
@@ -115,7 +116,8 @@ function buildScheduleDetail(item, breaks = DEFAULT_BREAKS) {
 
 function renderScheduleDetailHtml(item, breaks = DEFAULT_BREAKS) {
   return renderToStaticMarkup(
-    createElement(PlannerScheduleDetailCard, { schedule: buildScheduleDetail(item, breaks) })
+    // The card reads the language from context, which does not exist in a static render.
+    createElement(LanguageProvider, null, createElement(PlannerScheduleDetailCard, { schedule: buildScheduleDetail(item, breaks) }))
   );
 }
 
@@ -783,8 +785,10 @@ export function openPlannerCalendarWindow({ factoryName, planDate, scheduledProd
     throw new Error("No scheduled products available for calendar view.");
   }
 
+  // Build first: if this throws, no empty tab is left behind.
+  const html = generateCalendarHtml({ factoryName, planDate, scheduledProducts, breaks, startTime });
   const nextWindow = getWindowOrThrow("calendar view");
-  nextWindow.document.write(generateCalendarHtml({ factoryName, planDate, scheduledProducts, breaks, startTime }));
+  nextWindow.document.write(html);
   nextWindow.document.close();
 }
 
@@ -793,8 +797,9 @@ export function openPlannerPrintWindow({ factoryName, planDate, scheduledProduct
     throw new Error("No scheduled products available for printing.");
   }
 
+  const html = generatePrintHtml({ factoryName, planDate, scheduledProducts, selectedEquipment, breaks, startTime });
   const nextWindow = getWindowOrThrow("print preview");
-  nextWindow.document.write(generatePrintHtml({ factoryName, planDate, scheduledProducts, selectedEquipment, breaks, startTime }));
+  nextWindow.document.write(html);
   nextWindow.document.close();
   nextWindow.onload = () => {
     nextWindow.focus();

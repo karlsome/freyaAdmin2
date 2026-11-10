@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { isEquipmentUnavailable } from "../../utils/planner";
+import { PLANNER_CONFIG, isEquipmentUnavailable } from "../../utils/planner";
+import { openPlannerCalendarWindow, openPlannerPrintWindow } from "../../utils/plannerExports";
+import { canManagePlannerPublished } from "../../services/plannerApi";
+import PlannerPrintModal from "./PlannerPrintModal";
 import {
   adjustBoxes,
   applyDrop,
@@ -70,6 +73,8 @@ export default function PlannerPreviewTab({
   const [editMode, setEditMode] = useState(false);
   const [insertTarget, setInsertTarget] = useState(null);
   const [quantityId, setQuantityId] = useState(null);
+  const [printOpen, setPrintOpen] = useState(false);
+  const canPublish = canManagePlannerPublished();
 
   const notify = (message, type = "info") => onNotify?.(message, type);
 
@@ -121,13 +126,16 @@ export default function PlannerPreviewTab({
   const laneNames = useMemo(() => {
     const names = new Set(sim.equipmentList);
     if (isEditing) {
-      (equipmentOptions || []).forEach((name) => {
+      [
+        ...(equipmentOptions || []),
+        ...priorityRows.flatMap((row) => (row.eligibleMachines || []).map((m) => m?.equipment || m?.設備)),
+      ].forEach((name) => {
         const text = String(name || "").trim();
         if (text && !isEquipmentUnavailable(text, unavailableEquipment)) names.add(text);
       });
     }
     return Array.from(names).sort((l, r) => l.localeCompare(r));
-  }, [sim.equipmentList, isEditing, equipmentOptions, unavailableEquipment]);
+  }, [sim.equipmentList, isEditing, equipmentOptions, priorityRows, unavailableEquipment]);
 
   const insertOptions = useMemo(() => (
     insertTarget && draft
@@ -218,6 +226,42 @@ export default function PlannerPreviewTab({
     notify(isJa
       ? `${blockLabel(result.assignment, "Block")} を ${result.assignment.equipment} の ${result.assignment.startTime} に追加しました。`
       : `${blockLabel(result.assignment, "Block")} added at ${result.assignment.startTime} on ${result.assignment.equipment}.`, "success");
+  }
+
+  // Print / calendar use the schedule currently on screen (Auto or Draft).
+  function exportItems() {
+    return normalizeAssignments(ctx, sim.assignments).map((assignment, index) => ({
+      ...assignment,
+      _id: assignment._id || draftIdOf(assignment) || `preview-${index}`,
+      color: assignment.color || "#6B7280",
+    }));
+  }
+
+  function handleOpenCalendar() {
+    const items = exportItems();
+    if (!items.length) {
+      notify(isJa ? "カレンダー表示できるブロックがありません。" : "No preview blocks are available for calendar view.", "warning");
+      return;
+    }
+    try {
+      openPlannerCalendarWindow({ factoryName, planDate, scheduledProducts: items, breaks, startTime: PLANNER_CONFIG.workStartTime });
+    } catch (error) {
+      notify(error.message || (isJa ? "カレンダー表示を開けませんでした。" : "Failed to open calendar view."), "error");
+    }
+  }
+
+  function handlePrint(selectedEquipment) {
+    const items = exportItems();
+    if (!items.length || !selectedEquipment.length) {
+      notify(isJa ? "印刷する設備を1つ以上選択してください。" : "Select at least one equipment to print.", "warning");
+      return;
+    }
+    setPrintOpen(false);
+    try {
+      openPlannerPrintWindow({ factoryName, planDate, scheduledProducts: items, selectedEquipment, breaks, startTime: PLANNER_CONFIG.workStartTime });
+    } catch (error) {
+      notify(error.message || (isJa ? "印刷プレビューを開けませんでした。" : "Failed to open print preview."), "error");
+    }
   }
 
   async function handleCopyJson(mode) {
@@ -353,7 +397,8 @@ export default function PlannerPreviewTab({
                 assignments: rawAssignments,
                 basisRows: priorityRows,
               })}
-              disabled={publishing || rawAssignments.length === 0}
+              disabled={publishing || rawAssignments.length === 0 || !canPublish}
+              title={canPublish ? undefined : (isJa ? "公開・復元の権限がありません" : "You do not have permission to publish or restore schedules.")}
               className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] disabled:opacity-40 transition-colors"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>publish</span>
@@ -607,6 +652,26 @@ export default function PlannerPreviewTab({
               {isJa ? "JSONコピー" : "Copy JSON"}
             </button>
 
+            <button
+              type="button"
+              onClick={() => setPrintOpen(true)}
+              disabled={rawAssignments.length === 0}
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:opacity-40 transition-colors"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>print</span>
+              {isJa ? "印刷" : "Print"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenCalendar}
+              disabled={rawAssignments.length === 0}
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:opacity-40 transition-colors"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>calendar_month</span>
+              {isJa ? "カレンダー" : "Calendar"}
+            </button>
+
             {draft !== null && (
               <button
                 type="button"
@@ -674,6 +739,13 @@ export default function PlannerPreviewTab({
           </div>
         )}
       </div>
+
+      <PlannerPrintModal
+        open={printOpen}
+        equipmentOptions={[...new Set(rawAssignments.map((a) => a.equipment).filter(Boolean))]}
+        onClose={() => setPrintOpen(false)}
+        onConfirm={handlePrint}
+      />
 
       {isEditing && insertTarget && (
         <PlannerDraftInsertModal

@@ -1004,6 +1004,14 @@ export default function PlannerPage() {
     const fetched = await resolvePlannerCapabilities({ factory: factoryName, items: missing });
     const merged = { ...capabilities, ...fetched };
     setCapabilities(merged);
+
+    // Machines a product is mapped to may not exist in the press history yet; make them selectable.
+    const mappedNames = Object.values(fetched).flatMap((entry) => (
+      Array.isArray(entry?.eligibleMachines) ? entry.eligibleMachines.map((m) => String(m?.equipment || m?.設備 || "").trim()) : []
+    )).filter(Boolean);
+    if (mappedNames.length) {
+      setEquipment((current) => [...new Set([...current, ...mappedNames])].sort((l, r) => l.localeCompare(r)));
+    }
     return merged;
   }
 

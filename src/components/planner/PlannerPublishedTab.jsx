@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { canManagePlannerPublished } from "../../services/plannerApi";
 
 export default function PlannerPublishedTab({
   publishedData,
@@ -134,7 +135,7 @@ export default function PlannerPublishedTab({
               {isJa ? "更新" : "Refresh"}
             </button>
 
-            {isViewingHistorical && (
+            {isViewingHistorical && canManagePlannerPublished() && (
               <button
                 type="button"
                 onClick={() => onRestoreVersion?.(viewedVersion.version)}

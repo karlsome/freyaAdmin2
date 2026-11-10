@@ -37,6 +37,34 @@ export function invalidatePlannerPublishedCache(factory, date) {
   }
 }
 
+// Roles allowed to publish / restore schedules (the server enforces the same list).
+const PUBLISH_MANAGE_ROLES = new Set(["admin", "課長", "部長", "係長"]);
+
+function getStoredAuthUser() {
+  try {
+    return JSON.parse(localStorage.getItem("authUser") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function canManagePlannerPublished() {
+  return PUBLISH_MANAGE_ROLES.has(String(getStoredAuthUser().role || "viewer").trim());
+}
+
+// The server reads the requester's role from "Authorization: Bearer <base64(JSON)>".
+function plannerAuthHeaders(extra = {}) {
+  const user = getStoredAuthUser();
+  const headers = { ...extra };
+  if (user && (user.username || user.role)) {
+    const bytes = new TextEncoder().encode(JSON.stringify({ username: user.username || "unknown", role: user.role || "viewer" }));
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    headers.Authorization = `Bearer ${btoa(binary)}`;
+  }
+  return headers;
+}
+
 async function readJson(res) {
   const text = await res.text();
   if (!text) return {};
@@ -449,7 +477,7 @@ export async function publishPlannerSchedule({
 }) {
   const result = await requestJson("api/production-planner/published/publish", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: plannerAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       factory,
       date,
@@ -472,7 +500,7 @@ export async function publishPlannerSchedule({
 export async function restorePlannerPublishedVersion({ factory, date, sourceVersion, publishedBy, note = "" }) {
   const result = await requestJson("api/production-planner/published/restore", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: plannerAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       factory,
       date,
