@@ -260,6 +260,12 @@ function EditProjectModal({ project, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const handleKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose, saving]);
+
   async function handleSubmit(event) {
     event.preventDefault();
     const nextTitle = title.trim();
@@ -275,32 +281,79 @@ function EditProjectModal({ project, onClose, onSaved }) {
     }
   }
 
+  const inputClass = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-all duration-150 focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]";
+
   return createPortal(
-    <div className="fixed inset-0 z-[350] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-separator bg-surface p-5 shadow-2xl">
-        <h3 className="text-lg font-black text-on-surface">{t("Edit project")}</h3>
-        <label className="mt-4 block text-xs font-bold text-on-surface-variant">
-          {t("Title")}
-          <input
-            autoFocus
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-separator bg-surface px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary"
-          />
-        </label>
-        <label className="mt-3 block text-xs font-bold text-on-surface-variant">
-          {t("Description")}
-          <textarea
-            rows={4}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="mt-1 w-full resize-none rounded-lg border border-separator bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
-          />
-        </label>
-        {error ? <p className="mt-3 text-xs font-bold text-red-600">{error}</p> : null}
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container disabled:opacity-50">{t("Cancel")}</button>
-          <button type="submit" disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary disabled:opacity-50">{saving ? t("Saving...") : t("Save")}</button>
+    <div
+      className="fixed inset-0 z-[350] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={() => { if (!saving) onClose(); }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(event) => event.stopPropagation()}
+        className="freya-card flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)] px-6 py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("vmTitle")}</p>
+            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{t("Edit project")}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-6 py-5">
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+            <div className="mb-2 flex items-center gap-1.5 text-[var(--text-muted)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>title</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">{t("Title")}</span>
+            </div>
+            <input autoFocus type="text" value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} />
+          </div>
+
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+            <div className="mb-2 flex items-center gap-1.5 text-[var(--text-muted)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>notes</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">{t("Description")}</span>
+            </div>
+            <textarea
+              rows={9}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className={`${inputClass} resize-y font-normal leading-relaxed`}
+            />
+          </div>
+
+          {error ? (
+            <div className="flex gap-2.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3.5 py-3">
+              <span className="material-symbols-outlined flex-shrink-0 text-[var(--status-danger)]" style={{ fontSize: 18 }}>report</span>
+              <p className="text-xs font-semibold text-[var(--text-primary)]">{error}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 border-t border-[var(--border)] bg-[var(--surface-raised)] px-6 py-3.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-2xs transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-50"
+          >
+            {t("Cancel")}
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? t("Saving...") : t("Save")}
+          </button>
         </div>
       </form>
     </div>,
