@@ -63,13 +63,25 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
           </div>
         </div>
 
-        <div>
+        <div
+          title={isJa
+            ? "目標数のうち、スケジュールに配置済みの割合です。生産の進捗ではありません。"
+            : "Share of the target already placed on the schedule. This is not production progress."}
+        >
           <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-            <span className="text-[var(--text-secondary)] font-mono freya-tabular">{Number(goal.scheduledQuantity || 0)} / {Number(goal.targetQuantity || 0)} {isJa ? "個" : "pcs"}</span>
-            <span className={`font-mono font-semibold ${goalState.textClassName}`}>{goalState.percentage}%</span>
+            <span className="inline-flex items-center gap-1 font-semibold text-[var(--freya-blue)]">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_available</span>
+              {Number(goal.scheduledQuantity || 0) >= Number(goal.targetQuantity || 0) && Number(goal.targetQuantity || 0) > 0
+                ? (isJa ? "全て計画済み" : "Fully scheduled")
+                : (isJa ? "計画済み" : "Scheduled")}
+            </span>
+            <span className="font-mono font-semibold text-[var(--freya-blue)]">{goalState.percentage}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-[var(--surface-subtle)] overflow-hidden">
-            <div className={`h-full rounded-full ${goalState.barClassName}`} style={{ width: `${goalState.percentage}%` }} />
+            <div className="h-full rounded-full bg-[var(--freya-blue)]" style={{ width: `${goalState.percentage}%` }} />
+          </div>
+          <div className="mt-1 text-[11px] text-[var(--text-secondary)] font-mono freya-tabular">
+            {Number(goal.scheduledQuantity || 0)} / {Number(goal.targetQuantity || 0)} {isJa ? "個" : "pcs"}
           </div>
         </div>
 
