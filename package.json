@@ -11,10 +11,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
+    "@shotstack/shotstack-studio": "file:../shotstack-studio-sdk",
     "chart.js": "^4.5.1",
     "hls.js": "^1.6.16",
+    "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "konva": "^10.3.0",

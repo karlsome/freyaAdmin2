@@ -31,6 +31,8 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import ScnaPage from "./pages/ScnaPage";
 import FinancialsPage from "./pages/FinancialsPage";
 import LoginPage from "./pages/LoginPage";
+import VideoManualPage from "./pages/VideoManualPage";
+import VideoManualProjectEditorPage from "./pages/VideoManualProjectEditorPage";
 import {
   clearStoredAuthUser,
   isAuthenticatedUser,
@@ -41,7 +43,6 @@ import {
 const placeholderPages = [
   "notifications",
   "customerManagement",
-  "videoManual",
 ];
 
 const SHELL_INTRO_DURATION_MS = 900;
@@ -233,10 +234,13 @@ function App() {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/financials" element={<FinancialsPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
+              <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />
               <Route path="/analytics/:tab" element={<AnalyticsPage />} />
               <Route path="/analytics/:tab/:process" element={<AnalyticsPage />} />
+              <Route path="/videoManual" element={<VideoManualPage />} />
+              <Route path="/videoManual/project/:projectId" element={<VideoManualProjectEditorPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

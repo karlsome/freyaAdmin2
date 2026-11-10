@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   equipmentConflicts,
   getBrokenDownEquipmentCount,
   getEquipmentUnavailableInfo,
   getFirstVisibleSlotMinutes,
+  getMatchingProduct,
   getProductForSlot,
+  getScheduledSpan,
   getTimelineSlots,
   isBreakAtSlot,
   isEquipmentUnavailable,
@@ -13,6 +15,7 @@ import {
   timeToMinutes,
 } from "../../utils/planner";
 import { useLanguage } from "../../contexts/LanguageContext";
+import SensorDevicePhotoPreviewModal from "../SensorDevicePhotoPreviewModal";
 
 const SLOT_WIDTH = 56;
 const LABEL_WIDTH = 132;
@@ -51,9 +54,16 @@ export default function PlannerTimelineView({
   onStartTimeChange,
   onOpenMachineStatusModal,
   onSlotSelect,
+  products = [],
+  onAddBreak,
+  onEditBreak,
   onMoveScheduledItem,
   onRemoveScheduledItem,
+  onActualBlockClick,
+  onInProgressClick,
 }) {
+  const [infoPopover, setInfoPopover] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const renderT0Ref = useRef(performance.now());
@@ -217,19 +227,32 @@ export default function PlannerTimelineView({
                   </div>
 
                   <div className="flex">
-                    {mappedSlots.map(({ slot, slotMinutes }) => {
+                    {mappedSlots.map(({ slot, slotMinutes }, slotIndex) => {
                       const breakBlock = isBreakAtSlot(slotMinutes, equipmentName, breaks);
                       const product = getProductForSlot(slotMinutes, equipmentName, plannedItems, breaks);
                       const firstVisibleSlot = product ? product._firstSlot : null;
 
                       if (breakBlock) {
+                        const prevSlot = mappedSlots[slotIndex - 1];
+                        const isBreakStart = !prevSlot || !isBreakAtSlot(prevSlot.slotMinutes, equipmentName, breaks);
                         return (
                           <div
                             key={`${equipmentName}-planned-${slot}`}
-                            className="border-r border-[var(--border)] bg-[var(--surface-subtle)]"
-                            style={{ width: SLOT_WIDTH }}
-                            title={breakBlock.name || "Break"}
-                          />
+                            className={`relative overflow-visible border-r border-slate-400/40 bg-slate-300/70 dark:bg-slate-600/60 ${onEditBreak ? "cursor-pointer hover:bg-slate-400/70" : ""}`}
+                            style={{
+                              width: SLOT_WIDTH,
+                              backgroundImage: "repeating-linear-gradient(135deg, rgba(100,116,139,0.45) 0, rgba(100,116,139,0.45) 4px, transparent 4px, transparent 8px)",
+                            }}
+                            title={`${breakBlock.name || "Break"} ${breakBlock.start}-${breakBlock.end}${onEditBreak ? (isJa ? " (クリックで編集)" : " (click to edit)") : ""}`}
+                            onClick={() => onEditBreak?.(breakBlock, equipmentName)}
+                            role={onEditBreak ? "button" : undefined}
+                          >
+                            {isBreakStart ? (
+                              <span className="absolute left-1 top-1/2 z-10 -translate-y-1/2 whitespace-nowrap rounded-[4px] bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm">
+                                {breakBlock.name && breakBlock.name !== "Break" ? breakBlock.name : (isJa ? "休憩" : "BREAK")}
+                              </span>
+                            ) : null}
+                          </div>
                         );
                       }
 
@@ -261,6 +284,19 @@ export default function PlannerTimelineView({
                                 <div className="absolute inset-0 flex items-center justify-center px-1 text-xs font-bold" style={{ color: product.color }}>
                                   {product.背番号}
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const rect = event.currentTarget.getBoundingClientRect();
+                                    setInfoPopover((current) => (current?.id === product._scheduleId ? null : { id: product._scheduleId, product, x: rect.left, y: rect.bottom + 6 }));
+                                  }}
+                                  className="absolute left-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface)] text-[10px] font-bold italic leading-none text-[var(--freya-blue)] shadow-sm ring-1 ring-[var(--freya-blue)]/40 hover:bg-[var(--freya-blue)] hover:text-white"
+                                  aria-label={isJa ? "計画数量の詳細" : "Planned quantity details"}
+                                  title={`${product.quantity} pcs`}
+                                >
+                                  i
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => onRemoveScheduledItem(product)}
@@ -297,6 +333,17 @@ export default function PlannerTimelineView({
                           <span className={`material-symbols-outlined absolute inset-0 flex items-center justify-center transition ${isBroken ? "text-red-400/0 group-hover:text-red-500/80" : "text-[var(--freya-blue)]/0 group-hover:text-[var(--freya-blue)]/70"}`} style={{ fontSize: 16 }}>
                             {isBroken ? "report_problem" : "add_circle"}
                           </span>
+                          {onAddBreak ? (
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              onClick={(event) => { event.stopPropagation(); onAddBreak(equipmentName, slot); }}
+                              className="absolute right-0.5 top-0.5 hidden h-4 w-4 items-center justify-center rounded-full bg-slate-600 text-white shadow-sm group-hover:flex hover:bg-slate-800"
+                              title={isJa ? `${slot} に休憩を追加` : `Add break at ${slot}`}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>free_breakfast</span>
+                            </span>
+                          ) : null}
                         </button>
                       );
                     })}
@@ -322,8 +369,9 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-actual-${slot}`}
-                            className="relative border-r border-[var(--border)]"
+                            className={`relative border-r border-[var(--border)] ${onActualBlockClick ? "cursor-pointer hover:brightness-95" : ""}`}
                             style={{ width: SLOT_WIDTH, backgroundColor: `${color}30` }}
+                            onClick={() => onActualBlockClick?.(block)}
                             title={`${block.背番号} · ${block.totalQuantity} ${isJa ? "個 実績" : "pcs actual"}`}
                           >
                             {showLabel ? (
@@ -339,8 +387,9 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-actual-${slot}`}
-                            className="relative border-r border-amber-400/40 bg-amber-400/15"
+                            className={`relative border-r border-amber-400/40 bg-amber-400/15 ${onInProgressClick ? "cursor-pointer hover:bg-amber-400/25" : ""}`}
                             style={{ width: SLOT_WIDTH }}
+                            onClick={() => onInProgressClick?.(equipmentName, slot, inProgress)}
                             title={`${inProgress.背番号 || inProgress.品番} ${isJa ? "進行中" : "in progress"}`}
                           >
                             <div className="absolute inset-0 flex items-center justify-center gap-1 px-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
@@ -368,6 +417,72 @@ export default function PlannerTimelineView({
           })}
         </div>
       </div>
+
+      {imagePreview ? (
+        <SensorDevicePhotoPreviewModal preview={imagePreview} onClose={() => setImagePreview(null)} />
+      ) : null}
+
+      {infoPopover ? (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setInfoPopover(null)} />
+          <div
+            className="fixed z-50 w-56 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 text-xs shadow-lg"
+            style={{ left: Math.max(8, Math.min(infoPopover.x, window.innerWidth - 232)), top: Math.min(infoPopover.y, window.innerHeight - 300) }}
+          >
+            {(() => {
+              const imageURL = infoPopover.product.imageURL || getMatchingProduct(infoPopover.product, products)?.imageURL;
+              return imageURL ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const item = infoPopover.product;
+                    const master = getMatchingProduct(item, products);
+                    setImagePreview({
+                      displayName: item.品番 || item.背番号 || "Product Image",
+                      eyebrow: "Product Reference Image",
+                      subtitle: [master?.モデル, master?.品名 || item.品名].filter(Boolean).join(" • "),
+                      images: [{ url: imageURL, label: item.品番 || item.背番号 || "Product Image" }],
+                      activeIndex: 0,
+                    });
+                    setInfoPopover(null);
+                  }}
+                  className="mb-2 block w-full cursor-zoom-in"
+                  title={isJa ? "クリックで拡大" : "Click to enlarge"}
+                >
+                  <img
+                    src={imageURL}
+                    alt={infoPopover.product.背番号}
+                    loading="lazy"
+                    onError={(event) => { event.currentTarget.parentElement.style.display = "none"; }}
+                    className="h-24 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] object-contain"
+                  />
+                </button>
+              ) : null;
+            })()}
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: infoPopover.product.color }} />
+              <span className="font-bold text-[var(--text-primary)]">{infoPopover.product.背番号}</span>
+              <span className="truncate text-[var(--text-muted)]">{infoPopover.product.品番}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="rounded-[6px] bg-[var(--surface-subtle)] px-2 py-1.5">
+                <div className="text-[10px] uppercase text-[var(--text-muted)]">{isJa ? "計画数量" : "Planned"}</div>
+                <div className="font-mono text-sm font-semibold text-[var(--text-primary)]">{Number(infoPopover.product.quantity || 0).toLocaleString()} {isJa ? "個" : "pcs"}</div>
+              </div>
+              <div className="rounded-[6px] bg-[var(--surface-subtle)] px-2 py-1.5">
+                <div className="text-[10px] uppercase text-[var(--text-muted)]">{isJa ? "箱数" : "Boxes"}</div>
+                <div className="font-mono text-sm font-semibold text-[var(--text-primary)]">{infoPopover.product.boxes ?? "-"}</div>
+              </div>
+            </div>
+            <div className="mt-2 space-y-0.5 text-[11px] text-[var(--text-muted)]">
+              {infoPopover.product["収容数"] ? <div>{isJa ? "収容数" : "Per box"}: <strong className="text-[var(--text-primary)]">{infoPopover.product["収容数"]}</strong></div> : null}
+              <div>{isJa ? "開始" : "Start"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.startTime || "-"}</strong> · {isJa ? "終了" : "End"}: <strong className="text-[var(--text-primary)]">{minutesToTime(getScheduledSpan(infoPopover.product, breaks).endTime)}</strong></div>
+              {infoPopover.product.estimatedTime?.formattedTime ? <div>{isJa ? "所要" : "Duration"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.estimatedTime.formattedTime}</strong></div> : null}
+              <div>{isJa ? "設備" : "Equipment"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.equipment}</strong></div>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
         <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">

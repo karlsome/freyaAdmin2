@@ -11,6 +11,7 @@ import PlannerTimelineView from "../components/planner/PlannerTimelineView";
 import PlannerKanbanView from "../components/planner/PlannerKanbanView";
 import PlannerTableView from "../components/planner/PlannerTableView";
 import PlannerBreakModal from "../components/planner/PlannerBreakModal";
+import PlannerQuickBreakModal from "../components/planner/PlannerQuickBreakModal";
 import PlannerManualGoalModal from "../components/planner/PlannerManualGoalModal";
 import PlannerDuplicateChoiceModal from "../components/planner/PlannerDuplicateChoiceModal";
 import PlannerGoalImportReviewModal from "../components/planner/PlannerGoalImportReviewModal";
@@ -19,6 +20,8 @@ import PlannerSmartSchedulingModal from "../components/planner/PlannerSmartSched
 import PlannerPrintModal from "../components/planner/PlannerPrintModal";
 import PlannerBulkEditGoalsModal from "../components/planner/PlannerBulkEditGoalsModal";
 import PlannerMachineStatusModal from "../components/planner/PlannerMachineStatusModal";
+import PlannerBarcodeScannerModal from "../components/planner/PlannerBarcodeScannerModal";
+import { PlannerActualProductionModal, PlannerInProgressModal } from "../components/planner/PlannerSessionModals";
 import PlannerPreviewTab from "../components/planner/PlannerPreviewTab";
 import PlannerPublishedTab from "../components/planner/PlannerPublishedTab";
 import {
@@ -43,9 +46,12 @@ import {
   reconcilePlannerGoals,
   restorePlannerPublishedVersion,
   savePlannerPreviewDraft,
+  resolvePlannerCapabilities,
   schedulePlannerGoal,
   updatePlannerGoal,
   upsertPlannerPlan,
+  fetchPlannerBreakDefaults,
+  savePlannerBreakDefaults,
 } from "../services/plannerApi";
 import { getAuthUser } from "../utils/masterDB";
 import {
@@ -53,9 +59,14 @@ import {
   PLANNER_CONFIG,
   buildProductColorMap,
   buildSmartAssignments,
+  calculateBoxesNeeded,
   calculateProductionTime,
+  formatDuration,
   cloneBreaks,
+  buildCapabilityKey,
+  getMatchingProduct,
   createScheduledItem,
+  resolveMachineSpec,
   getLatestEquipmentEnd,
   getProductCapacity,
   getScheduledSpan,
@@ -157,6 +168,10 @@ function filterGoals(goals, searchValue) {
   ));
 }
 
+const breaksSignature = (list) => JSON.stringify(
+  (Array.isArray(list) ? list : []).map((item) => [item.name || "", item.start, item.end, item.equipment || null]).sort(),
+);
+
 export default function PlannerPage() {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -192,6 +207,10 @@ export default function PlannerPage() {
   const [machineStatusModalOpen, setMachineStatusModalOpen] = useState(false);
   const [breakModalOpen, setBreakModalOpen] = useState(false);
   const [breakSaving, setBreakSaving] = useState(false);
+  const [quickBreak, setQuickBreak] = useState(null);
+  const [breakDefaults, setBreakDefaults] = useState(cloneBreaks(DEFAULT_BREAKS));
+  const breakDefaultsRef = useRef(breakDefaults);
+  useEffect(() => { breakDefaultsRef.current = breakDefaults; }, [breakDefaults]);
   const [manualGoalOpen, setManualGoalOpen] = useState(false);
   const [manualGoalSubmitting, setManualGoalSubmitting] = useState(false);
   const [duplicateState, setDuplicateState] = useState({ open: false, existingGoal: null, pendingGoal: null });
@@ -210,6 +229,17 @@ export default function PlannerPage() {
   // Bulk Edit Goals
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkEditBusy, setBulkEditBusy] = useState(false);
+
+  // Per-machine capability overrides (cycle time / pcs per cycle / box size), cached per product
+  const [capabilities, setCapabilities] = useState({});
+
+  // Actual-production / in-progress detail popups opened from the timeline
+  const [actualDetail, setActualDetail] = useState(null);
+  const [inProgressDetail, setInProgressDetail] = useState(null);
+
+  // Barcode scanner ("goals" = add goals, "slot" = add goals and schedule at the open slot)
+  const [scannerMode, setScannerMode] = useState(null);
+  const [scannerBusy, setScannerBusy] = useState(false);
 
   // Timeline Reconciliation
   const [reconciling, setReconciling] = useState(false);
@@ -321,13 +351,14 @@ export default function PlannerPage() {
     setDataLoading(true);
 
     try {
-      const [nextEquipment, nextProducts, nextGoals, nextPlans, actualRows, inProgressRows] = await Promise.all([
+      const [nextEquipment, nextProducts, nextGoals, nextPlans, actualRows, inProgressRows, fetchedBreakDefaults] = await Promise.all([
         fetchPlannerEquipment(nextFactory),
         fetchPlannerProducts(),
         fetchPlannerGoals({ factory: nextFactory, date: nextDate, endDate: activeRangeEnd }),
         fetchPlannerPlans({ factory: nextFactory, date: nextDate }),
         fetchPlannerActualProduction(nextFactory, nextDate),
         fetchPlannerInProgress(nextFactory, nextDate),
+        fetchPlannerBreakDefaults(nextFactory).catch(() => null),
       ]);
 
       if (requestId !== requestIdRef.current) {
@@ -354,7 +385,9 @@ export default function PlannerPage() {
       setScheduledProducts(normalizePlanProducts(currentPlan?.products || [], nextProducts, nextColorMap));
       setActualBlocks(processActualProductionData(actualRows));
       setInProgressMap(processInProgressData(inProgressRows));
-      setBreaks(currentPlan?.breaks?.length ? cloneBreaks(currentPlan.breaks) : cloneBreaks(DEFAULT_BREAKS));
+      const nextBreakDefaults = fetchedBreakDefaults ? cloneBreaks(fetchedBreakDefaults) : cloneBreaks(DEFAULT_BREAKS);
+      setBreakDefaults(nextBreakDefaults);
+      setBreaks(currentPlan?.breaks?.length ? cloneBreaks(currentPlan.breaks) : cloneBreaks(nextBreakDefaults));
       if (currentPlan?.startTime) {
         setStartTime(currentPlan.startTime);
         localStorage.setItem("planner_start_time", currentPlan.startTime);
@@ -383,7 +416,8 @@ export default function PlannerPage() {
   async function persistPlan(nextProducts, nextBreaks, nextStartTime = startTime, nextUnavailable = unavailableEquipment) {
     if (!factoryName) return;
 
-    if (!nextProducts.length && !nextUnavailable?.length) {
+    const customBreaks = breaksSignature(nextBreaks) !== breaksSignature(breakDefaultsRef.current);
+    if (!nextProducts.length && !nextUnavailable?.length && !customBreaks) {
       await deletePlannerPlanByFactoryDate(factoryName, planDate);
       setCurrentPlanId("");
       return;
@@ -498,8 +532,10 @@ export default function PlannerPage() {
       });
       await loadPreview(true);
       showFlash(isJa ? "需要計画下書きを保存しました。" : "Preview draft saved successfully.", "success");
+      return true;
     } catch (err) {
       showFlash(err.message || (isJa ? "下書きの保存に失敗しました。" : "Failed to save draft."), "error");
+      return false;
     } finally {
       setPreviewSaving(false);
     }
@@ -727,6 +763,51 @@ export default function PlannerPage() {
     }
   }
 
+  // Inline "add goal" row of the Edit Goals dialog. Returns true when the goal was created.
+  async function handleAddGoalFromTable({ 背番号, 品番, 品名, quantity }) {
+    if (!factoryName || !planDate) {
+      showFlash(isJa ? "工場と日付を選択してください。" : "Select a factory and date first.", "warning");
+      return false;
+    }
+
+    const pendingGoal = {
+      factory: factoryName,
+      date: planDate,
+      背番号,
+      品番,
+      品名,
+      targetQuantity: quantity,
+      createdBy: getUserDisplayName(authUser),
+    };
+
+    try {
+      const duplicateResult = await checkPlannerGoalDuplicates(factoryName, [{ 背番号, 品番, date: planDate }]);
+      if (duplicateResult?.hasDuplicates && duplicateResult.duplicates?.length) {
+        // Close this dialog first so the duplicate prompt is not stacked on top of it.
+        setBulkEditOpen(false);
+        setDuplicateState({ open: true, existingGoal: duplicateResult.duplicates[0], pendingGoal });
+        return false;
+      }
+
+      await createPlannerGoal(pendingGoal);
+      await refreshAfterMutation(isJa ? "目標を追加しました。" : "Goal added successfully.");
+      return true;
+    } catch (error) {
+      showFlash(error.message || (isJa ? "目標の追加に失敗しました。" : "Failed to add goal."), "error");
+      return false;
+    }
+  }
+
+  // Auto-fill helper for the inline row: returns the product master record or null.
+  async function handleLookupGoalProduct(searchType, searchValue) {
+    try {
+      const result = await lookupPlannerProduct({ searchType, searchValue, factory: factoryName });
+      return result?.success && result.data ? result.data : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleDuplicateResolution(action) {
     const { existingGoal, pendingGoal } = duplicateState;
 
@@ -916,6 +997,31 @@ export default function PlannerPage() {
     }
   }
 
+  async function handleSaveBreakDefaults(nextDefaults) {
+    if (!factoryName) return;
+    setBreakSaving(true);
+
+    try {
+      const previousDefaults = breakDefaultsRef.current;
+      const saved = await savePlannerBreakDefaults({
+        factory: factoryName,
+        breaks: nextDefaults,
+        updatedBy: getUserDisplayName(authUser),
+      });
+      setBreakDefaults(cloneBreaks(saved));
+      // A day still using the old defaults follows the new ones.
+      if (breaksSignature(breaks) === breaksSignature(previousDefaults)) {
+        setBreaks(cloneBreaks(saved));
+        if (scheduledProducts.length) await persistPlan(scheduledProducts, saved);
+      }
+      showFlash(isJa ? "デフォルト休憩時間を保存しました。" : "Default break times saved.");
+    } catch (error) {
+      showFlash(error.message || "Failed to save default breaks.", "error");
+    } finally {
+      setBreakSaving(false);
+    }
+  }
+
   async function handleSaveBreaks(nextBreaks) {
     setBreakSaving(true);
 
@@ -932,16 +1038,110 @@ export default function PlannerPage() {
     }
   }
 
-  async function handleSlotSchedule(queue) {
+  // Fetch (and cache) capability overrides for the given goals/products; returns the merged map.
+  async function ensureCapabilities(items) {
+    const missing = items.filter((item) => !capabilities[buildCapabilityKey(factoryName, item.背番号, item.品番)]);
+    if (!missing.length) return capabilities;
+
+    const fetched = await resolvePlannerCapabilities({ factory: factoryName, items: missing });
+    const merged = { ...capabilities, ...fetched };
+    setCapabilities(merged);
+
+    // Machines a product is mapped to may not exist in the press history yet; make them selectable.
+    const mappedNames = Object.values(fetched).flatMap((entry) => (
+      Array.isArray(entry?.eligibleMachines) ? entry.eligibleMachines.map((m) => String(m?.equipment || m?.設備 || "").trim()) : []
+    )).filter(Boolean);
+    if (mappedNames.length) {
+      setEquipment((current) => [...new Set([...current, ...mappedNames])].sort((l, r) => l.localeCompare(r)));
+    }
+    return merged;
+  }
+
+  // Create the goal for each scanned 背番号 (or add to the one already set for this date).
+  async function applyScannedGoals(items) {
+    const existingGoals = await fetchPlannerGoals({ factory: factoryName, date: planDate });
+    const newGoals = [];
+    let merged = 0;
+
+    for (const item of items) {
+      const quantity = Math.max(0, Number(item.quantity) || 0);
+      if (quantity <= 0) continue;
+
+      const existing = existingGoals.find((goal) => goal.背番号 === item.product.背番号 && goal.date === planDate);
+      if (existing) {
+        await updatePlannerGoal(existing._id, {
+          targetQuantity: Number(existing.targetQuantity || 0) + quantity,
+          remainingQuantity: Number(existing.remainingQuantity || 0) + quantity,
+        });
+        merged += 1;
+      } else {
+        newGoals.push({
+          factory: factoryName,
+          date: planDate,
+          背番号: item.product.背番号,
+          品番: item.product.品番,
+          品名: item.product.品名,
+          targetQuantity: quantity,
+        });
+      }
+    }
+
+    if (newGoals.length) {
+      await batchCreatePlannerGoals(newGoals, getUserDisplayName(authUser));
+    }
+    return { created: newGoals.length, merged };
+  }
+
+  async function handleScannerConfirm(items) {
+    if (!factoryName || !planDate || !items.length) return;
+    setScannerBusy(true);
+
+    try {
+      const { created, merged } = await applyScannedGoals(items);
+      const mode = scannerMode;
+      setScannerMode(null);
+
+      if (mode === "slot") {
+        const freshGoals = await fetchPlannerGoals({ factory: factoryName, date: planDate });
+        const queue = items.map((item) => {
+          const goal = freshGoals.find((entry) => entry.背番号 === item.product.背番号 && entry.date === planDate);
+          return goal ? { _id: goal._id, 背番号: goal.背番号, 品番: goal.品番, quantity: Number(item.quantity) || 0 } : null;
+        }).filter(Boolean);
+        await handleSlotSchedule(queue, freshGoals);
+        return;
+      }
+
+      await refreshAfterMutation(isJa
+        ? `${created} 件の目標を追加、${merged} 件を加算しました。`
+        : `Added ${created} new goal${created === 1 ? "" : "s"}, merged ${merged}.`);
+    } catch (error) {
+      showFlash(error.message || (isJa ? "スキャンした目標の保存に失敗しました。" : "Failed to save scanned goals."), "error");
+    } finally {
+      setScannerBusy(false);
+    }
+  }
+
+  async function handleSlotSchedule(queue, goalsSource = goals) {
     setSlotSubmitting(true);
 
     try {
-      const nextProducts = [...scheduledProducts];
+      let caps;
+      try {
+        caps = await ensureCapabilities(queue.map((item) => goalsSource.find((goal) => goal._id === item._id) || item));
+      } catch {
+        throw new Error(isJa ? "設備能力マッピングの確認に失敗しました。" : "Failed to validate capability mappings for the selected equipment.");
+      }
+
+      // Start from what is saved now, so a plan edited elsewhere is not overwritten or double-booked.
+      const latestPlans = await fetchPlannerPlans({ factory: factoryName, date: planDate });
+      const nextProducts = latestPlans?.[0]
+        ? normalizePlanProducts(latestPlans[0].products || [], products, productColors)
+        : [...scheduledProducts];
       const scheduleOperations = [];
       let nextStartMinutes = timeToMinutes(slotModalState.startTime);
 
       for (const queueItem of queue) {
-        const liveGoal = goals.find((goal) => goal._id === queueItem._id);
+        const liveGoal = goalsSource.find((goal) => goal._id === queueItem._id);
         if (!liveGoal) {
           throw new Error(`Goal ${queueItem.背番号 || queueItem.品番} is no longer available.`);
         }
@@ -958,6 +1158,8 @@ export default function PlannerPage() {
           products,
           productColors,
           breaks,
+          capabilities: caps,
+          factory: factoryName,
         });
 
         const conflict = hasSchedulingConflict(scheduledItem, nextProducts, breaks);
@@ -1127,6 +1329,13 @@ export default function PlannerPage() {
       const workingProducts = [...baseScheduledProducts];
       const scheduleOperations = [];
       const unavailableParts = new Set();
+
+      let caps;
+      try {
+        caps = await ensureCapabilities(Object.values(smartPreview.assignments || {}).flat());
+      } catch {
+        throw new Error(isJa ? "設備能力マッピングの確認に失敗しました。" : "Failed to validate capability mappings.");
+      }
       const maxEndTime = timeToMinutes(timeLimit);
 
       workingProducts.forEach((item) => {
@@ -1173,7 +1382,11 @@ export default function PlannerPage() {
 
             for (let boxIndex = 1; boxIndex <= totalBoxesNeeded; boxIndex += 1) {
               const boxQuantity = Math.min(capacity, remainingQuantity - ((boxIndex - 1) * capacity));
-              const boxTiming = calculateProductionTime(goal, boxQuantity);
+              const boxTiming = calculateProductionTime(
+                goal,
+                boxQuantity,
+                resolveMachineSpec({ ...getMatchingProduct(goal, products), ...goal }, equipmentName, caps, factoryName),
+              );
               const nextWindow = getScheduledSpan({
                 equipment: equipmentName,
                 startTime: minutesToTime(scanTime),
@@ -1199,6 +1412,8 @@ export default function PlannerPage() {
               products,
               productColors,
               breaks,
+              capabilities: caps,
+              factory: factoryName,
             });
 
             const conflict = hasSchedulingConflict(scheduledItem, workingProducts, breaks);
@@ -1297,14 +1512,6 @@ export default function PlannerPage() {
           <>
             <button
               type="button"
-              onClick={() => setBreakModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
-              {isJa ? "休憩時間" : "Break Times"}
-            </button>
-            <button
-              type="button"
               onClick={() => loadPlannerData()}
               disabled={loadingFactories || dataLoading}
               className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
@@ -1366,6 +1573,7 @@ export default function PlannerPage() {
             outOfSyncCount={outOfSyncCount}
             onGoalSearchChange={setGoalSearch}
             onCsvSelected={handleCsvSelected}
+            onOpenScanner={() => setScannerMode("goals")}
             onOpenManualGoal={() => {
               if (!factoryName) {
                 showFlash(isJa ? "目標を追加する前に工場を選択してください。" : "Select a factory before adding goals.", "warning");
@@ -1390,6 +1598,11 @@ export default function PlannerPage() {
             publishing={previewPublishing}
             factoryName={factoryName}
             planDate={planDate}
+            breaks={breaks}
+            unavailableEquipment={unavailableEquipment}
+            productColors={productColors}
+            equipmentOptions={equipment}
+            onNotify={showFlash}
             onRefresh={() => loadPreview(true)}
             onSaveDraft={handleSavePreviewDraft}
             onDiscardDraft={handleDiscardPreviewDraft}
@@ -1446,6 +1659,14 @@ export default function PlannerPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
+                  onClick={() => setBreakModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
+                  {isJa ? "休憩時間" : "Break Times"}
+                </button>
+                <button
+                  type="button"
                   onClick={handleOpenCalendar}
                   disabled={!scheduledProducts.length}
                   className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
@@ -1468,6 +1689,7 @@ export default function PlannerPage() {
             {viewTab === "timeline" ? (
               <PlannerTimelineView
                 equipment={equipment}
+                products={products}
                 scheduledProducts={scheduledProducts}
                 actualBlocks={actualBlocks}
                 inProgressMap={inProgressMap}
@@ -1484,6 +1706,8 @@ export default function PlannerPage() {
                 }}
                 hideUnavailableEquipment={hideUnavailableEquipment}
                 onToggleHideUnavailable={() => setHideUnavailableEquipment((value) => !value)}
+                onActualBlockClick={setActualDetail}
+                onInProgressClick={(equipmentName, slot, session) => setInProgressDetail({ equipment: equipmentName, slot, session })}
                 onSlotSelect={(equipmentName, startTime) => {
                   if (!factoryName) {
                     showFlash(isJa ? "製品を計画する前に工場を選択してください。" : "Select a factory before scheduling products.", "warning");
@@ -1491,6 +1715,8 @@ export default function PlannerPage() {
                   }
                   setSlotModalState({ open: true, equipment: equipmentName, startTime });
                 }}
+                onAddBreak={(equipmentName, slot) => setQuickBreak({ equipment: equipmentName, start: slot })}
+                onEditBreak={(breakItem, equipmentName) => setQuickBreak({ breakItem, equipment: equipmentName, start: breakItem.start })}
                 onMoveScheduledItem={handleMoveScheduledItem}
                 onRemoveScheduledItem={handleRemoveScheduledItem}
               />
@@ -1516,13 +1742,34 @@ export default function PlannerPage() {
         )}
       </div>
 
+      {quickBreak ? (
+        <PlannerQuickBreakModal
+          key={`${quickBreak.breakItem?.id || "new"}-${quickBreak.equipment}-${quickBreak.start}`}
+          target={quickBreak}
+          saving={breakSaving}
+          onClose={() => setQuickBreak(null)}
+          onSave={async (item) => {
+            const exists = breaks.some((entry) => entry.id === item.id);
+            const next = exists ? breaks.map((entry) => (entry.id === item.id ? item : entry)) : [...breaks, item];
+            await handleSaveBreaks(next);
+            setQuickBreak(null);
+          }}
+          onDelete={async (id) => {
+            await handleSaveBreaks(breaks.filter((entry) => entry.id !== id));
+            setQuickBreak(null);
+          }}
+        />
+      ) : null}
+
       <PlannerBreakModal
         open={breakModalOpen}
         breaks={breaks}
+        defaults={breakDefaults}
         equipmentOptions={equipment}
         saving={breakSaving}
         onClose={() => setBreakModalOpen(false)}
         onSave={handleSaveBreaks}
+        onSaveDefaults={handleSaveBreakDefaults}
       />
 
       <PlannerPrintModal
@@ -1574,7 +1821,33 @@ export default function PlannerPage() {
           if (!slotSubmitting) setSlotModalState({ open: false, equipment: "", startTime: "" });
         }}
         onConfirm={handleSlotSchedule}
+        onOpenScanner={() => setScannerMode("slot")}
+        productColors={productColors}
+        getMetrics={(item, quantity) => {
+          const spec = resolveMachineSpec(item, slotModalState.equipment, capabilities, factoryName);
+          const timing = calculateProductionTime(item, quantity, spec);
+          return {
+            boxes: calculateBoxesNeeded(item, quantity, products, spec),
+            time: timing.formattedTime || formatDuration(timing.totalSeconds),
+          };
+        }}
       />
+
+      <PlannerActualProductionModal block={actualDetail} onClose={() => setActualDetail(null)} />
+      {inProgressDetail ? <PlannerInProgressModal key={`${inProgressDetail.equipment}-${inProgressDetail.session?.sessionID}`} target={inProgressDetail} onClose={() => setInProgressDetail(null)} /> : null}
+
+      {scannerMode ? (
+        <PlannerBarcodeScannerModal
+          products={products}
+          busy={scannerBusy}
+          confirmLabel={scannerMode === "slot" ? (isJa ? "確定してスケジュール" : "Confirm & Schedule") : undefined}
+          subtitle={scannerMode === "slot"
+            ? (isJa ? `スキャンした製品を ${slotModalState.equipment} の ${slotModalState.startTime} から順に配置します。` : `Scanned products are scheduled in order on ${slotModalState.equipment} from ${slotModalState.startTime}.`)
+            : undefined}
+          onConfirm={handleScannerConfirm}
+          onClose={() => { if (!scannerBusy) setScannerMode(null); }}
+        />
+      ) : null}
 
       <PlannerSmartSchedulingModal
         open={smartPreviewOpen}
@@ -1598,6 +1871,8 @@ export default function PlannerPage() {
         onDeleteSelected={handleBulkDeleteSelected}
         onDeleteAll={handleBulkDeleteAll}
         onUpdateTarget={handleBulkUpdateTarget}
+        onAddGoal={handleAddGoalFromTable}
+        onLookupProduct={handleLookupGoalProduct}
       />
 
       <PlannerMachineStatusModal

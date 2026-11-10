@@ -12,6 +12,8 @@ export default function PlannerBulkEditGoalsModal({
   onDeleteSelected,
   onDeleteAll,
   onUpdateTarget,
+  onAddGoal,
+  onLookupProduct,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -21,6 +23,9 @@ export default function PlannerBulkEditGoalsModal({
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [editedTargets, setEditedTargets] = useState({});
   const [savingId, setSavingId] = useState(null);
+  const [newGoal, setNewGoal] = useState({ 背番号: "", 品番: "", 品名: "", quantity: "100" });
+  const [adding, setAdding] = useState(false);
+  const [autoFillNote, setAutoFillNote] = useState("");
 
   // Filter goals matching selected factory & planDate
   const factoryGoals = useMemo(() => {
@@ -86,6 +91,48 @@ export default function PlannerBulkEditGoalsModal({
 
     await onDeleteAll?.(factoryName, planDate);
     setSelectedIds(new Set());
+  }
+
+  function setNewGoalField(field, value) {
+    setNewGoal((prev) => ({ ...prev, [field]: value }));
+  }
+
+  // Typing one of 背番号 / 品番 fills the other fields from the product master.
+  async function autoFill(searchType) {
+    const value = String(newGoal[searchType] || "").trim();
+    const otherType = searchType === "背番号" ? "品番" : "背番号";
+    if (!value || String(newGoal[otherType] || "").trim() || !onLookupProduct) return;
+
+    const product = await onLookupProduct(searchType, value);
+    if (!product) return;
+
+    setNewGoal((prev) => ({
+      ...prev,
+      背番号: prev.背番号 || product.背番号 || "",
+      品番: prev.品番 || product.品番 || "",
+      品名: prev.品名 || product.品名 || "",
+    }));
+    setAutoFillNote(isJa ? `${otherType} と 品名 を製品マスターから自動入力しました` : `${otherType} and 品名 auto-filled from the product master`);
+    window.setTimeout(() => setAutoFillNote(""), 2500);
+  }
+
+  async function handleAddGoal(event) {
+    event.preventDefault();
+    const quantity = parseInt(newGoal.quantity, 10);
+    if (!newGoal.背番号.trim() || !newGoal.品番.trim() || !(quantity >= 1)) return;
+
+    setAdding(true);
+    try {
+      const added = await onAddGoal?.({
+        背番号: newGoal.背番号.trim(),
+        品番: newGoal.品番.trim(),
+        品名: newGoal.品名.trim(),
+        quantity,
+      });
+      if (added) setNewGoal({ 背番号: "", 品番: "", 品名: "", quantity: "100" });
+    } finally {
+      setAdding(false);
+    }
   }
 
   async function handleSaveRow(goal) {
@@ -171,6 +218,8 @@ export default function PlannerBulkEditGoalsModal({
           </div>
         </div>
 
+        <form id="planner-bulk-add-goal" onSubmit={handleAddGoal} />
+
         {/* Goals Table */}
         <div className="overflow-x-auto rounded-[8px] border border-[var(--border)]">
           <table className="w-full border-collapse text-left text-xs">
@@ -196,6 +245,52 @@ export default function PlannerBulkEditGoalsModal({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]">
+              {onAddGoal ? (
+                <tr className="bg-[var(--surface-subtle)]/60">
+                  <td className="px-3 py-2 text-center text-[var(--freya-blue)]">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_circle</span>
+                  </td>
+                  {[
+                    ["背番号", "font-mono"],
+                    ["品番", "font-mono"],
+                    ["品名", ""],
+                  ].map(([field, extra]) => (
+                    <td key={field} className="px-2 py-1.5">
+                      <input
+                        form="planner-bulk-add-goal"
+                        value={newGoal[field]}
+                        onChange={(e) => setNewGoalField(field, e.target.value)}
+                        onBlur={field === "品名" ? undefined : () => autoFill(field)}
+                        placeholder={field}
+                        aria-label={field}
+                        className={`h-7 w-full rounded border border-[var(--border)] bg-[var(--surface-raised)] px-2 text-xs ${extra} text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]`}
+                      />
+                    </td>
+                  ))}
+                  <td className="px-2 py-1.5 text-right">
+                    <input
+                      form="planner-bulk-add-goal"
+                      type="number"
+                      min="1"
+                      value={newGoal.quantity}
+                      onChange={(e) => setNewGoalField("quantity", e.target.value)}
+                      aria-label={isJa ? "目標数" : "Target Qty"}
+                      className="h-7 w-24 rounded border border-[var(--border)] bg-[var(--surface-raised)] px-2 text-right font-mono text-xs font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
+                    />
+                  </td>
+                  <td colSpan={3} className="px-3 py-1.5 text-[11px] text-sky-600 dark:text-sky-400">{autoFillNote}</td>
+                  <td className="px-3 py-1.5 text-center">
+                    <button
+                      form="planner-bulk-add-goal"
+                      type="submit"
+                      disabled={adding || busy || !newGoal.背番号.trim() || !newGoal.品番.trim()}
+                      className="rounded bg-[var(--freya-blue)] px-2 py-1 text-[11px] font-semibold text-white hover:bg-[var(--freya-blue-hover)] disabled:opacity-40"
+                    >
+                      {adding ? "..." : (isJa ? "追加" : "Add")}
+                    </button>
+                  </td>
+                </tr>
+              ) : null}
               {filteredGoals.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">

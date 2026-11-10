@@ -37,6 +37,34 @@ export function invalidatePlannerPublishedCache(factory, date) {
   }
 }
 
+// Roles allowed to publish / restore schedules (the server enforces the same list).
+const PUBLISH_MANAGE_ROLES = new Set(["admin", "課長", "部長", "係長"]);
+
+function getStoredAuthUser() {
+  try {
+    return JSON.parse(localStorage.getItem("authUser") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function canManagePlannerPublished() {
+  return PUBLISH_MANAGE_ROLES.has(String(getStoredAuthUser().role || "viewer").trim());
+}
+
+// The server reads the requester's role from "Authorization: Bearer <base64(JSON)>".
+function plannerAuthHeaders(extra = {}) {
+  const user = getStoredAuthUser();
+  const headers = { ...extra };
+  if (user && (user.username || user.role)) {
+    const bytes = new TextEncoder().encode(JSON.stringify({ username: user.username || "unknown", role: user.role || "viewer" }));
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    headers.Authorization = `Bearer ${btoa(binary)}`;
+  }
+  return headers;
+}
+
 async function readJson(res) {
   const text = await res.text();
   if (!text) return {};
@@ -99,6 +127,7 @@ export async function fetchPlannerProducts() {
         モデル: 1,
         pcPerCycle: 1,
         "秒数(1pcs何秒)": 1,
+        imageURL: 1,
       },
       limit: 20000,
     },
@@ -166,6 +195,25 @@ export async function checkPlannerGoalDuplicates(factory, items) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ factory, items }),
   });
+}
+
+// Per-machine cycle time / pcs-per-cycle / box size overrides for products.
+// Returns { "<factory>::<背番号>::<品番>": { eligibleMachines: [...] } }
+export async function resolvePlannerCapabilities({ factory, items = [] } = {}) {
+  if (!factory || !items.length) return {};
+  const result = await requestJson("api/production-capability/resolve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      factory,
+      items: items.map((item) => ({
+        factory,
+        背番号: String(item.背番号 || "").trim(),
+        品番: String(item.品番 || "").trim(),
+      })),
+    }),
+  });
+  return result?.capabilities || {};
 }
 
 export async function lookupPlannerProduct({ searchType, searchValue, factory }) {
@@ -264,6 +312,13 @@ export async function fetchPlannerActualProduction(factory, date) {
   );
 
   return Array.isArray(rows) ? rows : [];
+}
+
+// All tablet log events of one in-progress work session, oldest first.
+export async function fetchPlannerSessionLogs(sessionID) {
+  if (!sessionID) return [];
+  const rows = await query("submittedDB", "tabletLogDB", { sessionID }, { limit: 5000 });
+  return (Array.isArray(rows) ? rows : []).sort((a, b) => new Date(a.Timestamp) - new Date(b.Timestamp));
 }
 
 export async function fetchPlannerInProgress(factory, date) {
@@ -423,7 +478,7 @@ export async function publishPlannerSchedule({
 }) {
   const result = await requestJson("api/production-planner/published/publish", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: plannerAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       factory,
       date,
@@ -446,7 +501,7 @@ export async function publishPlannerSchedule({
 export async function restorePlannerPublishedVersion({ factory, date, sourceVersion, publishedBy, note = "" }) {
   const result = await requestJson("api/production-planner/published/restore", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: plannerAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       factory,
       date,
@@ -459,4 +514,19 @@ export async function restorePlannerPublishedVersion({ factory, date, sourceVers
   invalidatePlannerPreviewCache(factory, date);
   invalidatePlannerPublishedCache(factory, date);
   return result?.data || result;
+}
+// Default break times, stored per factory in Sasaki_Coating_MasterDB.plannerBreakDefaults.
+export async function fetchPlannerBreakDefaults(factory) {
+  if (!factory) return null;
+  const result = await requestJson(`api/planner-break-defaults?factory=${encodeURIComponent(factory)}`);
+  return result?.data?.breaks || null;
+}
+
+export async function savePlannerBreakDefaults({ factory, breaks, updatedBy }) {
+  const result = await requestJson("api/planner-break-defaults", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ factory, breaks, updatedBy }),
+  });
+  return result?.data?.breaks || [];
 }

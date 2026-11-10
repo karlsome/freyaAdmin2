@@ -16,6 +16,7 @@ export default function PlannerGoalsPanel({
   onGoalSearchChange,
   onCsvSelected,
   onOpenManualGoal,
+  onOpenScanner,
   onOpenSmartScheduling,
   onOpenBulkEdit,
   onReconcileGoals,
@@ -66,6 +67,14 @@ export default function PlannerGoalsPanel({
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_circle</span>
               {isJa ? "手動入力" : "Manual Input"}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>qr_code_scanner</span>
+              {isJa ? "バーコード" : "Scan"}
             </button>
             <button
               type="button"

@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+.video-manual-timeline-host .ss-playhead-handle {
+  top: -4px;
+  width: 28px;
+  height: 20px;
+  background: transparent;
+  border-radius: 0;
+  touch-action: none;
+  transform: translateX(-50%);
+}
+
+.video-manual-timeline-host .ss-playhead-handle:hover {
+  transform: translateX(-50%);
+}
+
+.video-manual-timeline-host .ss-playhead-handle::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border-radius: 2px 2px 50% 50%;
+  transform: translateX(-50%);
+  transition: transform 0.12s ease;
+}
+
+.video-manual-timeline-host .ss-playhead-handle:hover::before {
+  transform: translateX(-50%) scaleX(1.6) scaleY(2.2);
+}
+
 /* ─── Light mode (default) ─────────────────────────────────────────────────── */
 /* Colors are stored as RGB channels so Tailwind opacity modifiers work:        */
 /* e.g. bg-primary/10 → rgba(73, 75, 214, 0.10)                                */

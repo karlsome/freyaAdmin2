@@ -13,8 +13,12 @@ export function LanguageProvider({ children }) {
     setLanguage(lang);
   }
 
-  function t(key) {
-    return translations[language]?.[key] ?? key;
+  // Falls back to the key itself (so English text can be used as the key),
+  // and supports {name} placeholders: t("Revision {n} created.", { n: 3 })
+  function t(key, params) {
+    const text = translations[language]?.[key] ?? key;
+    if (!params) return text;
+    return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
   }
 
   return (

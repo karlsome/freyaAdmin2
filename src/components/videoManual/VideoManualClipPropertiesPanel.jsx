@@ -1,0 +1,328 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+import { createShapeSvg, extractShapeStyle, getClipCategory, getClipRelativePlaybackTime, getKeyframedScalarValueAtTime, normalizeHexColor } from "./videoManualEditorUtils";
+
+const FONT_OPTIONS = ["Work Sans", "Montserrat", "Open Sans", "Roboto", "Lato", "Merriweather", "Playfair Display", "Oswald"];
+const FONT_WEIGHTS = [300, 400, 500, 600, 700, 800];
+const TRANSITION_OPTIONS = ["", "fade", "zoom", "slideLeft", "slideRight", "slideUp", "slideDown", "carouselLeft", "carouselRight", "carouselUp", "carouselDown", "reveal", "wipeRight", "wipeLeft"];
+const EFFECT_OPTIONS = ["", "zoomIn", "zoomOut", "slideLeft", "slideRight", "slideUp", "slideDown"];
+
+function Icon({ children, className = "text-[16px]" }) {
+  return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
+}
+
+function staticNumber(value, fallback = 0) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function formatInputNumber(value, fallback = 0, decimals = 4) {
+  const numericValue = staticNumber(value, fallback);
+  return Number(numericValue.toFixed(decimals));
+}
+
+function Section({ title, children, action }) {
+  const { t } = useLanguage();
+
+  return (
+    <section className="border-t border-separator pt-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="text-xs font-bold text-on-surface">{t(title)}</h4>
+        {action}
+      </div>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, children }) {
+  const { t } = useLanguage();
+
+  return (
+    <label className="block space-y-1 text-[11px] font-semibold text-on-surface-variant">
+      <span>{t(label)}</span>
+      {children}
+    </label>
+  );
+}
+
+const inputClass = "w-full rounded-lg border border-separator bg-surface px-2.5 py-1.5 text-xs font-semibold text-on-surface outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/30";
+const colorInputClass = "h-9 w-full cursor-pointer rounded-lg border border-separator bg-surface p-1";
+
+function NumberField({ label, value, min, max, step = "0.1", onChange }) {
+  return (
+    <Field label={label}>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={inputClass}
+      />
+    </Field>
+  );
+}
+
+const OPTION_JA = {
+  left: "左", center: "中央", right: "右", top: "上", middle: "中央", bottom: "下",
+  fade: "フェード", zoom: "ズーム", slideLeft: "左へスライド", slideRight: "右へスライド", slideUp: "上へスライド", slideDown: "下へスライド",
+  carouselLeft: "カルーセル左", carouselRight: "カルーセル右", carouselUp: "カルーセル上", carouselDown: "カルーセル下",
+  reveal: "リビール", wipeRight: "ワイプ右", wipeLeft: "ワイプ左", zoomIn: "ズームイン", zoomOut: "ズームアウト",
+};
+
+function SelectField({ label, value, options, onChange, emptyLabel = "None" }) {
+  const { t, language } = useLanguage();
+
+  return (
+    <Field label={label}>
+      <select value={value || ""} onChange={(event) => onChange(event.target.value)} className={inputClass}>
+        {options.map((option) => (
+          <option key={option || "none"} value={option}>{option ? (language === "ja" && OPTION_JA[option]) || option : t(emptyLabel)}</option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
+function ColorField({ label, value, onChange }) {
+  return (
+    <Field label={label}>
+      <input type="color" value={value} onChange={(event) => onChange(event.target.value)} className={colorInputClass} />
+    </Field>
+  );
+}
+
+export default function VideoManualClipPropertiesPanel({
+  selectedClip,
+  playbackTime = 0,
+  onUpdateClip,
+  onOpenAnimationPanel,
+  onAddKeyframe,
+}) {
+  const { t } = useLanguage();
+  const clip = selectedClip?.clip || {};
+  const asset = clip.asset || {};
+  const category = getClipCategory(clip);
+  const assetType = asset.type || "clip";
+  const isText = category === "text";
+  const isMedia = category === "media";
+  const isShape = category === "shapes";
+  const mediaKind = assetType === "audio" ? "Audio" : assetType === "image" ? "Image" : "Video";
+  const title = isText ? "Selected Text" : isShape ? "Selected Shape" : `Selected ${mediaKind}`;
+  const pill = isText ? "Text" : isShape ? "Shapes" : "Media";
+
+  const update = (updates, message) => onUpdateClip(updates, message ? t(message) : message);
+  const updateNumber = (value, buildUpdate, message) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return;
+    update(buildUpdate(numericValue), message);
+  };
+
+  const width = Math.max(1, Math.round(staticNumber(clip.width, assetType === "image" ? 400 : 600)));
+  const height = Math.max(1, Math.round(staticNumber(clip.height, isText ? 150 : 300)));
+  const keyframeTime = getClipRelativePlaybackTime(clip, playbackTime);
+  const start = formatInputNumber(clip.start, 0, 3);
+  const length = Math.max(0.1, formatInputNumber(clip.length, 5, 3));
+  const scale = formatInputNumber(getKeyframedScalarValueAtTime(clip.scale, keyframeTime, 1, 3), 1, 3);
+  const opacity = formatInputNumber(getKeyframedScalarValueAtTime(clip.opacity, keyframeTime, 1, 2), 1, 2);
+  const offset = clip.offset || {};
+  const rotate = clip.transform?.rotate?.angle;
+  const rotation = formatInputNumber(getKeyframedScalarValueAtTime(rotate, keyframeTime, 0, 2), 0, 2);
+  const transitionIn = clip.transition?.in || "";
+  const transitionOut = clip.transition?.out || "";
+  const effect = clip.effect || "";
+
+  const font = asset.font || {};
+  const fontFamily = font.family || "Work Sans";
+  const fontSize = Math.max(8, Math.round(staticNumber(font.size, 48)));
+  const fontWeight = Math.max(100, Math.round(staticNumber(font.weight, 400)));
+  const textColor = normalizeHexColor(font.color) || "#111111";
+  const align = asset.align || asset.alignment || {};
+  const background = asset.background || {};
+  const stroke = asset.stroke || {};
+  const textBackgroundColor = normalizeHexColor(background.color) || "#ffffff";
+  const textBackgroundOpacity = formatInputNumber(background.opacity, 0, 2);
+  const strokeColor = normalizeHexColor(stroke.color) || "#000000";
+  const strokeWidth = Math.max(0, Math.round(staticNumber(stroke.width, 0)));
+
+  const mediaVolume = Math.max(0, Math.min(1, formatInputNumber(asset.volume, 1, 2)));
+  const mediaTrim = Math.max(0, formatInputNumber(asset.trim, 0, 3));
+  const mediaCrop = asset.crop || {};
+
+  const shapeStyle = extractShapeStyle(asset.src);
+  const shapeFill = normalizeHexColor(shapeStyle.fill) || "#fecaca";
+  const shapeStroke = normalizeHexColor(shapeStyle.stroke) || "#ef4444";
+  const shapeStrokeWidth = Math.max(1, Math.round(staticNumber(shapeStyle.strokeWidth, 3)));
+
+  const updateAsset = (assetUpdates, message) => {
+    update({ asset: { ...asset, ...assetUpdates } }, message);
+  };
+
+  const updateTextFont = (fontUpdates, message) => {
+    updateAsset({ font: { ...font, ...fontUpdates } }, message);
+  };
+
+  const updateTextBackground = (backgroundUpdates, message) => {
+    updateAsset({ background: { ...background, ...backgroundUpdates } }, message);
+  };
+
+  const updateTextStroke = (strokeUpdates, message) => {
+    updateAsset({ stroke: { ...stroke, ...strokeUpdates } }, message);
+  };
+
+  const updateShapeStyle = (styleUpdates) => {
+    const nextStyle = { ...shapeStyle, ...styleUpdates };
+    updateAsset({ src: createShapeSvg(nextStyle.shapeType || "rect", width, height, nextStyle) }, "Shape updated.");
+  };
+
+  return (
+    <div className="flex min-h-full flex-col">
+      <div className="flex-1 space-y-3 pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-on-surface">{t(title)}</p>
+            <p className="text-xs font-semibold text-on-surface-variant">{t("Track {n}", { n: Number(selectedClip?.trackIndex ?? 0) + 1 })}</p>
+          </div>
+          <span className="rounded-full border border-separator px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+            {t(pill)}
+          </span>
+        </div>
+
+        {isText ? (
+          <>
+            <Section title="Style">
+              <Field label="Text">
+                <textarea
+                  rows={3}
+                  value={asset.text || ""}
+                  onChange={(event) => updateAsset({ text: event.target.value }, "Text updated.")}
+                  className={`${inputClass} min-h-[74px] resize-y`}
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <SelectField label="Font" value={fontFamily} options={FONT_OPTIONS} onChange={(value) => updateTextFont({ family: value }, "Font family updated.")} />
+                <NumberField label="Font Size" min="8" step="1" value={fontSize} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, font: { ...font, size: Math.max(8, Math.round(number)) } } }), "Font size updated.")} />
+                <SelectField label="Weight" value={String(fontWeight)} options={FONT_WEIGHTS.map(String)} onChange={(value) => updateTextFont({ weight: Number(value) }, "Font weight updated.")} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <SelectField label="Horizontal Align" value={align.horizontal || "center"} options={["left", "center", "right"]} onChange={(value) => updateAsset({ align: { ...align, horizontal: value } }, "Alignment updated.")} />
+                <SelectField label="Vertical Align" value={align.vertical || "middle"} options={["top", "middle", "bottom"]} onChange={(value) => updateAsset({ align: { ...align, vertical: value } }, "Alignment updated.")} />
+              </div>
+              <NumberField label="Line Height" min="0.5" step="0.1" value={formatInputNumber(font.lineHeight, 1, 2)} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, font: { ...font, lineHeight: Math.max(0.5, Number(number.toFixed(2))) } } }), "Line height updated.")} />
+            </Section>
+
+            <Section title="Color">
+              <ColorField label="Text Color" value={textColor} onChange={(value) => updateTextFont({ color: value }, "Text color updated.")} />
+              <div className="grid grid-cols-2 gap-2">
+                <ColorField label="Background" value={textBackgroundColor} onChange={(value) => updateTextBackground({ color: value }, "Background color updated.")} />
+                <NumberField label="BG Opacity" min="0" max="1" step="0.05" value={textBackgroundOpacity} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, background: { ...background, opacity: Math.max(0, Math.min(1, Number(number.toFixed(2)))) } } }), "Background opacity updated.")} />
+                <ColorField label="Stroke Color" value={strokeColor} onChange={(value) => updateTextStroke({ color: value }, "Stroke color updated.")} />
+                <NumberField label="Stroke Width" min="0" step="1" value={strokeWidth} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, stroke: { ...stroke, width: Math.max(0, Math.round(number)) } } }), "Stroke width updated.")} />
+              </div>
+            </Section>
+          </>
+        ) : null}
+
+        {isMedia ? (
+          <Section title={mediaKind}>
+            <div className="grid grid-cols-2 gap-2">
+              {assetType === "video" ? (
+                <NumberField label="Trim" min="0" step="0.1" value={mediaTrim} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, trim: Math.max(0, Number(number.toFixed(3))) } }), "Trim updated.")} />
+              ) : null}
+              {assetType === "video" || assetType === "audio" ? (
+                <NumberField label="Volume" min="0" max="1" step="0.05" value={mediaVolume} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, volume: Math.max(0, Math.min(1, Number(number.toFixed(2)))) } }), "Volume updated.")} />
+              ) : null}
+            </div>
+            {assetType === "video" || assetType === "audio" ? (
+              <button
+                type="button"
+                onClick={() => updateAsset({ volume: mediaVolume > 0 ? 0 : 1 }, mediaVolume > 0 ? "Muted." : "Unmuted.")}
+                className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition ${mediaVolume <= 0 ? "bg-primary text-on-primary hover:bg-primary/90" : "bg-surface-container text-on-surface hover:bg-surface-container-high "}`}
+              >
+                <Icon className="text-[15px]">{mediaVolume <= 0 ? "volume_off" : "volume_up"}</Icon>
+                {mediaVolume <= 0 ? t("Unmute") : t("Mute")}
+              </button>
+            ) : null}
+          </Section>
+        ) : null}
+
+        {assetType === "video" ? (
+          <Section title="Crop">
+            <div className="grid grid-cols-2 gap-2">
+              {["top", "right", "bottom", "left"].map((field) => (
+                <NumberField
+                  key={field}
+                  label={field[0].toUpperCase() + field.slice(1)}
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formatInputNumber(mediaCrop[field], 0, 3)}
+                  onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, crop: { ...mediaCrop, [field]: Math.max(0, Math.min(1, Number(number.toFixed(3)))) } } }), "Crop updated.")}
+                />
+              ))}
+            </div>
+          </Section>
+        ) : null}
+
+        {isShape ? (
+          <Section title="Shape">
+            <div className="grid grid-cols-2 gap-2">
+              <ColorField label="Fill" value={shapeFill} onChange={(value) => updateShapeStyle({ fill: value })} />
+              <ColorField label="Stroke" value={shapeStroke} onChange={(value) => updateShapeStyle({ stroke: value })} />
+            </div>
+            <NumberField label="Stroke Width" min="1" step="1" value={shapeStrokeWidth} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, src: createShapeSvg(shapeStyle.shapeType || "rect", width, height, { ...shapeStyle, strokeWidth: Math.max(1, Math.round(number)) }) } }), "Shape updated.")} />
+          </Section>
+        ) : null}
+
+        <Section title="Transform">
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label="Scale" min="0.05" step="0.05" value={scale} onChange={(value) => updateNumber(value, (number) => ({ scale: Math.max(0.05, Number(number.toFixed(3))) }), "Scale updated.")} />
+            <NumberField label="Opacity" min="0" max="1" step="0.05" value={opacity} onChange={(value) => updateNumber(value, (number) => ({ opacity: Math.max(0, Math.min(1, Number(number.toFixed(2)))) }), "Opacity updated.")} />
+            <NumberField label="X Position" min="-1" max="1" step="0.05" value={formatInputNumber(getKeyframedScalarValueAtTime(offset.x, keyframeTime, 0, 4), 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, x: Number(number.toFixed(4)) } }), "X position updated.")} />
+            <NumberField label="Y Position" min="-1" max="1" step="0.05" value={formatInputNumber(getKeyframedScalarValueAtTime(offset.y, keyframeTime, 0, 4), 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, y: Number(number.toFixed(4)) } }), "Y position updated.")} />
+          </div>
+          <NumberField label="Rotation" min="-360" max="360" step="1" value={rotation} onChange={(value) => updateNumber(value, (number) => ({ transform: { ...(clip.transform || {}), rotate: { ...(clip.transform?.rotate || {}), angle: Number(number.toFixed(2)) } } }), "Rotation updated.")} />
+        </Section>
+
+        <Section title="Timing">
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label="Start" min="0" step="0.1" value={start} onChange={(value) => updateNumber(value, (number) => ({ start: Math.max(0, Number(number.toFixed(3))) }), "Start updated.")} />
+            <NumberField label="Length" min="0.1" step="0.1" value={length} onChange={(value) => updateNumber(value, (number) => ({ length: Math.max(0.1, Number(number.toFixed(3))) }), "Length updated.")} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <SelectField label="Transition In" value={transitionIn} options={TRANSITION_OPTIONS} onChange={(value) => update({ transition: value || transitionOut ? { ...(clip.transition || {}), in: value || undefined } : undefined }, "Transition updated.")} />
+            <SelectField label="Transition Out" value={transitionOut} options={TRANSITION_OPTIONS} onChange={(value) => update({ transition: transitionIn || value ? { ...(clip.transition || {}), out: value || undefined } : undefined }, "Transition updated.")} />
+          </div>
+          <SelectField label="Effect" value={effect} options={EFFECT_OPTIONS} onChange={(value) => update({ effect: value || undefined }, "Effect updated.")} />
+        </Section>
+
+        <Section title="Size & Position">
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label="Width" min="1" step="1" value={width} onChange={(value) => updateNumber(value, (number) => ({ width: Math.max(1, Math.round(number)) }), "Width updated.")} />
+            <NumberField label="Height" min="1" step="1" value={height} onChange={(value) => updateNumber(value, (number) => ({ height: Math.max(1, Math.round(number)) }), "Height updated.")} />
+          </div>
+        </Section>
+
+        <Section
+          title="Animation"
+          action={(
+            <button type="button" onClick={onOpenAnimationPanel} className="inline-flex h-7 items-center gap-1 rounded-full border border-separator px-2.5 text-[11px] font-bold text-on-surface-variant transition hover:bg-surface-container">
+              <Icon className="text-[14px]">show_chart</Icon>
+              {t("Animation")}
+            </button>
+          )}
+        >
+          <button
+            type="button"
+            onClick={onAddKeyframe}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+          >
+            <svg width="9" height="9" viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="6" height="6" fill="currentColor" transform="rotate(45 4 4)" /></svg>
+            {t("Add Keyframe")} T={keyframeTime.toFixed(2)}s
+          </button>
+        </Section>
+      </div>
+    </div>
+  );
+}
