@@ -631,20 +631,82 @@ export default function FactoryStatusPage() {
                     </button>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "目標" : "Goal"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "実績" : "Actual"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.actualQuantity + (liveByFactory[group.factory]?.pieces || 0))}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "良品" : "Good"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.goodQuantity + Math.max(0, (liveByFactory[group.factory]?.pieces || 0) - (liveByFactory[group.factory]?.ng || 0)))}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "不良" : "NG"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.ngQuantity + (liveByFactory[group.factory]?.ng || 0))}</span></span>
-                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "進捗" : "Progress"}</span> <span className="font-mono freya-tabular font-semibold text-[var(--freya-blue)]">{rateOf(group.overview.actualQuantity + (liveByFactory[group.factory]?.pieces || 0), group.goal.totalTargetQuantity).toLocaleString()}%</span></span>
-                  </div>
+                  {(() => {
+                    const live = liveByFactory[group.factory] || { pieces: 0, ng: 0 };
+                    const goal = Number(group.goal.totalTargetQuantity) || 0;
+                    const submitted = group.overview.actualQuantity;
+                    const actual = submitted + live.pieces;
+                    const good = group.overview.goodQuantity + Math.max(0, live.pieces - live.ng);
+                    const ng = group.overview.ngQuantity + live.ng;
+                    const rate = rateOf(actual, goal);
+                    const diff = actual - goal;
+                    const reached = goal > 0 && actual >= goal;
+                    const scaleMax = Math.max(goal, actual, 1);
+                    const fillPct = (actual / scaleMax) * 100;
+                    const goalPct = (goal / scaleMax) * 100;
+                    const tone = reached ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--freya-blue)]";
+                    const tile = "rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2";
+                    const tileLabel = "text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]";
+                    const tileValue = "mt-0.5 font-mono freya-tabular text-lg font-bold text-[var(--text-primary)]";
+                    return (
+                      <div className="mt-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+                          <div className={`${tile} border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/5`}>
+                            <div className={`${tileLabel} text-[var(--freya-blue)]`}>{isJa ? "本日の目標" : "Today's goal"}</div>
+                            <div className={`${tileValue} text-[var(--freya-blue)]`}>{formatFactoryStatusNumber(goal)}</div>
+                            <div className="text-[11px] text-[var(--text-muted)]">{isJa ? "生産目標の合計" : "Sum of production goals"}</div>
+                          </div>
+                          <div className={tile}>
+                            <div className={tileLabel}>{isJa ? "実績" : "Actual"}</div>
+                            <div className={tileValue}>{formatFactoryStatusNumber(actual)}</div>
+                            <div className="text-[11px] text-[var(--text-muted)]">
+                              {isJa ? "提出済み" : "Submitted"} {formatFactoryStatusNumber(submitted)}
+                              {live.pieces > 0 ? ` + ${isJa ? "稼働中" : "running"} ${formatFactoryStatusNumber(live.pieces)}` : ""}
+                            </div>
+                          </div>
+                          <div className={tile}>
+                            <div className={tileLabel}>{isJa ? "良品" : "Good"}</div>
+                            <div className={`${tileValue} text-emerald-600 dark:text-emerald-400`}>{formatFactoryStatusNumber(good)}</div>
+                            <div className="text-[11px] text-[var(--text-muted)]">{isJa ? "不良を除く" : "NG excluded"}</div>
+                          </div>
+                          <div className={tile}>
+                            <div className={tileLabel}>{isJa ? "不良 (NG)" : "NG"}</div>
+                            <div className={`${tileValue} ${ng > 0 ? "text-red-600 dark:text-red-400" : ""}`}>{formatFactoryStatusNumber(ng)}</div>
+                            <div className="text-[11px] text-[var(--text-muted)]">{actual > 0 ? `${(Math.round((ng / actual) * 1000) / 10).toLocaleString()}% ${isJa ? "不良率" : "defect rate"}` : "—"}</div>
+                          </div>
+                          <div className={tile}>
+                            <div className={tileLabel}>{reached ? (isJa ? "目標超過" : "Over goal") : (isJa ? "残り" : "Remaining")}</div>
+                            <div className={`${tileValue} ${tone}`}>{reached ? "+" : ""}{formatFactoryStatusNumber(Math.abs(diff))}</div>
+                            <div className="text-[11px] text-[var(--text-muted)]">{reached ? (isJa ? "目標達成" : "Goal reached") : (isJa ? "目標まで" : "Until goal")}</div>
+                          </div>
+                        </div>
 
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
-                    <div
-                      className="h-full rounded-full bg-[var(--freya-blue)] transition-all duration-300"
-                      style={{ width: `${Math.min(rateOf(group.overview.actualQuantity + (liveByFactory[group.factory]?.pieces || 0), group.goal.totalTargetQuantity), 100)}%` }}
-                    />
-                  </div>
+                        <div>
+                          <div className="mb-5 flex items-center justify-between text-xs">
+                            <span className="font-semibold text-[var(--text-primary)]">{isJa ? "目標に対する進捗" : "Progress toward goal"}</span>
+                            <span className={`font-mono freya-tabular font-bold ${tone}`}>{rate.toLocaleString()}%</span>
+                          </div>
+                          <div className="relative h-3 rounded-full bg-[var(--surface-subtle)]" title={`${formatFactoryStatusNumber(actual)} / ${formatFactoryStatusNumber(goal)}`}>
+                            <div
+                              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${reached ? "bg-emerald-500" : "bg-[var(--freya-blue)]"}`}
+                              style={{ width: `${Math.min(100, fillPct)}%` }}
+                            />
+                            {goal > 0 ? (
+                              <div className="absolute -top-1 -bottom-1 w-0.5 bg-[var(--text-primary)]" style={{ left: `calc(${goalPct}% - 1px)` }}>
+                                <span className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-[var(--text-secondary)]">
+                                  {isJa ? "目標" : "Goal"} {formatFactoryStatusNumber(goal)}
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="mt-1 flex justify-between text-[10px] text-[var(--text-muted)] font-mono freya-tabular">
+                            <span>0</span>
+                            <span>{formatFactoryStatusNumber(scaleMax)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                     <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "稼働中" : "Running"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.activeMachines)}</span></span>
