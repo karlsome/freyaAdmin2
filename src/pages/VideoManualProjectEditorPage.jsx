@@ -17,7 +17,7 @@ import {
   clipBoxFromDocument,
   createBubbleClips,
   documentFieldsFromBox,
-  findBubblePair,
+  getBubbleAliasInfo,
   parseBubbleGeometry,
 } from "../components/videoManual/bubbleUtils";
 import {
@@ -1172,56 +1172,85 @@ export default function VideoManualProjectEditorPage() {
   }, [readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh]);
 
   const bubbleSyncingRef = useRef(false);
+  const bubbleLastRef = useRef(new Map());
 
-  // Keeps a speech bubble's svg shape and its text clip together: moving/resizing/retiming one updates the other.
-  const syncBubblePair = useCallback(async (change) => {
+  // Keeps a speech bubble's svg shape and its text clip together. Canvas drags/resizes only emit a generic
+  // `edit:changed`, so instead of relying on which clip fired, compare each bubble's clips with the last known
+  // state: if only the text changed the shape follows, if only the shape changed the text follows.
+  const reconcileBubbles = useCallback(async () => {
     const edit = editRef.current;
-    const current = change?.current;
-    if (!edit || !current || bubbleSyncingRef.current) return;
+    if (!edit || bubbleSyncingRef.current) return;
 
-    const editData = edit.getEdit();
-    const pair = findBubblePair(editData, current.trackIndex, current.clipIndex);
-    if (!pair) return;
     const editSize = { width: edit.size.width, height: edit.size.height };
-    const fromText = current.trackIndex === pair.text.trackIndex && current.clipIndex === pair.text.clipIndex;
-    const geometry = parseBubbleGeometry(pair.shape.clip.asset?.src);
-    const shapeBox = clipBoxFromDocument(pair.shape.clip, editSize);
-    const textBox = clipBoxFromDocument(pair.text.clip, editSize);
-    if (!geometry || !shapeBox || !textBox) return;
+    const sigOf = (clip) => JSON.stringify([clip.width, clip.height, clip.position, clip.offset, clip.start, clip.length, clip.asset?.type === "svg" ? clip.asset.src : ""]);
+    const collect = () => {
+      const groups = new Map();
+      (edit.getEdit()?.timeline?.tracks || []).forEach((track, trackIndex) => {
+        (track?.clips || []).forEach((clip, clipIndex) => {
+          const info = getBubbleAliasInfo(clip);
+          if (!info) return;
+          const group = groups.get(info.groupId) || {};
+          group[info.role] = { trackIndex, clipIndex, clip };
+          groups.set(info.groupId, group);
+        });
+      });
+      return groups;
+    };
 
-    const timing = (clip) => ({ start: clip.start, length: clip.length });
-    const sameTiming = pair.shape.clip.start === pair.text.clip.start && pair.shape.clip.length === pair.text.clip.length;
     bubbleSyncingRef.current = true;
     try {
-      if (fromText) {
-        const oldAbs = bubbleAbsFromBox(shapeBox, geometry);
-        const resized = Math.abs(oldAbs.body.width - textBox.width) > 0.5 || Math.abs(oldAbs.body.height - textBox.height) > 0.5;
-        const moved = Math.abs(oldAbs.body.left - textBox.left) > 0.5 || Math.abs(oldAbs.body.top - textBox.top) > 0.5;
-        if (!resized && !moved && sameTiming) return;
-        // Moving the text carries the pointer along; resizing keeps the pointer where it is.
-        const tip = resized
-          ? oldAbs.tip
-          : { x: oldAbs.tip.x + (textBox.left - oldAbs.body.left), y: oldAbs.tip.y + (textBox.top - oldAbs.body.top) };
-        const next = bubbleBoxFromAbs(textBox, tip);
-        const style = extractShapeStyle(pair.shape.clip.asset.src);
-        await edit.updateClip(pair.shape.trackIndex, pair.shape.clipIndex, {
-          asset: { ...pair.shape.clip.asset, src: buildBubbleSvg(next.box.width, next.box.height, next.geometry, style) },
-          ...documentFieldsFromBox(next.box, editSize),
-          ...timing(pair.text.clip),
-        });
-      } else {
-        const abs = bubbleAbsFromBox(shapeBox, geometry);
-        const moved = Math.abs(abs.body.left - textBox.left) > 0.5 || Math.abs(abs.body.top - textBox.top) > 0.5
-          || Math.abs(abs.body.width - textBox.width) > 0.5 || Math.abs(abs.body.height - textBox.height) > 0.5;
-        if (!moved && sameTiming) return;
-        await edit.updateClip(pair.text.trackIndex, pair.text.clipIndex, {
-          ...documentFieldsFromBox(abs.body, editSize),
-          ...timing(pair.shape.clip),
-        });
+      const last = bubbleLastRef.current;
+      for (const [groupId, group] of collect()) {
+        if (!group.shape || !group.text) continue;
+        const previous = last.get(groupId);
+        if (!previous) continue;
+        const shapeChanged = sigOf(group.shape.clip) !== previous.shape;
+        const textChanged = sigOf(group.text.clip) !== previous.text;
+        if (shapeChanged === textChanged) continue;
+
+        const geometry = parseBubbleGeometry(group.shape.clip.asset?.src);
+        const shapeBox = clipBoxFromDocument(group.shape.clip, editSize);
+        const textBox = clipBoxFromDocument(group.text.clip, editSize);
+        if (!geometry || !shapeBox || !textBox) continue;
+        const timing = (clip) => ({ start: clip.start, length: clip.length });
+
+        if (textChanged) {
+          const oldAbs = bubbleAbsFromBox(shapeBox, geometry);
+          const resized = Math.abs(oldAbs.body.width - textBox.width) > 0.5 || Math.abs(oldAbs.body.height - textBox.height) > 0.5;
+          // Moving the text carries the pointer along; resizing keeps the pointer where it is.
+          const tip = resized
+            ? oldAbs.tip
+            : { x: oldAbs.tip.x + (textBox.left - oldAbs.body.left), y: oldAbs.tip.y + (textBox.top - oldAbs.body.top) };
+          const next = bubbleBoxFromAbs(textBox, tip);
+          const style = extractShapeStyle(group.shape.clip.asset.src);
+          // eslint-disable-next-line no-await-in-loop -- clips must be updated one at a time
+          await edit.updateClip(group.shape.trackIndex, group.shape.clipIndex, {
+            asset: { ...group.shape.clip.asset, src: buildBubbleSvg(next.box.width, next.box.height, next.geometry, style) },
+            ...documentFieldsFromBox(next.box, editSize),
+            ...timing(group.text.clip),
+          });
+        } else {
+          const abs = bubbleAbsFromBox(shapeBox, geometry);
+          const textAlreadyMatches = Math.abs(abs.body.left - textBox.left) < 0.5 && Math.abs(abs.body.top - textBox.top) < 0.5
+            && Math.abs(abs.body.width - textBox.width) < 0.5 && Math.abs(abs.body.height - textBox.height) < 0.5
+            && group.shape.clip.start === group.text.clip.start && group.shape.clip.length === group.text.clip.length;
+          if (textAlreadyMatches) continue;
+          // eslint-disable-next-line no-await-in-loop -- clips must be updated one at a time
+          await edit.updateClip(group.text.trackIndex, group.text.clipIndex, {
+            ...documentFieldsFromBox(abs.body, editSize),
+            ...timing(group.shape.clip),
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to sync speech bubble:", error);
     } finally {
+      // Record the settled state of every bubble as the new baseline
+      const next = new Map();
+      for (const [groupId, group] of collect()) {
+        if (group.shape && group.text) next.set(groupId, { shape: sigOf(group.shape.clip), text: sigOf(group.text.clip) });
+      }
+      bubbleLastRef.current = next;
       window.setTimeout(() => { bubbleSyncingRef.current = false; }, 0);
     }
   }, []);
@@ -1241,7 +1270,7 @@ export default function VideoManualProjectEditorPage() {
     syncSelectedClip,
     syncSelectedClipFromDocument,
     syncSteps,
-    syncBubblePair,
+    reconcileBubbles,
   };
   const projectRef = useRef(project);
   projectRef.current = project;
@@ -1262,7 +1291,7 @@ export default function VideoManualProjectEditorPage() {
     const syncSelectedClip = (...args) => editorHandlersRef.current.syncSelectedClip(...args);
     const syncSelectedClipFromDocument = (...args) => editorHandlersRef.current.syncSelectedClipFromDocument(...args);
     const syncSteps = (...args) => editorHandlersRef.current.syncSteps(...args);
-    const syncBubblePair = (...args) => editorHandlersRef.current.syncBubblePair(...args);
+    const reconcileBubbles = (...args) => editorHandlersRef.current.reconcileBubbles(...args);
 
     sdkInitialized.current = true;
     const { template, isPlaceholder: startsEmpty } = prepareEditForEditor(initialProject.edit);
@@ -1345,7 +1374,8 @@ export default function VideoManualProjectEditorPage() {
           }));
         });
 
-        unsubs.push(edit.events.on("clip:updated", syncBubblePair));
+        unsubs.push(edit.events.on("clip:updated", reconcileBubbles));
+        unsubs.push(edit.events.on("edit:changed", reconcileBubbles));
         unsubs.push(edit.events.on("clip:selected", syncSelectedClip));
         unsubs.push(edit.events.on("selection:cleared", () => syncSelectedClip(null)));
         unsubs.push(edit.events.on("clip:updated", (change) => {
@@ -1364,6 +1394,7 @@ export default function VideoManualProjectEditorPage() {
         edit.pause?.();
         fitTimelineToEdit(true);
         syncAll();
+        reconcileBubbles();
         scheduleTimelineKeyframeRefresh();
       } catch (error) {
         disposeSDK();
@@ -2172,6 +2203,7 @@ export default function VideoManualProjectEditorPage() {
         window.setTimeout(() => { bubbleSyncingRef.current = false; }, 0);
       }
       syncSteps();
+      window.setTimeout(() => reconcileBubbles(), 0);
       showNotice(t("Speech bubble added."));
       return;
     }
@@ -2189,7 +2221,7 @@ export default function VideoManualProjectEditorPage() {
     });
     syncSteps();
     showNotice(t("{name} added.", { name: t(shapeType === "rect" ? "Rectangle" : shapeType[0].toUpperCase() + shapeType.slice(1)) }));
-  }, [getPlaybackTime, showNotice, syncSteps]);
+  }, [getPlaybackTime, reconcileBubbles, showNotice, syncSteps]);
 
   // Convert a drop position on the canvas into a clip offset (fraction of the canvas, centre origin, y up).
   const getCanvasDropOffset = useCallback((event) => {
