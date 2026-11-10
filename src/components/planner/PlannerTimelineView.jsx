@@ -275,6 +275,19 @@ export default function PlannerTimelineView({
                         };
                         const isTileStart = neighbourId(-1) !== product._scheduleId;
                         const isTileEnd = neighbourId(1) !== product._scheduleId;
+                        // The same schedule resumes after a break (or continues from before one): dashed edge + "continued" label
+                        const scanFor = (dir) => {
+                          let i = slotIndex + dir;
+                          while (mappedSlots[i] && isBreakAtSlot(mappedSlots[i].slotMinutes, equipmentName, breaks)) i += dir;
+                          const near = mappedSlots[i];
+                          return Boolean(near) && getProductForSlot(near.slotMinutes, equipmentName, plannedItems, breaks)?._scheduleId === product._scheduleId;
+                        };
+                        const continuesBefore = isTileStart && scanFor(-1);
+                        const continuesAfter = isTileEnd && scanFor(1);
+                        const edgeStyle = (isEdge, continued) => {
+                          if (!isEdge) return "none";
+                          return continued ? `3px dashed ${product.color}` : "2px solid var(--surface, #fff)";
+                        };
                         const edge = `3px solid ${product.color}`;
                         return (
                           <div
@@ -300,16 +313,24 @@ export default function PlannerTimelineView({
                               borderTop: edge,
                               borderBottom: edge,
                               // 2px white gap, then the 4px coloured edge, so same-colour neighbours still separate
-                              borderLeft: isTileStart ? "2px solid var(--surface, #fff)" : "none",
-                              borderRight: isTileEnd ? "2px solid var(--surface, #fff)" : "none",
+                              borderLeft: edgeStyle(isTileStart, continuesBefore),
+                              borderRight: edgeStyle(isTileEnd, continuesAfter),
                               boxShadow: [
-                                isTileStart ? `inset 4px 0 0 ${product.color}` : "",
-                                isTileEnd ? `inset -4px 0 0 ${product.color}` : "",
+                                isTileStart && !continuesBefore ? `inset 4px 0 0 ${product.color}` : "",
+                                isTileEnd && !continuesAfter ? `inset -4px 0 0 ${product.color}` : "",
                               ].filter(Boolean).join(", ") || "none",
                               boxSizing: "border-box",
                             }}
                             title={`${product.背番号} · ${product.quantity} pcs`}
                           >
+                            {continuesBefore && !showLabel ? (
+                              <div className="pointer-events-none absolute inset-0 flex items-end px-1.5 pb-1 text-xs font-bold" style={{ color: darkenHex(product.color, 0.45) }}>
+                                ‹ {product.背番号}
+                              </div>
+                            ) : null}
+                            {continuesAfter ? (
+                              <span className="pointer-events-none absolute bottom-1 right-1 text-xs font-black" style={{ color: darkenHex(product.color, 0.45) }}>›</span>
+                            ) : null}
                             {showLabel ? (
                               <>
                                 <div className="absolute inset-0 flex items-end justify-center px-1 pb-1 text-xs font-bold" style={{ color: darkenHex(product.color, 0.45) }}>
