@@ -17,6 +17,7 @@ import {
   clipBoxFromDocument,
   createBubbleClips,
   documentFieldsFromBox,
+  findBubblePair,
   getBubbleAliasInfo,
   parseBubbleGeometry,
 } from "../components/videoManual/bubbleUtils";
