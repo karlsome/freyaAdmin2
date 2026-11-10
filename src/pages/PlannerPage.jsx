@@ -746,6 +746,51 @@ export default function PlannerPage() {
     }
   }
 
+  // Inline "add goal" row of the Edit Goals dialog. Returns true when the goal was created.
+  async function handleAddGoalFromTable({ 背番号, 品番, 品名, quantity }) {
+    if (!factoryName || !planDate) {
+      showFlash(isJa ? "工場と日付を選択してください。" : "Select a factory and date first.", "warning");
+      return false;
+    }
+
+    const pendingGoal = {
+      factory: factoryName,
+      date: planDate,
+      背番号,
+      品番,
+      品名,
+      targetQuantity: quantity,
+      createdBy: getUserDisplayName(authUser),
+    };
+
+    try {
+      const duplicateResult = await checkPlannerGoalDuplicates(factoryName, [{ 背番号, 品番, date: planDate }]);
+      if (duplicateResult?.hasDuplicates && duplicateResult.duplicates?.length) {
+        // Close this dialog first so the duplicate prompt is not stacked on top of it.
+        setBulkEditOpen(false);
+        setDuplicateState({ open: true, existingGoal: duplicateResult.duplicates[0], pendingGoal });
+        return false;
+      }
+
+      await createPlannerGoal(pendingGoal);
+      await refreshAfterMutation(isJa ? "目標を追加しました。" : "Goal added successfully.");
+      return true;
+    } catch (error) {
+      showFlash(error.message || (isJa ? "目標の追加に失敗しました。" : "Failed to add goal."), "error");
+      return false;
+    }
+  }
+
+  // Auto-fill helper for the inline row: returns the product master record or null.
+  async function handleLookupGoalProduct(searchType, searchValue) {
+    try {
+      const result = await lookupPlannerProduct({ searchType, searchValue, factory: factoryName });
+      return result?.success && result.data ? result.data : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleDuplicateResolution(action) {
     const { existingGoal, pendingGoal } = duplicateState;
 
@@ -1743,6 +1788,8 @@ export default function PlannerPage() {
         onDeleteSelected={handleBulkDeleteSelected}
         onDeleteAll={handleBulkDeleteAll}
         onUpdateTarget={handleBulkUpdateTarget}
+        onAddGoal={handleAddGoalFromTable}
+        onLookupProduct={handleLookupGoalProduct}
       />
 
       <PlannerMachineStatusModal
