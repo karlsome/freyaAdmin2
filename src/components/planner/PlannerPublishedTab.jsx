@@ -19,6 +19,8 @@ export default function PlannerPublishedTab({
   renderT0Ref.current = performance.now();
 
   const [selectedVersionId, setSelectedVersionId] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const canManage = canManagePlannerPublished();
 
   console.log(`⏱️ [PlannerPublishedTab] Rendering published tab (loading=${loading})`);
 
@@ -135,7 +137,7 @@ export default function PlannerPublishedTab({
               {isJa ? "更新" : "Refresh"}
             </button>
 
-            {isViewingHistorical && canManagePlannerPublished() && (
+            {editMode && isViewingHistorical && canManage && (
               <button
                 type="button"
                 onClick={() => onRestoreVersion?.(viewedVersion.version)}
@@ -180,7 +182,7 @@ export default function PlannerPublishedTab({
               {versions.map((v) => {
                 const isSelected = String(v.id || v._id) === String(viewedVersion?.id || viewedVersion?._id);
                 const isActive = String(v.id || v._id) === String(activeVersion?.id || activeVersion?._id);
-                return (
+                const chip = (
                   <button
                     key={v.id || v._id}
                     type="button"
@@ -197,13 +199,43 @@ export default function PlannerPublishedTab({
                     )}
                   </button>
                 );
+                if (!(editMode && canManage && !isActive)) return chip;
+                return (
+                  <span key={v.id || v._id} className="inline-flex items-center gap-1">
+                    {chip}
+                    <button
+                      type="button"
+                      disabled={restoring}
+                      onClick={() => {
+                        const msg = isJa ? `第 ${v.version} 版を新しいバージョンとして復元しますか？` : `Restore version ${v.version} as a new version?`;
+                        if (window.confirm(msg)) onRestoreVersion?.(v.version);
+                      }}
+                      className="rounded-[6px] border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-300"
+                    >
+                      {isJa ? "新バージョンとして復元" : "Restore as New Version"}
+                    </button>
+                  </span>
+                );
               })}
             </div>
           </div>
 
-          <span className="text-xs font-mono text-[var(--text-muted)] flex-shrink-0">
-            {assignments.length} {isJa ? "件の確定作業" : "jobs scheduled"}
-          </span>
+          <div className="flex flex-shrink-0 items-center gap-3">
+            {canManage ? (
+              <button
+                type="button"
+                onClick={() => setEditMode((on) => !on)}
+                aria-pressed={editMode}
+                className={`flex items-center gap-1 rounded-[6px] border px-2.5 py-1 text-xs font-semibold transition-colors ${editMode ? "border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-300" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"}`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{editMode ? "edit_off" : "edit"}</span>
+                {editMode ? (isJa ? "編集を終了" : "Exit Edit Version") : (isJa ? "バージョン編集" : "Edit Version")}
+              </button>
+            ) : null}
+            <span className="text-xs font-mono text-[var(--text-muted)]">
+              {assignments.length} {isJa ? "件の確定作業" : "jobs scheduled"}
+            </span>
+          </div>
         </div>
       )}
 

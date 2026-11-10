@@ -56,7 +56,9 @@ import {
   PLANNER_CONFIG,
   buildProductColorMap,
   buildSmartAssignments,
+  calculateBoxesNeeded,
   calculateProductionTime,
+  formatDuration,
   cloneBreaks,
   buildCapabilityKey,
   getMatchingProduct,
@@ -1756,6 +1758,15 @@ export default function PlannerPage() {
         }}
         onConfirm={handleSlotSchedule}
         onOpenScanner={() => setScannerMode("slot")}
+        productColors={productColors}
+        getMetrics={(item, quantity) => {
+          const spec = resolveMachineSpec(item, slotModalState.equipment, capabilities, factoryName);
+          const timing = calculateProductionTime(item, quantity, spec);
+          return {
+            boxes: calculateBoxesNeeded(item, quantity, products, spec),
+            time: timing.formattedTime || formatDuration(timing.totalSeconds),
+          };
+        }}
       />
 
       <PlannerActualProductionModal block={actualDetail} onClose={() => setActualDetail(null)} />
