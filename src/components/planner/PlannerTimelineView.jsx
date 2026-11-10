@@ -304,7 +304,7 @@ export default function PlannerTimelineView({
                                     onRemoveScheduledItem(product);
                                   }}
                                   draggable={false}
-                                  className="absolute right-0.5 top-0.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-danger)] text-[11px] font-bold leading-none text-white shadow-sm transition hover:brightness-110"
+                                  className="absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-sm font-black leading-none text-white shadow-md ring-2 ring-white transition hover:scale-110 hover:bg-red-700"
                                   aria-label={isJa ? `${product.背番号} を削除` : `Remove ${product.背番号}`}
                                   title={isJa ? "スケジュールを削除" : "Delete schedule"}
                                 >
