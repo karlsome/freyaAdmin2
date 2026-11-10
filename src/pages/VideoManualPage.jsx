@@ -15,6 +15,7 @@ import {
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
   patchVideoManualPlaylist,
+  previewVideoManualPlaylistDelete,
   patchVideoManualProject,
 } from "../services/videoManualApi";
 
@@ -532,15 +533,31 @@ export default function VideoManualPage() {
 
   async function handleDeletePlaylist() {
     if (!selectedPlaylist) return;
-    const count = Number(selectedPlaylist.projectCount || projects.length || 0);
-    if (!window.confirm(t("Permanently delete playlist \"{name}\" and its {count} project(s)? This cannot be undone.", { name: selectedPlaylist.name || "", count }))) return;
     setActionError("");
+    let preview = null;
     try {
-      await deleteVideoManualPlaylist(selectedPlaylist._id);
+      preview = await previewVideoManualPlaylistDelete(selectedPlaylist._id);
+    } catch (error) {
+      setActionError(error.message || t("Failed to delete playlist."));
+      return;
+    }
+    const message = t("Permanently delete playlist \"{name}\"?\n\n- {projects} project(s) and their revisions will be deleted.\n- {files} uploaded/deployed file(s) used only by this playlist will be deleted from storage.\n- {kept} file(s) are also used elsewhere and will be kept.\n\nThis cannot be undone.", {
+      name: selectedPlaylist.name || "",
+      projects: preview?.projectCount ?? 0,
+      files: preview?.filesToDelete ?? 0,
+      kept: preview?.filesKept ?? 0,
+    });
+    if (!window.confirm(message)) return;
+    try {
+      const result = await deleteVideoManualPlaylist(selectedPlaylist._id);
       const remaining = playlists.filter((item) => String(item._id) !== String(selectedPlaylist._id));
       setPlaylists(remaining);
       setSelectedPlaylistId(String(remaining[0]?._id || ""));
-      setNotice(t("Deleted playlist \"{name}\".", { name: selectedPlaylist.name || "" }));
+      setNotice(t("Deleted playlist \"{name}\" ({files} file(s) removed, {kept} kept).", {
+        name: selectedPlaylist.name || "",
+        files: result?.filesDeleted ?? 0,
+        kept: result?.filesKept ?? 0,
+      }));
     } catch (error) {
       setActionError(error.message || t("Failed to delete playlist."));
     }
@@ -772,37 +789,39 @@ export default function VideoManualPage() {
         <section className="min-w-0">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold text-on-surface">
-                {selectedPlaylist?.name || t("vmProjectsHeading")}
-              </h2>
+              <div className="flex min-w-0 items-center gap-1">
+                <h2 className="truncate text-lg font-bold text-on-surface">
+                  {selectedPlaylist?.name || t("vmProjectsHeading")}
+                </h2>
+                {selectedPlaylist && canEditProjects ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditingPlaylist(selectedPlaylist)}
+                    aria-label={t("Edit playlist")}
+                    title={t("Edit playlist")}
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-outline transition-colors hover:bg-surface-container hover:text-primary"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                  </button>
+                ) : null}
+                {selectedPlaylist && canDeleteProjects ? (
+                  <button
+                    type="button"
+                    onClick={handleDeletePlaylist}
+                    aria-label={t("Delete playlist")}
+                    title={t("Delete playlist")}
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-outline transition-colors hover:bg-error/10 hover:text-error"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                  </button>
+                ) : null}
+              </div>
               <p className="text-xs text-outline">
                 {selectedPlaylist ? formatProjectCount(filteredProjects.length, t) : t("vmNoPlaylistSelected")}
               </p>
             </div>
 
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            {canEditProjects ? (
-              <button
-                type="button"
-                onClick={() => setEditingPlaylist(selectedPlaylist)}
-                disabled={!selectedPlaylist}
-                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl border border-separator/40 bg-surface-container-low px-3.5 py-2.5 text-xs font-bold text-on-surface transition-all duration-150 hover:bg-surface-container active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-                {t("Edit playlist")}
-              </button>
-            ) : null}
-            {canDeleteProjects ? (
-              <button
-                type="button"
-                onClick={handleDeletePlaylist}
-                disabled={!selectedPlaylist}
-                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl border border-error/30 bg-error/10 px-3.5 py-2.5 text-xs font-bold text-error transition-all duration-150 hover:bg-error/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_delete</span>
-                {t("Delete playlist")}
-              </button>
-            ) : null}
             {canEditProjects ? (
               <button
                 type="button"

@@ -100,6 +100,11 @@ export async function patchVideoManualPlaylist(playlistId, updates) {
   });
 }
 
+export async function previewVideoManualPlaylistDelete(playlistId) {
+  if (!playlistId) throw new Error("playlistId is required");
+  return request(`api/video-manuals-studio/playlists/${playlistId}/delete-preview`);
+}
+
 export async function deleteVideoManualPlaylist(playlistId) {
   if (!playlistId) throw new Error("playlistId is required");
   return request(`api/video-manuals-studio/playlists/${playlistId}`, { method: "DELETE" });
