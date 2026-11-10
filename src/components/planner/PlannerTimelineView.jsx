@@ -171,8 +171,6 @@ export default function PlannerTimelineView({
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needle]);
-  const renderT0Ref = useRef(performance.now());
-  renderT0Ref.current = performance.now();
 
   const brokenDownCount = getBrokenDownEquipmentCount(equipment, unavailableEquipment);
 
@@ -199,12 +197,6 @@ export default function PlannerTimelineView({
       _firstSlot: getFirstVisibleSlotMinutes(p, breaks, startTime),
     }));
   }, [scheduledProducts, breaks, startTime]);
-
-  console.log(`⏱️ [PlannerTimelineView] Rendering timeline grid: ${equipment.length} equipment × ${timeSlots.length} slots (${equipment.length * timeSlots.length * 2} cells), ${scheduledProducts.length} scheduled items`);
-
-  useEffect(() => {
-    console.log(`✅ [PlannerTimelineView] Rendered to DOM in ${(performance.now() - renderT0Ref.current).toFixed(1)}ms`);
-  });
 
   if (!equipment.length) {
     return (
