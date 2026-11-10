@@ -1751,7 +1751,7 @@ export default function VideoManualProjectEditorPage() {
     throw new Error("Render timeout after 10 minutes.");
   }, []);
 
-  const exportRevisionSnapshotAsBlob = useCallback(async (snapshot) => {
+  const exportRevisionSnapshotAsBlob = useCallback(async (snapshot, onProgress = null) => {
     if (typeof VideoEncoder === "undefined") {
       throw new Error("This browser cannot create an MP4 fallback because WebCodecs is not available.");
     }
@@ -1790,6 +1790,8 @@ export default function VideoManualProjectEditorPage() {
       await exportEdit.load();
 
       exporter = new VideoExporter(exportEdit, exportCanvas);
+      // Report progress through our own export modal instead of the SDK's built-in overlay (they used to stack).
+      exporter.configureProgress?.({ showOverlay: false, onProgress });
       return await exporter.exportBlob(outputFps);
     } finally {
       try { exporter?.dispose?.(); } catch { /* Ignore fallback exporter cleanup errors. */ }
@@ -1909,7 +1911,15 @@ export default function VideoManualProjectEditorPage() {
             progress: null,
           });
 
-          const exportedBlob = await exportRevisionSnapshotAsBlob(snapshot);
+          const exportedBlob = await exportRevisionSnapshotAsBlob(snapshot, (percent, text) => {
+            setDeploymentStatus({
+              type: "info",
+              status: "LOCAL_EXPORT",
+              title: "Rendering locally",
+              message: `${text || "Exporting..."} ${percent}%`,
+              progress: percent,
+            });
+          });
           usedLocalFallback = true;
 
           setDeploymentStatus({

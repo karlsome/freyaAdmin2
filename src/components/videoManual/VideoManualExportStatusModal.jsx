@@ -90,8 +90,11 @@ export default function VideoManualExportStatusModal({
           </div>
 
           {progress != null ? (
-            <div className="mt-5 overflow-hidden rounded-full bg-surface-container">
-              <div className="h-2 rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
+            <div className="mt-5">
+              <div className="overflow-hidden rounded-full bg-surface-container">
+                <div className="h-2 rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="mt-2 text-xs font-black tabular-nums text-on-surface-variant">{Math.round(progress)}%</p>
             </div>
           ) : null}
 
