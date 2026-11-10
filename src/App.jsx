@@ -234,6 +234,7 @@ function App() {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/financials" element={<FinancialsPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
+              <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />
               <Route path="/analytics/:tab" element={<AnalyticsPage />} />
