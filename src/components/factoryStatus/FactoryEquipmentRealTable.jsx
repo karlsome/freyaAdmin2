@@ -14,6 +14,8 @@ import { STATUS_THEME, formatAgo, formatNumber, statusLabel } from "../twin/twin
  * Machines running together (OZNC04 <-> OZNC06) are one row with one piece count.
  * Only meaningful for the current production day: for any other date it renders `fallback` (the log based table).
  */
+const runGood = (run) => (run.good != null ? Number(run.good) || 0 : Math.max(0, (Number(run.pieces) || 0) - (Number(run.ng) || 0)));
+
 export default function FactoryEquipmentRealTable({ factory, date, refreshNonce = 0, onLiveTotals, isJa, fallback = null }) {
   const [twin, setTwin] = useState(null);
   const [live, setLive] = useState([]);
@@ -63,7 +65,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
       const primary = byId[unit.id];
       const together = unit.together;
       const runs = (together ? primary?.pair?.completedRuns : primary?.completedRuns) || [];
-      const submitted = runs.reduce((sum, run) => sum + (Number(run.pieces) || 0), 0);
+      const submitted = runs.reduce((sum, run) => sum + runGood(run), 0);
       const liveMs = live.filter((m) => unit.ids.includes(m.machine));
       const hasLive = liveMs.length > 0;
       const activeRuns = unit.ids.map((id) => byId[id]?.activeRun).filter(Boolean);
@@ -87,6 +89,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
         cycles,
         runningSerial,
         runningHinban,
+        inProgressGood: Math.max(0, inProgress - ng),
         total: submitted + Math.max(0, inProgress - ng),
         counters,
         lastCycle: Number.isFinite(lastCycle) ? lastCycle : null,
@@ -113,7 +116,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
 
   const totals = rows.reduce((acc, r) => ({
     submitted: acc.submitted + r.submitted,
-    inProgress: acc.inProgress + r.inProgress,
+    inProgress: acc.inProgress + r.inProgressGood,
     total: acc.total + r.total,
   }), { submitted: 0, inProgress: 0, total: 0 });
 
@@ -127,8 +130,8 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
             <th className={th}>{isJa ? "設備" : "Equipment"}</th>
             <th className={th}>{isJa ? "ステータス" : "Status"}</th>
             <th className={th}>{isJa ? "作業者" : "Operator"}</th>
-            <th className={th}>{isJa ? "進行中" : "In progress"}</th>
-            <th className={th}>{isJa ? "提出済み" : "Submitted"}</th>
+            <th className={th} title={isJa ? "良品数（NG除く）" : "Good pieces (NG excluded)"}>{isJa ? "進行中" : "In progress"}</th>
+            <th className={th} title={isJa ? "良品数（NG除く）" : "Good pieces (NG excluded)"}>{isJa ? "提出済み" : "Submitted"}</th>
             <th className={`${th} text-right`}>{isJa ? "実数（合計）" : "Real total"}</th>
             <th className={th}>{isJa ? "カウンタ" : "Counter"}</th>
             <th className={th}>{isJa ? "最終サイクル" : "Last cycle"}</th>
@@ -157,7 +160,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                       className={`text-left ${row.sessionID ? "cursor-pointer rounded-[4px] px-1 -mx-1 hover:bg-amber-500/10" : "cursor-default"}`}
                     >
                       <div className="font-mono font-semibold text-amber-600 dark:text-amber-400">
-                        {row.runningSerial} · {formatNumber(row.inProgress)} {isJa ? "個" : "pcs"}
+                        {row.runningSerial} · {formatNumber(row.inProgressGood)} {isJa ? "個" : "pcs"}
                       </div>
                       <div className="text-[11px] text-[var(--text-muted)]">
                         {formatNumber(row.cycles)} {isJa ? "サイクル" : "cycles"}{row.ng > 0 ? ` · NG ${formatNumber(row.ng)}` : ""}
@@ -174,10 +177,10 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                           type="button"
                           key={`${run.sebanggo}-${run.start}-${index}`}
                           onClick={() => openSubmittedRun(run)}
-                          title={`${run.start}–${run.end} · ${run.shots} ${isJa ? "ショット" : "shots"} — ${isJa ? "提出記録を表示" : "view submitted record"}`}
+                          title={`${run.start}–${run.end} · ${run.shots} ${isJa ? "ショット" : "shots"}${run.ng ? ` · NG ${run.ng}` : ""} — ${isJa ? "提出記録を表示" : "view submitted record"}`}
                           className="cursor-pointer rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)] hover:border-emerald-500/50 hover:bg-emerald-500/10"
                         >
-                          {run.sebanggo} <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(run.pieces)}</span>
+                          {run.sebanggo} <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(runGood(run))}</span>
                         </button>
                       ))}
                     </div>
