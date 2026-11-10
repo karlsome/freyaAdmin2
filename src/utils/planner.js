@@ -118,7 +118,61 @@ export function getMatchingProduct(item, products = []) {
   )) || null;
 }
 
-export function getProductCapacity(item, products = []) {
+// ─── Per-machine capability overrides (productionCapabilityDB) ──────────────
+// capabilities: { "<factory>::<背番号>::<品番>": { eligibleMachines: [{ equipment, cycleTimeSeconds, pcPerCycle, boxQuantityOverride }] } }
+
+export function buildCapabilityKey(factory = "", sebanggo = "", hinban = "") {
+  return `${String(factory || "").trim()}::${String(sebanggo || "").trim()}::${String(hinban || "").trim()}`;
+}
+
+function toNumberOrNull(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getCapabilityMachine(item, equipment, capabilities, factory) {
+  const name = String(equipment || "").trim();
+  if (!name || !capabilities) return null;
+
+  const key = buildCapabilityKey(factory || item?.factory || item?.工場, item?.背番号, item?.品番);
+  const entry = capabilities[key];
+  if (!entry || !Array.isArray(entry.eligibleMachines)) return null;
+
+  return entry.eligibleMachines.find((machine) => String(machine?.equipment || machine?.設備 || "").trim() === name) || null;
+}
+
+// Cycle time / pcs per cycle / box size for one product on one machine.
+// Priority: capability override → machineConfig (pcPerCycle) → product master → defaults.
+export function resolveMachineSpec(item, equipment = "", capabilities = null, factory = "") {
+  const machine = getCapabilityMachine(item, equipment, capabilities, factory);
+
+  const cycleOverride = toNumberOrNull(machine?.cycleTimeSeconds);
+  const masterCycle = toNumberOrNull(item?.["秒数(1pcs何秒)"]);
+  const cycleTimeSeconds = cycleOverride > 0 ? cycleOverride : (masterCycle > 0 ? masterCycle : PLANNER_CONFIG.defaultCycleTime);
+
+  const pcOverride = toNumberOrNull(machine?.pcPerCycle);
+  let masterPc = toNumberOrNull(item?.pcPerCycle);
+  const config = item?.machineConfig && typeof item.machineConfig === "object" ? item.machineConfig : null;
+  const names = normalizeEquipmentParts(equipment);
+  if (config && names.length === 1) {
+    masterPc = toNumberOrNull(config[names[0]]?.pcPerCycle) ?? masterPc;
+  } else if (config && names.length > 1) {
+    const values = names.map((name) => toNumberOrNull(config[name]?.pcPerCycle)).filter((value) => value !== null);
+    if (values.length === names.length && values.every((value) => value === values[0])) masterPc = values[0];
+  }
+  const pcPerCycle = pcOverride > 0 ? pcOverride : (masterPc > 0 ? masterPc : PLANNER_CONFIG.defaultPcPerCycle);
+
+  const boxOverride = toNumberOrNull(machine?.boxQuantityOverride);
+  const masterBox = toNumberOrNull(item?.["収容数"]);
+  const boxQuantity = boxOverride > 0 ? boxOverride : (masterBox > 0 ? masterBox : null);
+
+  return { cycleTimeSeconds, pcPerCycle, boxQuantity };
+}
+
+export function getProductCapacity(item, products = [], spec = null) {
+  if (spec?.boxQuantity > 0) return spec.boxQuantity;
+
   const directCapacity = Number(item?.["収容数"] || 0);
   if (directCapacity > 0) return directCapacity;
 
@@ -128,22 +182,28 @@ export function getProductCapacity(item, products = []) {
   return matchedCapacity > 0 ? matchedCapacity : 1;
 }
 
-export function calculateBoxesNeeded(item, quantity, products = []) {
-  const capacity = getProductCapacity(item, products);
+export function calculateBoxesNeeded(item, quantity, products = [], spec = null) {
+  const capacity = getProductCapacity(item, products, spec);
   const safeQuantity = Math.max(0, Number(quantity) || 0);
 
   return Math.ceil(safeQuantity / capacity);
 }
 
-export function calculateProductionTime(item, quantity) {
-  const cycleTimeSeconds = Number(item?.["秒数(1pcs何秒)"] || PLANNER_CONFIG.defaultCycleTime) || PLANNER_CONFIG.defaultCycleTime;
-  const pcPerCycle = Number(item?.pcPerCycle || PLANNER_CONFIG.defaultPcPerCycle) || PLANNER_CONFIG.defaultPcPerCycle;
+// 秒数(1pcs何秒) is seconds per piece (not per cycle), so total time = quantity × seconds per piece.
+export function calculateProductionTime(item, quantity, spec = null) {
+  const resolved = spec || resolveMachineSpec(item, item?.equipment);
+  const secondsPerPiece = resolved.cycleTimeSeconds;
+  const pcPerCycle = resolved.pcPerCycle;
   const safeQuantity = Math.max(0, Number(quantity) || 0);
   const cyclesNeeded = Math.ceil(safeQuantity / pcPerCycle);
-  const totalSeconds = cyclesNeeded * cycleTimeSeconds;
+  const totalSeconds = safeQuantity * secondsPerPiece;
 
   return {
     totalSeconds,
+    totalMinutes: totalSeconds / 60,
+    cycleTimeSeconds: secondsPerPiece,
+    secondsPerPiece,
+    pcPerCycle,
     hours: Math.floor(totalSeconds / 3600),
     minutes: Math.floor((totalSeconds % 3600) / 60),
     cyclesNeeded,
@@ -651,8 +711,9 @@ export function sortScheduledProducts(scheduledProducts = []) {
   });
 }
 
-export function createScheduledItem({ goal, equipment, quantity, startMinutes, products = [], productColors = {}, breaks = DEFAULT_BREAKS }) {
-  const estimatedTime = calculateProductionTime(goal, quantity);
+export function createScheduledItem({ goal, equipment, quantity, startMinutes, products = [], productColors = {}, breaks = DEFAULT_BREAKS, capabilities = null, factory = "" }) {
+  const spec = resolveMachineSpec({ ...getMatchingProduct(goal, products), ...goal }, equipment, capabilities, factory || goal?.factory);
+  const estimatedTime = calculateProductionTime(goal, quantity, spec);
   const timing = findNextAvailableTime(startMinutes, estimatedTime.totalSeconds / 60, equipment, breaks);
 
   return {
@@ -662,7 +723,7 @@ export function createScheduledItem({ goal, equipment, quantity, startMinutes, p
     _scheduleId: createScheduleId(goal._id),
     equipment,
     quantity,
-    boxes: calculateBoxesNeeded(goal, quantity, products),
+    boxes: calculateBoxesNeeded(goal, quantity, products, spec),
     estimatedTime,
     startTime: minutesToTime(timing.startTime),
     color: productColors[goal.背番号] || getColorForProduct(goal, products),

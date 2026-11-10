@@ -168,6 +168,25 @@ export async function checkPlannerGoalDuplicates(factory, items) {
   });
 }
 
+// Per-machine cycle time / pcs-per-cycle / box size overrides for products.
+// Returns { "<factory>::<背番号>::<品番>": { eligibleMachines: [...] } }
+export async function resolvePlannerCapabilities({ factory, items = [] } = {}) {
+  if (!factory || !items.length) return {};
+  const result = await requestJson("api/production-capability/resolve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      factory,
+      items: items.map((item) => ({
+        factory,
+        背番号: String(item.背番号 || "").trim(),
+        品番: String(item.品番 || "").trim(),
+      })),
+    }),
+  });
+  return result?.capabilities || {};
+}
+
 export async function lookupPlannerProduct({ searchType, searchValue, factory }) {
   return requestJson("api/production-goals/lookup", {
     method: "POST",

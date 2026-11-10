@@ -44,6 +44,7 @@ import {
   reconcilePlannerGoals,
   restorePlannerPublishedVersion,
   savePlannerPreviewDraft,
+  resolvePlannerCapabilities,
   schedulePlannerGoal,
   updatePlannerGoal,
   upsertPlannerPlan,
@@ -56,7 +57,10 @@ import {
   buildSmartAssignments,
   calculateProductionTime,
   cloneBreaks,
+  buildCapabilityKey,
+  getMatchingProduct,
   createScheduledItem,
+  resolveMachineSpec,
   getLatestEquipmentEnd,
   getProductCapacity,
   getScheduledSpan,
@@ -211,6 +215,9 @@ export default function PlannerPage() {
   // Bulk Edit Goals
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkEditBusy, setBulkEditBusy] = useState(false);
+
+  // Per-machine capability overrides (cycle time / pcs per cycle / box size), cached per product
+  const [capabilities, setCapabilities] = useState({});
 
   // Barcode scanner ("goals" = add goals, "slot" = add goals and schedule at the open slot)
   const [scannerMode, setScannerMode] = useState(null);
@@ -939,6 +946,17 @@ export default function PlannerPage() {
     }
   }
 
+  // Fetch (and cache) capability overrides for the given goals/products; returns the merged map.
+  async function ensureCapabilities(items) {
+    const missing = items.filter((item) => !capabilities[buildCapabilityKey(factoryName, item.背番号, item.品番)]);
+    if (!missing.length) return capabilities;
+
+    const fetched = await resolvePlannerCapabilities({ factory: factoryName, items: missing });
+    const merged = { ...capabilities, ...fetched };
+    setCapabilities(merged);
+    return merged;
+  }
+
   // Create the goal for each scanned 背番号 (or add to the one already set for this date).
   async function applyScannedGoals(items) {
     const existingGoals = await fetchPlannerGoals({ factory: factoryName, date: planDate });
@@ -1007,7 +1025,18 @@ export default function PlannerPage() {
     setSlotSubmitting(true);
 
     try {
-      const nextProducts = [...scheduledProducts];
+      let caps;
+      try {
+        caps = await ensureCapabilities(queue.map((item) => goalsSource.find((goal) => goal._id === item._id) || item));
+      } catch {
+        throw new Error(isJa ? "設備能力マッピングの確認に失敗しました。" : "Failed to validate capability mappings for the selected equipment.");
+      }
+
+      // Start from what is saved now, so a plan edited elsewhere is not overwritten or double-booked.
+      const latestPlans = await fetchPlannerPlans({ factory: factoryName, date: planDate });
+      const nextProducts = latestPlans?.[0]
+        ? normalizePlanProducts(latestPlans[0].products || [], products, productColors)
+        : [...scheduledProducts];
       const scheduleOperations = [];
       let nextStartMinutes = timeToMinutes(slotModalState.startTime);
 
@@ -1029,6 +1058,8 @@ export default function PlannerPage() {
           products,
           productColors,
           breaks,
+          capabilities: caps,
+          factory: factoryName,
         });
 
         const conflict = hasSchedulingConflict(scheduledItem, nextProducts, breaks);
@@ -1198,6 +1229,13 @@ export default function PlannerPage() {
       const workingProducts = [...baseScheduledProducts];
       const scheduleOperations = [];
       const unavailableParts = new Set();
+
+      let caps;
+      try {
+        caps = await ensureCapabilities(Object.values(smartPreview.assignments || {}).flat());
+      } catch {
+        throw new Error(isJa ? "設備能力マッピングの確認に失敗しました。" : "Failed to validate capability mappings.");
+      }
       const maxEndTime = timeToMinutes(timeLimit);
 
       workingProducts.forEach((item) => {
@@ -1244,7 +1282,11 @@ export default function PlannerPage() {
 
             for (let boxIndex = 1; boxIndex <= totalBoxesNeeded; boxIndex += 1) {
               const boxQuantity = Math.min(capacity, remainingQuantity - ((boxIndex - 1) * capacity));
-              const boxTiming = calculateProductionTime(goal, boxQuantity);
+              const boxTiming = calculateProductionTime(
+                goal,
+                boxQuantity,
+                resolveMachineSpec({ ...getMatchingProduct(goal, products), ...goal }, equipmentName, caps, factoryName),
+              );
               const nextWindow = getScheduledSpan({
                 equipment: equipmentName,
                 startTime: minutesToTime(scanTime),
@@ -1270,6 +1312,8 @@ export default function PlannerPage() {
               products,
               productColors,
               breaks,
+              capabilities: caps,
+              factory: factoryName,
             });
 
             const conflict = hasSchedulingConflict(scheduledItem, workingProducts, breaks);

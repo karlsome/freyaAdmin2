@@ -116,12 +116,18 @@ export function resolveBoxQuantity(ctx, item, equipment) {
 }
 
 export function calcProductionTime(ctx, item, quantity, equipment) {
+  // 秒数(1pcs何秒) is seconds per piece, so time = quantity × seconds per piece.
   const cycleSeconds = resolveCycleSeconds(ctx, item, equipment);
   const pc = resolvePcPerCycle(ctx, item, equipment);
-  const cyclesNeeded = Math.ceil(Math.max(0, Number(quantity) || 0) / pc);
-  const totalSeconds = cyclesNeeded * cycleSeconds;
+  const safeQuantity = Math.max(0, Number(quantity) || 0);
+  const cyclesNeeded = Math.ceil(safeQuantity / pc);
+  const totalSeconds = safeQuantity * cycleSeconds;
   return {
     totalSeconds,
+    totalMinutes: totalSeconds / 60,
+    cycleTimeSeconds: cycleSeconds,
+    secondsPerPiece: cycleSeconds,
+    pcPerCycle: pc,
     hours: Math.floor(totalSeconds / 3600),
     minutes: Math.floor((totalSeconds % 3600) / 60),
     cyclesNeeded,
@@ -482,8 +488,7 @@ function partialMachineChoicesForRow(ctx, assignments, row, remainingRows) {
     const minutes = availableProductionMinutes(ctx, start, windowEnd, machine.equipment);
     if (minutes <= 0) return null;
 
-    const secondsPerPiece = resolveCycleSeconds(ctx, record, machine.equipment)
-      / Math.max(1, resolvePcPerCycle(ctx, record, machine.equipment));
+    const secondsPerPiece = resolveCycleSeconds(ctx, record, machine.equipment);
     if (!Number.isFinite(secondsPerPiece) || secondsPerPiece <= 0) return null;
 
     const partialQuantity = Math.min(quantity, Math.floor((minutes * 60) / secondsPerPiece));
@@ -1021,7 +1026,7 @@ export function buildInsertOption(ctx, priorityRowMap, assignments, exception, t
   if (limit <= 0) return null;
 
   const record = productRecord(ctx, { ...row, equipment });
-  const secondsPerPiece = resolveCycleSeconds(ctx, record, equipment) / Math.max(1, resolvePcPerCycle(ctx, record, equipment));
+  const secondsPerPiece = resolveCycleSeconds(ctx, record, equipment);
   if (!Number.isFinite(secondsPerPiece) || secondsPerPiece <= 0) return null;
 
   const next = occupiedWindows(ctx, assignments, equipment).find((w) => w.startMinutes > start);
