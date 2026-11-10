@@ -20,6 +20,7 @@ import PlannerPrintModal from "../components/planner/PlannerPrintModal";
 import PlannerBulkEditGoalsModal from "../components/planner/PlannerBulkEditGoalsModal";
 import PlannerMachineStatusModal from "../components/planner/PlannerMachineStatusModal";
 import PlannerBarcodeScannerModal from "../components/planner/PlannerBarcodeScannerModal";
+import { PlannerActualProductionModal, PlannerInProgressModal } from "../components/planner/PlannerSessionModals";
 import PlannerPreviewTab from "../components/planner/PlannerPreviewTab";
 import PlannerPublishedTab from "../components/planner/PlannerPublishedTab";
 import {
@@ -218,6 +219,10 @@ export default function PlannerPage() {
 
   // Per-machine capability overrides (cycle time / pcs per cycle / box size), cached per product
   const [capabilities, setCapabilities] = useState({});
+
+  // Actual-production / in-progress detail popups opened from the timeline
+  const [actualDetail, setActualDetail] = useState(null);
+  const [inProgressDetail, setInProgressDetail] = useState(null);
 
   // Barcode scanner ("goals" = add goals, "slot" = add goals and schedule at the open slot)
   const [scannerMode, setScannerMode] = useState(null);
@@ -1605,6 +1610,8 @@ export default function PlannerPage() {
                 }}
                 hideUnavailableEquipment={hideUnavailableEquipment}
                 onToggleHideUnavailable={() => setHideUnavailableEquipment((value) => !value)}
+                onActualBlockClick={setActualDetail}
+                onInProgressClick={(equipmentName, slot, session) => setInProgressDetail({ equipment: equipmentName, slot, session })}
                 onSlotSelect={(equipmentName, startTime) => {
                   if (!factoryName) {
                     showFlash(isJa ? "製品を計画する前に工場を選択してください。" : "Select a factory before scheduling products.", "warning");
@@ -1697,6 +1704,9 @@ export default function PlannerPage() {
         onConfirm={handleSlotSchedule}
         onOpenScanner={() => setScannerMode("slot")}
       />
+
+      <PlannerActualProductionModal block={actualDetail} onClose={() => setActualDetail(null)} />
+      {inProgressDetail ? <PlannerInProgressModal key={`${inProgressDetail.equipment}-${inProgressDetail.session?.sessionID}`} target={inProgressDetail} onClose={() => setInProgressDetail(null)} /> : null}
 
       {scannerMode ? (
         <PlannerBarcodeScannerModal

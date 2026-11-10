@@ -285,6 +285,13 @@ export async function fetchPlannerActualProduction(factory, date) {
   return Array.isArray(rows) ? rows : [];
 }
 
+// All tablet log events of one in-progress work session, oldest first.
+export async function fetchPlannerSessionLogs(sessionID) {
+  if (!sessionID) return [];
+  const rows = await query("submittedDB", "tabletLogDB", { sessionID }, { limit: 5000 });
+  return (Array.isArray(rows) ? rows : []).sort((a, b) => new Date(a.Timestamp) - new Date(b.Timestamp));
+}
+
 export async function fetchPlannerInProgress(factory, date) {
   if (!factory || !date) return [];
 

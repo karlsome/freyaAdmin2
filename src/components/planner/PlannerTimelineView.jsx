@@ -53,6 +53,8 @@ export default function PlannerTimelineView({
   onSlotSelect,
   onMoveScheduledItem,
   onRemoveScheduledItem,
+  onActualBlockClick,
+  onInProgressClick,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -322,8 +324,9 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-actual-${slot}`}
-                            className="relative border-r border-[var(--border)]"
+                            className={`relative border-r border-[var(--border)] ${onActualBlockClick ? "cursor-pointer hover:brightness-95" : ""}`}
                             style={{ width: SLOT_WIDTH, backgroundColor: `${color}30` }}
+                            onClick={() => onActualBlockClick?.(block)}
                             title={`${block.背番号} · ${block.totalQuantity} ${isJa ? "個 実績" : "pcs actual"}`}
                           >
                             {showLabel ? (
@@ -339,8 +342,9 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-actual-${slot}`}
-                            className="relative border-r border-amber-400/40 bg-amber-400/15"
+                            className={`relative border-r border-amber-400/40 bg-amber-400/15 ${onInProgressClick ? "cursor-pointer hover:bg-amber-400/25" : ""}`}
                             style={{ width: SLOT_WIDTH }}
+                            onClick={() => onInProgressClick?.(equipmentName, slot, inProgress)}
                             title={`${inProgress.背番号 || inProgress.品番} ${isJa ? "進行中" : "in progress"}`}
                           >
                             <div className="absolute inset-0 flex items-center justify-center gap-1 px-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
