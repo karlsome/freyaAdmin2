@@ -11,6 +11,58 @@ import {
   timeToMinutes,
 } from "./planner";
 
+const PRINT_BASE_URL = ((import.meta.env.VITE_API_URL || "").trim() || "http://localhost:3000/").replace(/\/?$/, "/");
+
+// The planner's product list only carries a few master fields, so scheduled items have no 材料 / 送りピッチ.
+// Like the legacy Freya Admin, look each printed 背番号 up in masterDB right before printing.
+async function enrichItemsWithMaster(items = []) {
+  const serials = [...new Set(items.map((item) => item?.背番号).filter(Boolean))];
+  const masters = {};
+  await Promise.all(serials.map(async (serial) => {
+    try {
+      const res = await fetch(`${PRINT_BASE_URL}api/masterdb/product?seiban=${encodeURIComponent(serial)}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json?.data) masters[serial] = json.data;
+    } catch {
+      // keep the item as is; the cells fall back to "-"
+    }
+  }));
+
+  return items.map((item) => {
+    const master = masters[item?.背番号];
+    if (!master) return item;
+
+    let pitch = parseFloat(master["送りピッチ"]) || 0;
+    let pcPerCycle = parseInt(master.pcPerCycle, 10) || 0;
+    const config = master.machineConfig && typeof master.machineConfig === "object" ? master.machineConfig : null;
+    const names = String(item.equipment || "").split(",").map((name) => name.trim()).filter(Boolean);
+    if (config && names.length) {
+      const configs = names.map((name) => config[name]).filter(Boolean);
+      if (names.length === 1 && configs.length === 1) {
+        pitch = parseFloat(configs[0]["送りピッチ"]) || pitch;
+        pcPerCycle = parseInt(configs[0].pcPerCycle, 10) || pcPerCycle;
+      } else if (names.length > 1 && configs.length > 0) {
+        const firstPitch = parseFloat(configs[0]["送りピッチ"]);
+        const firstPc = parseInt(configs[0].pcPerCycle, 10);
+        const allSame = configs.every((c) => parseFloat(c["送りピッチ"]) === firstPitch && parseInt(c.pcPerCycle, 10) === firstPc);
+        if (allSame) {
+          pitch = firstPitch || pitch;
+          pcPerCycle = firstPc || pcPerCycle;
+        }
+      }
+    }
+
+    return {
+      ...item,
+      材料: master["材料"] || item["材料"] || "",
+      材料背番号: master["材料背番号"] || item["材料背番号"] || "",
+      送りピッチ: pitch || item["送りピッチ"],
+      pcPerCycle: pcPerCycle || item.pcPerCycle,
+    };
+  });
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -797,12 +849,18 @@ export function openPlannerPrintWindow({ factoryName, planDate, scheduledProduct
     throw new Error("No scheduled products available for printing.");
   }
 
-  const html = generatePrintHtml({ factoryName, planDate, scheduledProducts, selectedEquipment, breaks, startTime });
+  // Open the tab synchronously (inside the click) so pop-up blockers allow it, then fill it once master data arrived.
   const nextWindow = getWindowOrThrow("print preview");
-  nextWindow.document.write(html);
-  nextWindow.document.close();
-  nextWindow.onload = () => {
-    nextWindow.focus();
-    nextWindow.print();
-  };
+  nextWindow.document.write("<!DOCTYPE html><title>Loading…</title><body style=\"font-family:sans-serif;padding:24px\">Loading…</body>");
+
+  enrichItemsWithMaster(scheduledProducts)
+    .catch(() => scheduledProducts)
+    .then((items) => {
+      const html = generatePrintHtml({ factoryName, planDate, scheduledProducts: items, selectedEquipment, breaks, startTime });
+      nextWindow.document.open();
+      nextWindow.document.write(html);
+      nextWindow.document.close();
+      nextWindow.focus();
+      setTimeout(() => nextWindow.print(), 300);
+    });
 }

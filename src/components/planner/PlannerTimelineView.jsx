@@ -299,9 +299,14 @@ export default function PlannerTimelineView({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => onRemoveScheduledItem(product)}
-                                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-danger)] text-[9px] text-white opacity-0 shadow-sm transition group-hover:opacity-100"
-                                  aria-label={`Remove ${product.背番号}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onRemoveScheduledItem(product);
+                                  }}
+                                  draggable={false}
+                                  className="absolute right-0.5 top-0.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-danger)] text-[11px] font-bold leading-none text-white shadow-sm transition hover:brightness-110"
+                                  aria-label={isJa ? `${product.背番号} を削除` : `Remove ${product.背番号}`}
+                                  title={isJa ? "スケジュールを削除" : "Delete schedule"}
                                 >
                                   ×
                                 </button>
