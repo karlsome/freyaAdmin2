@@ -223,6 +223,7 @@ export default function VideoManualAddElementsSidebar({
             <TileButton dragPayload={{ kind: "shape", shapeType: "rect" }} onClick={() => onAddShape("rect")} preview={<div className="h-9 w-12 rounded border-2 border-slate-800" />}>Rectangle</TileButton>
             <TileButton dragPayload={{ kind: "shape", shapeType: "circle" }} onClick={() => onAddShape("circle")} preview={<div className="h-11 w-11 rounded-full border-2 border-slate-800" />}>Circle</TileButton>
             <TileButton dragPayload={{ kind: "shape", shapeType: "arrow" }} onClick={() => onAddShape("arrow")} icon="call_made">Arrow</TileButton>
+            <TileButton dragPayload={{ kind: "shape", shapeType: "bubble" }} onClick={() => onAddShape("bubble")} icon="chat_bubble">Speech bubble</TileButton>
             <TileButton dragPayload={{ kind: "shape", shapeType: "line" }} onClick={() => onAddShape("line")} preview={<div className="h-1 w-12 bg-slate-800" />}>Line</TileButton>
           </div>
         </div>

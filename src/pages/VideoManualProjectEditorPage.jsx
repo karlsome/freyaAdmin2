@@ -9,6 +9,17 @@ import VideoManualEditorToolbar from "../components/videoManual/VideoManualEdito
 import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
 import VideoManualRevisionHistoryModal from "../components/videoManual/VideoManualRevisionHistoryModal";
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
+import BubbleTailHandle from "../components/videoManual/BubbleTailHandle";
+import {
+  bubbleAbsFromBox,
+  bubbleBoxFromAbs,
+  buildBubbleSvg,
+  clipBoxFromDocument,
+  createBubbleClips,
+  documentFieldsFromBox,
+  findBubblePair,
+  parseBubbleGeometry,
+} from "../components/videoManual/bubbleUtils";
 import {
   buildRevisionSnapshot,
   buildAnimatedScalarUpdateForClip,
@@ -17,6 +28,7 @@ import {
   cloneJson,
   createAnimatedClipStateSnapshot,
   createShapeSvg,
+  extractShapeStyle,
   decorateAssetForPreview,
   DEFAULT_VIDEO_MANUAL_TEMPLATE,
   prepareEditForEditor,
@@ -1159,6 +1171,61 @@ export default function VideoManualProjectEditorPage() {
     edit.__vmfaAnimatedLiveUpdateInterceptor = true;
   }, [readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh]);
 
+  const bubbleSyncingRef = useRef(false);
+
+  // Keeps a speech bubble's svg shape and its text clip together: moving/resizing/retiming one updates the other.
+  const syncBubblePair = useCallback(async (change) => {
+    const edit = editRef.current;
+    const current = change?.current;
+    if (!edit || !current || bubbleSyncingRef.current) return;
+
+    const editData = edit.getEdit();
+    const pair = findBubblePair(editData, current.trackIndex, current.clipIndex);
+    if (!pair) return;
+    const editSize = { width: edit.size.width, height: edit.size.height };
+    const fromText = current.trackIndex === pair.text.trackIndex && current.clipIndex === pair.text.clipIndex;
+    const geometry = parseBubbleGeometry(pair.shape.clip.asset?.src);
+    const shapeBox = clipBoxFromDocument(pair.shape.clip, editSize);
+    const textBox = clipBoxFromDocument(pair.text.clip, editSize);
+    if (!geometry || !shapeBox || !textBox) return;
+
+    const timing = (clip) => ({ start: clip.start, length: clip.length });
+    const sameTiming = pair.shape.clip.start === pair.text.clip.start && pair.shape.clip.length === pair.text.clip.length;
+    bubbleSyncingRef.current = true;
+    try {
+      if (fromText) {
+        const oldAbs = bubbleAbsFromBox(shapeBox, geometry);
+        const resized = Math.abs(oldAbs.body.width - textBox.width) > 0.5 || Math.abs(oldAbs.body.height - textBox.height) > 0.5;
+        const moved = Math.abs(oldAbs.body.left - textBox.left) > 0.5 || Math.abs(oldAbs.body.top - textBox.top) > 0.5;
+        if (!resized && !moved && sameTiming) return;
+        // Moving the text carries the pointer along; resizing keeps the pointer where it is.
+        const tip = resized
+          ? oldAbs.tip
+          : { x: oldAbs.tip.x + (textBox.left - oldAbs.body.left), y: oldAbs.tip.y + (textBox.top - oldAbs.body.top) };
+        const next = bubbleBoxFromAbs(textBox, tip);
+        const style = extractShapeStyle(pair.shape.clip.asset.src);
+        await edit.updateClip(pair.shape.trackIndex, pair.shape.clipIndex, {
+          asset: { ...pair.shape.clip.asset, src: buildBubbleSvg(next.box.width, next.box.height, next.geometry, style) },
+          ...documentFieldsFromBox(next.box, editSize),
+          ...timing(pair.text.clip),
+        });
+      } else {
+        const abs = bubbleAbsFromBox(shapeBox, geometry);
+        const moved = Math.abs(abs.body.left - textBox.left) > 0.5 || Math.abs(abs.body.top - textBox.top) > 0.5
+          || Math.abs(abs.body.width - textBox.width) > 0.5 || Math.abs(abs.body.height - textBox.height) > 0.5;
+        if (!moved && sameTiming) return;
+        await edit.updateClip(pair.text.trackIndex, pair.text.clipIndex, {
+          ...documentFieldsFromBox(abs.body, editSize),
+          ...timing(pair.shape.clip),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to sync speech bubble:", error);
+    } finally {
+      window.setTimeout(() => { bubbleSyncingRef.current = false; }, 0);
+    }
+  }, []);
+
   // The editor handlers below are re-created on every render. The init effect must NOT depend on them
   // (or on `project`), otherwise saving/exporting/deploying (which refreshes `project`) tears the whole
   // SDK down and builds a second one on top of the old timeline DOM, which leaves the timeline frozen.
@@ -1174,6 +1241,7 @@ export default function VideoManualProjectEditorPage() {
     syncSelectedClip,
     syncSelectedClipFromDocument,
     syncSteps,
+    syncBubblePair,
   };
   const projectRef = useRef(project);
   projectRef.current = project;
@@ -1194,6 +1262,7 @@ export default function VideoManualProjectEditorPage() {
     const syncSelectedClip = (...args) => editorHandlersRef.current.syncSelectedClip(...args);
     const syncSelectedClipFromDocument = (...args) => editorHandlersRef.current.syncSelectedClipFromDocument(...args);
     const syncSteps = (...args) => editorHandlersRef.current.syncSteps(...args);
+    const syncBubblePair = (...args) => editorHandlersRef.current.syncBubblePair(...args);
 
     sdkInitialized.current = true;
     const { template, isPlaceholder: startsEmpty } = prepareEditForEditor(initialProject.edit);
@@ -1276,6 +1345,7 @@ export default function VideoManualProjectEditorPage() {
           }));
         });
 
+        unsubs.push(edit.events.on("clip:updated", syncBubblePair));
         unsubs.push(edit.events.on("clip:selected", syncSelectedClip));
         unsubs.push(edit.events.on("selection:cleared", () => syncSelectedClip(null)));
         unsubs.push(edit.events.on("clip:updated", (change) => {
@@ -2085,6 +2155,27 @@ export default function VideoManualProjectEditorPage() {
     const edit = editRef.current;
     if (!edit) return;
 
+    if (shapeType === "bubble") {
+      const editSize = { width: edit.size.width, height: edit.size.height };
+      const { shapeClip, textClip } = createBubbleClips({
+        editSize,
+        start: getPlaybackTime(),
+        centerX: dropPoint ? (0.5 + dropPoint.x) * editSize.width : undefined,
+        centerY: dropPoint ? (0.5 - dropPoint.y) * editSize.height : undefined,
+        text: t("Your text"),
+      });
+      bubbleSyncingRef.current = true;
+      try {
+        await edit.addTrack(0, { clips: [shapeClip] });
+        await edit.addTrack(0, { clips: [textClip] }); // text track sits above the bubble shape
+      } finally {
+        window.setTimeout(() => { bubbleSyncingRef.current = false; }, 0);
+      }
+      syncSteps();
+      showNotice(t("Speech bubble added."));
+      return;
+    }
+
     const dimensions = SHAPE_DIMENSIONS[shapeType] || SHAPE_DIMENSIONS.rect;
     await edit.addTrack(0, {
       clips: [{
@@ -2762,6 +2853,7 @@ export default function VideoManualProjectEditorPage() {
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
                 <div ref={studioElRef} data-shotstack-studio onDragOver={handleCanvasDragOver} onDrop={handleCanvasDrop} className="h-full w-full max-w-[980px] overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
+                <BubbleTailHandle editRef={editRef} studioElRef={studioElRef} selectedClip={selectedClip} />
                 <style dangerouslySetInnerHTML={{ __html: `
                   [data-shotstack-studio] > div:not(canvas) { opacity: 0 !important; pointer-events: none !important; position: absolute !important; width: 0 !important; height: 0 !important; overflow: hidden !important; }
                 ` }} />

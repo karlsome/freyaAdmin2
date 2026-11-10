@@ -1,3 +1,5 @@
+import { buildBubbleSvg, parseBubbleGeometry } from "./bubbleUtils";
+
 export function normalizePlaylistAssetType(type, mimeType = "") {
   if (["image", "video", "audio"].includes(type)) return type;
   if (typeof mimeType === "string" && mimeType.startsWith("image/")) return "image";
@@ -640,11 +642,19 @@ export function extractShapeStyle(svgSource) {
     shapeType: readAttr("data-vmfa-shape") || readAttr("data-vmss-shape") || "rect",
     fill: normalizeHexColor(readAttr("fill")) || "#fecaca",
     stroke: normalizeHexColor(readAttr("stroke")) || "#ef4444",
-    strokeWidth: Number.isFinite(strokeWidth) && strokeWidth > 0 ? strokeWidth : 3,
+    strokeWidth: Number.isFinite(strokeWidth) && strokeWidth > 0 ? strokeWidth : (readAttr("data-vmfa-shape") === "bubble" ? 0 : 3),
+    bubble: parseBubbleGeometry(svgSource),
   };
 }
 
 export function createShapeSvg(shapeType, width, height, options = {}) {
+  if (shapeType === "bubble") {
+    return buildBubbleSvg(width, height, options.bubble || { bx: 0, by: 0, bw: 1, bh: 0.62, tx: 0.78, ty: 1 }, {
+      fill: options.fill,
+      stroke: options.stroke,
+      strokeWidth: options.strokeWidth,
+    });
+  }
   const fill = options.fill || "#fecaca";
   const stroke = options.stroke || "#ef4444";
   const safeStrokeWidth = Math.max(2, Number(options.strokeWidth) || 3);
