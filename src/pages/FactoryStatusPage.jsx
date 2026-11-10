@@ -78,7 +78,7 @@ export default function FactoryStatusPage() {
   const [advancedFilters, setAdvancedFilters] = useState([]);
   const [pagesByFactory, setPagesByFactory] = useState({});
   const [sort, setSort] = useState({ column: "", direction: 1 });
-  const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [, setSummary] = useState(EMPTY_SUMMARY);
   const [groups, setGroups] = useState([]);
   const [filterOptions, setFilterOptions] = useState(EMPTY_FILTER_OPTIONS);
   const [generatedAt, setGeneratedAt] = useState("");
