@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/freyaAdmin2/',
   plugins: [react()],
+  optimizeDeps: { exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'] },
   server: {
     proxy: {
       // Proxies /api/* and /queries/* to the backend in dev

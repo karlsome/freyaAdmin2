@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Canvas, Controls, Edit, Timeline, UIController } from "@shotstack/shotstack-studio";
 import VideoManualAddElementsSidebar, { ELEMENT_DRAG_MIME } from "../components/videoManual/VideoManualAddElementsSidebar";
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
+import VideoManualTrimModal from "../components/videoManual/VideoManualTrimModal";
 import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
 import VideoManualEditorToolbar from "../components/videoManual/VideoManualEditorToolbar";
 import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
@@ -550,6 +551,7 @@ export default function VideoManualProjectEditorPage() {
   const [timelineBackground, setTimelineBackground] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
   const [outputSize, setOutputSize] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size);
   const [outputFps, setOutputFps] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps);
+  const [pendingTrimFile, setPendingTrimFile] = useState(null);
   const [assetLibrary, setAssetLibrary] = useState({
     open: false,
     type: "video",
@@ -2456,7 +2458,7 @@ export default function VideoManualProjectEditorPage() {
     showNotice(t("{type} item added.", { type: t(getAssetLibraryTypeLabel(assetType)) }));
   }, [apiBaseUrl, getPlaybackTime, rememberAssetSource, showNotice, syncSteps]);
 
-  const handleUploadAsset = useCallback(async (file) => {
+  const performAssetUpload = useCallback(async (file) => {
     if (!playlistId) {
       showNotice("Open a project from a playlist first.", "error");
       return;
@@ -2485,6 +2487,15 @@ export default function VideoManualProjectEditorPage() {
       showNotice(error.message || "Upload failed.", "error");
     }
   }, [apiBaseUrl, assetLibrary.type, loadAssetLibrary, playlistId, showNotice]);
+
+  // Videos open the trimmer first so only the part the user wants is uploaded and stored.
+  const handleUploadAsset = useCallback((file) => {
+    if (file && String(file.type || "").startsWith("video/")) {
+      setPendingTrimFile(file);
+      return;
+    }
+    performAssetUpload(file);
+  }, [performAssetUpload]);
 
   const handleSetBackgroundColor = useCallback(async (color) => {
     const edit = editRef.current;
@@ -3035,6 +3046,17 @@ export default function VideoManualProjectEditorPage() {
         onRestoreAssets={restoreAssetLibraryItems}
         onPermanentDelete={permanentlyDeleteAssetLibraryItems}
       />
+
+      {pendingTrimFile ? (
+        <VideoManualTrimModal
+          file={pendingTrimFile}
+          onCancel={() => setPendingTrimFile(null)}
+          onConfirm={(readyFile) => {
+            setPendingTrimFile(null);
+            performAssetUpload(readyFile);
+          }}
+        />
+      ) : null}
 
       <VideoManualExportStatusModal
         open={exportModalOpen}
