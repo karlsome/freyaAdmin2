@@ -293,7 +293,6 @@ export default function PlannerTimelineView({
                               borderLeft: isTileStart ? `4px solid ${product.color}` : "none",
                               borderRight: isTileEnd ? `4px solid ${product.color}` : "none",
                               boxSizing: "border-box",
-                              marginRight: isTileEnd ? 2 : 0,
                             }}
                             title={`${product.背番号} · ${product.quantity} pcs`}
                           >
