@@ -531,7 +531,8 @@ export default function VideoManualPage() {
   const canEditProjects = canEditVideoManualProjects(authRole);
   const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
 
-  async function handleDeletePlaylist() {
+  async function handleDeletePlaylist(target) {
+    const selectedPlaylist = target;
     if (!selectedPlaylist) return;
     setActionError("");
     let preview = null;
@@ -552,7 +553,7 @@ export default function VideoManualPage() {
       const result = await deleteVideoManualPlaylist(selectedPlaylist._id);
       const remaining = playlists.filter((item) => String(item._id) !== String(selectedPlaylist._id));
       setPlaylists(remaining);
-      setSelectedPlaylistId(String(remaining[0]?._id || ""));
+      if (String(selectedPlaylistId) === String(selectedPlaylist._id)) setSelectedPlaylistId(String(remaining[0]?._id || ""));
       setNotice(t("Deleted playlist \"{name}\" ({files} file(s) removed, {kept} kept).", {
         name: selectedPlaylist.name || "",
         files: result?.filesDeleted ?? 0,
@@ -755,25 +756,50 @@ export default function VideoManualPage() {
                 const isActive = String(playlist?._id) === String(selectedPlaylistId);
 
                 return (
-                  <button
-                    key={playlist?._id}
-                    type="button"
-                    onClick={() => setSelectedPlaylistId(String(playlist?._id || ""))}
-                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-150 ${isActive
-                      ? "border-primary/25 bg-primary/10 shadow-[inset_3px_0_0_rgb(var(--c-primary))]"
-                      : "border-transparent hover:bg-surface-container"
-                    }`}
-                  >
-                    <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>inventory_2</span>
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-on-surface">{playlist?.name || t("vmUntitledPlaylist")}</span>
-                      <span className="block truncate text-[11px] text-outline">
-                        {formatProjectCount(playlist?.projectCount || 0, t)}{playlist?.model ? ` · ${playlist.model}` : ""}
+                  <div key={playlist?._id} className="group relative">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlaylistId(String(playlist?._id || ""))}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-150 ${isActive
+                        ? "border-primary/25 bg-primary/10 shadow-[inset_3px_0_0_rgb(var(--c-primary))]"
+                        : "border-transparent hover:bg-surface-container"
+                      } ${canEditProjects ? "pr-[4.5rem]" : ""}`}
+                    >
+                      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>inventory_2</span>
                       </span>
-                    </span>
-                  </button>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-on-surface">{playlist?.name || t("vmUntitledPlaylist")}</span>
+                        <span className="block truncate text-[11px] text-outline">
+                          {formatProjectCount(playlist?.projectCount || 0, t)}{playlist?.model ? ` · ${playlist.model}` : ""}
+                        </span>
+                      </span>
+                    </button>
+                    {canEditProjects ? (
+                      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPlaylist(playlist)}
+                          aria-label={t("Edit playlist")}
+                          title={t("Edit playlist")}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-outline transition-colors hover:bg-surface hover:text-primary"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                        </button>
+                        {canDeleteProjects ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePlaylist(playlist)}
+                            aria-label={t("Delete playlist")}
+                            title={t("Delete playlist")}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-outline transition-colors hover:bg-error/10 hover:text-error"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })
             ) : (
@@ -789,33 +815,9 @@ export default function VideoManualPage() {
         <section className="min-w-0">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-1">
-                <h2 className="truncate text-lg font-bold text-on-surface">
-                  {selectedPlaylist?.name || t("vmProjectsHeading")}
-                </h2>
-                {selectedPlaylist && canEditProjects ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingPlaylist(selectedPlaylist)}
-                    aria-label={t("Edit playlist")}
-                    title={t("Edit playlist")}
-                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-outline transition-colors hover:bg-surface-container hover:text-primary"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-                  </button>
-                ) : null}
-                {selectedPlaylist && canDeleteProjects ? (
-                  <button
-                    type="button"
-                    onClick={handleDeletePlaylist}
-                    aria-label={t("Delete playlist")}
-                    title={t("Delete playlist")}
-                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-outline transition-colors hover:bg-error/10 hover:text-error"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-                  </button>
-                ) : null}
-              </div>
+              <h2 className="truncate text-lg font-bold text-on-surface">
+                {selectedPlaylist?.name || t("vmProjectsHeading")}
+              </h2>
               <p className="text-xs text-outline">
                 {selectedPlaylist ? formatProjectCount(filteredProjects.length, t) : t("vmNoPlaylistSelected")}
               </p>
