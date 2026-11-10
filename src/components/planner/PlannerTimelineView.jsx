@@ -5,6 +5,7 @@ import {
   getEquipmentUnavailableInfo,
   getFirstVisibleSlotMinutes,
   getProductForSlot,
+  getScheduledSpan,
   getTimelineSlots,
   isBreakAtSlot,
   isEquipmentUnavailable,
@@ -437,7 +438,7 @@ export default function PlannerTimelineView({
             </div>
             <div className="mt-2 space-y-0.5 text-[11px] text-[var(--text-muted)]">
               {infoPopover.product["収容数"] ? <div>{isJa ? "収容数" : "Per box"}: <strong className="text-[var(--text-primary)]">{infoPopover.product["収容数"]}</strong></div> : null}
-              <div>{isJa ? "開始" : "Start"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.startTime || "-"}</strong>{infoPopover.product.estimatedTime?.formattedTime ? <> · {isJa ? "所要" : "Duration"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.estimatedTime.formattedTime}</strong></> : null}</div>
+              <div>{isJa ? "開始" : "Start"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.startTime || "-"}</strong> · {isJa ? "終了" : "End"}: <strong className="text-[var(--text-primary)]">{minutesToTime(getScheduledSpan(infoPopover.product, breaks).endTime)}</strong>{infoPopover.product.estimatedTime?.formattedTime ? <> · {isJa ? "所要" : "Duration"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.estimatedTime.formattedTime}</strong></> : null}</div>
               <div>{isJa ? "設備" : "Equipment"}: <strong className="text-[var(--text-primary)]">{infoPopover.product.equipment}</strong></div>
             </div>
           </div>
