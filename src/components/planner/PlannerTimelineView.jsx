@@ -258,6 +258,15 @@ export default function PlannerTimelineView({
 
                       if (product) {
                         const showLabel = firstVisibleSlot === slotMinutes;
+                        // Tile edges: where this schedule starts/ends in the lane, so neighbouring tiles read as separate blocks
+                        const neighbourId = (offset) => {
+                          const near = mappedSlots[slotIndex + offset];
+                          if (!near || isBreakAtSlot(near.slotMinutes, equipmentName, breaks)) return null;
+                          return getProductForSlot(near.slotMinutes, equipmentName, plannedItems, breaks)?._scheduleId || null;
+                        };
+                        const isTileStart = neighbourId(-1) !== product._scheduleId;
+                        const isTileEnd = neighbourId(1) !== product._scheduleId;
+                        const edge = `3px solid ${product.color}`;
                         return (
                           <div
                             key={`${equipmentName}-planned-${slot}`}
@@ -275,8 +284,17 @@ export default function PlannerTimelineView({
                                 onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
                               }
                             }}
-                            className={`group relative border-r border-[var(--border)] ${showLabel ? "cursor-move" : "cursor-default"}`}
-                            style={{ width: SLOT_WIDTH, backgroundColor: `${product.color}22` }}
+                            className={`group relative ${showLabel ? "cursor-move" : "cursor-default"}`}
+                            style={{
+                              width: SLOT_WIDTH,
+                              backgroundColor: `${product.color}30`,
+                              borderTop: edge,
+                              borderBottom: edge,
+                              borderLeft: isTileStart ? `4px solid ${product.color}` : "none",
+                              borderRight: isTileEnd ? `4px solid ${product.color}` : "none",
+                              boxSizing: "border-box",
+                              marginRight: isTileEnd ? 2 : 0,
+                            }}
                             title={`${product.背番号} · ${product.quantity} pcs`}
                           >
                             {showLabel ? (
