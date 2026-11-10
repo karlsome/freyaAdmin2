@@ -1175,8 +1175,6 @@ export default function VideoManualProjectEditorPage() {
   const bubbleLastRef = useRef(new Map());
   // Bubbles whose follower clip is being moved live while the leader is dragged: groupId -> original fields.
   const bubbleLiveRef = useRef(new Map());
-  const selectedClipRef = useRef(null);
-  selectedClipRef.current = selectedClip;
 
   // While a bubble's text (or shape) is dragged/resized on the canvas, move the other clip in real time.
   // These are live document updates (no undo entries); reconcileBubbles() restores them and commits one clean update on release.
