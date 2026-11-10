@@ -298,7 +298,7 @@ export default function PlannerTimelineView({
                           >
                             {showLabel ? (
                               <>
-                                <div className="absolute inset-0 flex items-center justify-center px-1 text-xs font-bold" style={{ color: product.color }}>
+                                <div className="absolute inset-0 flex items-end justify-center px-1 pb-1 text-xs font-bold" style={{ color: product.color }}>
                                   {product.背番号}
                                 </div>
                                 <button
@@ -308,7 +308,7 @@ export default function PlannerTimelineView({
                                     const rect = event.currentTarget.getBoundingClientRect();
                                     setInfoPopover((current) => (current?.id === product._scheduleId ? null : { id: product._scheduleId, product, x: rect.left, y: rect.bottom + 6 }));
                                   }}
-                                  className="absolute left-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface)] text-[10px] font-bold italic leading-none text-[var(--freya-blue)] shadow-sm ring-1 ring-[var(--freya-blue)]/40 hover:bg-[var(--freya-blue)] hover:text-white"
+                                  className="absolute left-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--surface)] text-[10px] font-bold italic leading-none text-[var(--freya-blue)] shadow-sm ring-1 ring-[var(--freya-blue)]/40 hover:bg-[var(--freya-blue)] hover:text-white"
                                   aria-label={isJa ? "計画数量の詳細" : "Planned quantity details"}
                                   title={`${product.quantity} pcs`}
                                 >
@@ -321,7 +321,7 @@ export default function PlannerTimelineView({
                                     onRemoveScheduledItem(product);
                                   }}
                                   draggable={false}
-                                  className="absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-sm font-black leading-none text-white shadow-md ring-2 ring-white transition hover:scale-110 hover:bg-red-700"
+                                  className="absolute right-0.5 top-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[10px] font-black leading-none text-white shadow ring-1 ring-white transition hover:scale-125 hover:bg-red-700"
                                   aria-label={isJa ? `${product.背番号} を削除` : `Remove ${product.背番号}`}
                                   title={isJa ? "スケジュールを削除" : "Delete schedule"}
                                 >
