@@ -1311,6 +1311,7 @@ const translations = {
     "Steps": "ステップ",
     "No video clips on the timeline": "タイムラインに動画クリップがありません",
     "Add Step": "ステップを追加",
+    "Add description...": "説明を追加...",
     "PROCESSING": "処理中",
     "FAILED": "失敗",
     "COMPLETE": "完了",

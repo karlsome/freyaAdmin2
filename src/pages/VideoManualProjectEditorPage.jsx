@@ -415,6 +415,8 @@ function buildStableAnimatedMediaResizeUpdate(sourceClip, updates, targetTime) {
   return { ...updates, offset: normalizedOffset };
 }
 
+const STEP_DESCRIPTION_MATCH_TOLERANCE = 0.15;
+
 function isShotstackScrollablePopupTarget(target) {
   return target instanceof Element && !!target.closest(SHOTSTACK_SCROLLABLE_POPUP_SELECTOR);
 }
@@ -525,6 +527,7 @@ export default function VideoManualProjectEditorPage() {
   const [activeAddCategory, setActiveAddCategory] = useState("text");
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
   const [steps, setSteps] = useState([]);
+  const [stepDescriptions, setStepDescriptions] = useState([]);
   const [selectedClip, setSelectedClip] = useState(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [keyframeDraft, setKeyframeDraft] = useState(null);
@@ -667,6 +670,7 @@ export default function VideoManualProjectEditorPage() {
     if (!project) return;
     const editData = project.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE;
     assetSourceMapRef.current = { ...(project.assetSourceMap || {}) };
+    setStepDescriptions(Array.isArray(project.settings?.stepDescriptions) ? project.settings.stepDescriptions : []);
     timelineHeightUserSetRef.current = false;
     setTimelineBackground(editData?.timeline?.background || DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
     setOutputSize(getOutputSize(editData));
@@ -714,6 +718,19 @@ export default function VideoManualProjectEditorPage() {
       console.warn("Failed to sync steps", error);
     }
   }, []);
+
+  const handleStepDescriptionChange = useCallback((step, description) => {
+    setStepDescriptions((current) => {
+      const rest = current.filter((entry) => Math.abs(Number(entry.start) - step.startTime) >= STEP_DESCRIPTION_MATCH_TOLERANCE);
+      return [...rest, { start: Math.round(step.startTime * 1000) / 1000, description }];
+    });
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const buildProjectSettings = useCallback(() => ({
+    ...(project?.settings || {}),
+    stepDescriptions: stepDescriptions.filter((entry) => String(entry.description || "").trim()),
+  }), [project?.settings, stepDescriptions]);
 
   const syncEditorSettings = useCallback(() => {
     const edit = editRef.current;
@@ -1361,8 +1378,9 @@ export default function VideoManualProjectEditorPage() {
     try {
       const currentEdit = editRef.current.getEdit();
       const assetSourceMap = assetSourceMapRef.current;
-      await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap });
-      const snapshot = buildRevisionSnapshot(project, currentEdit, assetSourceMap);
+      const projectSettings = buildProjectSettings();
+      await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap, settings: projectSettings });
+      const snapshot = buildRevisionSnapshot({ ...project, settings: projectSettings }, currentEdit, assetSourceMap);
       const { revisionNumber } = await createVideoManualRevision(projectId, snapshot, revisionName.trim());
       setProject(await fetchVideoManualProject(projectId));
       await loadRevisionHistory({ open: true });
@@ -1373,7 +1391,7 @@ export default function VideoManualProjectEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [loadRevisionHistory, project, projectId, revisionPreview, saving, showNotice]);
+  }, [buildProjectSettings, loadRevisionHistory, project, projectId, revisionPreview, saving, showNotice]);
 
   const handleShowHistory = useCallback(() => {
     loadRevisionHistory({ open: true });
@@ -1548,7 +1566,9 @@ export default function VideoManualProjectEditorPage() {
     const currentEditSignature = buildVideoManualComparableSignature(currentEdit, DEFAULT_VIDEO_MANUAL_TEMPLATE);
     const savedAssetSourceSignature = buildVideoManualComparableSignature(project?.assetSourceMap, {});
     const currentAssetSourceSignature = buildVideoManualComparableSignature(currentAssetSourceMap, {});
-    const hasUnsavedChanges = savedEditSignature !== currentEditSignature || savedAssetSourceSignature !== currentAssetSourceSignature;
+    const savedDescriptionSignature = buildVideoManualComparableSignature(project?.settings?.stepDescriptions || [], []);
+    const currentDescriptionSignature = buildVideoManualComparableSignature(buildProjectSettings().stepDescriptions, []);
+    const hasUnsavedChanges = savedEditSignature !== currentEditSignature || savedAssetSourceSignature !== currentAssetSourceSignature || savedDescriptionSignature !== currentDescriptionSignature;
 
     if (!hasUnsavedChanges && project?.lastRevisionId) {
       return fetchVideoManualRevision(String(project.lastRevisionId));
@@ -1563,8 +1583,9 @@ export default function VideoManualProjectEditorPage() {
 
     setSaving(true);
     try {
-      await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap: currentAssetSourceMap });
-      const snapshot = buildRevisionSnapshot(project, currentEdit, currentAssetSourceMap);
+      const projectSettings = buildProjectSettings();
+      await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap: currentAssetSourceMap, settings: projectSettings });
+      const snapshot = buildRevisionSnapshot({ ...project, settings: projectSettings }, currentEdit, currentAssetSourceMap);
       const { revisionId, revisionNumber } = await createVideoManualRevision(projectId, snapshot, revisionName.trim());
       const nextProject = await fetchVideoManualProject(projectId);
       setProject(nextProject);
@@ -1577,7 +1598,7 @@ export default function VideoManualProjectEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [loadRevisionHistory, project, projectId, revisionHistory.open, revisionPreview, showNotice]);
+  }, [buildProjectSettings, loadRevisionHistory, project, projectId, revisionHistory.open, revisionPreview, showNotice]);
 
   const runRevisionDeployment = useCallback(async (revision, {
     reasonLabel = "Deployment",
@@ -2661,7 +2682,7 @@ export default function VideoManualProjectEditorPage() {
       ) : (
         <div ref={editorBodyRef} className={`relative flex min-h-0 flex-1 flex-col ${timelineResizing ? "select-none" : ""}`}>
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
-            <VideoManualStepsPanel steps={steps} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
+            <VideoManualStepsPanel steps={steps} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
