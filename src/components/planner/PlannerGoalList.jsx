@@ -16,6 +16,7 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
   const capacity = calculateBoxesNeeded(goal, goal.targetQuantity, products);
   const scheduledBoxes = calculateBoxesNeeded(goal, goal.scheduledQuantity, products);
   const targetBoxes = capacity;
+  const producedBoxes = produced !== null ? calculateBoxesNeeded(goal, produced, products) : null;
   const schedulable = goal.date === currentDate && Number(goal.remainingQuantity || 0) > 0;
   const stateLabel = isJa ? (goalState.labelJa || goalState.label) : goalState.label;
 
@@ -127,9 +128,25 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
         </div>
 
         <div className="text-[var(--text-primary)] xl:text-right">
-          <div className="font-semibold font-mono freya-tabular">{scheduledBoxes}/{targetBoxes}</div>
+          <div
+            className="font-semibold font-mono freya-tabular text-[var(--freya-blue)]"
+            title={isJa ? "計画済みの箱数" : "Boxes scheduled"}
+          >
+            {scheduledBoxes}/{targetBoxes}
+          </div>
+          {producedBoxes !== null ? (
+            <div
+              className="font-semibold font-mono freya-tabular text-emerald-600 dark:text-emerald-400"
+              title={isJa ? "生産済みの箱数（稼働中の推定分を含む）" : "Boxes produced (incl. the estimate for work running now)"}
+            >
+              {producedBoxes}/{targetBoxes}
+            </div>
+          ) : null}
           <div className="text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">
             {isJa ? "箱数" : "Boxes"}
+            {producedBoxes !== null ? (
+              <span className="normal-case tracking-normal"> · <span className="text-[var(--freya-blue)]">{isJa ? "計画" : "sched"}</span> / <span className="text-emerald-600 dark:text-emerald-400">{isJa ? "生産" : "done"}</span></span>
+            ) : null}
           </div>
         </div>
 
