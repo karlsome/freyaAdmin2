@@ -153,10 +153,10 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
           <tr>
             <th className={th}>{isJa ? "設備" : "Equipment"}</th>
             <th className={th}>{isJa ? "ステータス" : "Status"}</th>
+            <th className={th} title={isJa ? "本日の生産計画の数量" : "Quantity scheduled in today's production plan"}>{isJa ? "計画数量" : "Planned qty"}</th>
             <th className={th}>{isJa ? "作業者" : "Operator"}</th>
             <th className={th} title={isJa ? "良品数（NG除く）" : "Good pieces (NG excluded)"}>{isJa ? "進行中" : "In progress"}</th>
             <th className={th} title={isJa ? "良品数（NG除く）" : "Good pieces (NG excluded)"}>{isJa ? "提出済み" : "Submitted"}</th>
-            <th className={th} title={isJa ? "本日の生産計画の数量" : "Quantity scheduled in today's production plan"}>{isJa ? "計画数量" : "Planned qty"}</th>
             <th className={`${th} text-right`}>{isJa ? "実数（合計）" : "Real total"}</th>
             <th className={th}>{isJa ? "カウンタ" : "Counter"}</th>
             <th className={th}>{isJa ? "最終サイクル" : "Last cycle"}</th>
@@ -173,6 +173,21 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                     <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{theme.icon}</span>
                     {statusLabel(row.status, isJa)}
                   </span>
+                </td>
+                <td className="border-t border-[var(--border)] px-3 py-2.5">
+                  {row.plannedItems.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {row.plannedItems.map((item, index) => (
+                        <span
+                          key={`${item.serial}-${item.startTime}-${index}`}
+                          title={item.startTime ? `${isJa ? "開始" : "Starts"} ${item.startTime}` : undefined}
+                          className="rounded-[4px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/5 px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)]"
+                        >
+                          {item.serial} <span className="font-semibold text-[var(--freya-blue)]">{formatNumber(item.quantity)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : <span className="text-[var(--text-muted)]">—</span>}
                 </td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)]">{row.worker || "—"}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5">
@@ -211,21 +226,6 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                     </div>
                   ) : "—"}
                 </td>
-                <td className="border-t border-[var(--border)] px-3 py-2.5">
-                  {row.plannedItems.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {row.plannedItems.map((item, index) => (
-                        <span
-                          key={`${item.serial}-${item.startTime}-${index}`}
-                          title={item.startTime ? `${isJa ? "開始" : "Starts"} ${item.startTime}` : undefined}
-                          className="rounded-[4px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/5 px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)]"
-                        >
-                          {item.serial} <span className="font-semibold text-[var(--freya-blue)]">{formatNumber(item.quantity)}</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : <span className="text-[var(--text-muted)]">—</span>}
-                </td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-right font-mono font-bold text-[var(--freya-blue)] freya-tabular">{formatNumber(row.total)}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 font-mono text-[var(--text-secondary)] whitespace-nowrap">{row.counters.some((c) => c !== null && c !== undefined) ? row.counters.map((c) => (c ?? "—")).join(" / ") : "—"}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-[var(--text-muted)] whitespace-nowrap">{formatAgo(row.lastCycle, isJa)}</td>
@@ -235,10 +235,11 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
         </tbody>
         <tfoot className="bg-[var(--surface-subtle)]">
           <tr>
-            <td colSpan={3} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "合計" : "Total"}</td>
+            <td colSpan={2} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "合計" : "Total"}</td>
+            <td className="px-3 py-2 font-mono font-semibold text-[var(--freya-blue)]">{formatNumber(totals.planned)}</td>
+            <td className="px-3 py-2" />
             <td className="px-3 py-2 font-mono font-semibold text-amber-600 dark:text-amber-400">{formatNumber(totals.inProgress)}</td>
             <td className="px-3 py-2 font-mono font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(totals.submitted)}</td>
-            <td className="px-3 py-2 font-mono font-semibold text-[var(--freya-blue)]">{formatNumber(totals.planned)}</td>
             <td className="px-3 py-2 text-right font-mono font-bold text-[var(--freya-blue)] freya-tabular">{formatNumber(totals.total)}</td>
             <td colSpan={2} />
           </tr>
