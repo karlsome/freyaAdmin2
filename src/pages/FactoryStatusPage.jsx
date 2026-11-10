@@ -7,6 +7,7 @@ import MasterTabNav from "../components/MasterTabNav";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
+import FactoryEquipmentRealTable from "../components/factoryStatus/FactoryEquipmentRealTable";
 import FactoryStatusLogsModal from "../components/factoryStatus/FactoryStatusLogsModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
@@ -639,36 +640,45 @@ export default function FactoryStatusPage() {
                   </div>
                 </div>
 
-                <DataTable
-                  columns={columns}
-                  rows={group.rows}
-                  loading={false}
-                  error=""
-                  sort={sort}
-                  page={group.pagination.currentPage}
-                  pageSize={FACTORY_STATUS_PAGE_SIZE}
-                  filteredCount={group.pagination.totalItems}
-                  totalPages={group.pagination.totalPages}
-                  onSort={handleSort}
-                  onPageChange={(nextPage) => {
-                    setPagesByFactory((current) => ({ ...current, [group.factory]: nextPage }));
-                  }}
-                  onRowClick={(row) => openLogsForEquipment(group.factory, row?.equipment)}
-                  rowKey={(row) => `${group.factory}-${row.equipment}`}
-                  getRowClassName={(row) => getFactoryStatusRowToneClass(row)}
-                  renderPageInfo={({ filteredCount, page, pageSize }) => (
-                    <span className="text-xs text-[var(--text-secondary)] font-mono">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize }, language)}</span>
+                <FactoryEquipmentRealTable
+                  factory={group.factory}
+                  date={date}
+                  refreshNonce={refreshNonce}
+                  isJa={isJa}
+                  onRowClick={(equipment) => openLogsForEquipment(group.factory, equipment)}
+                  fallback={(
+                  <DataTable
+                    columns={columns}
+                    rows={group.rows}
+                    loading={false}
+                    error=""
+                    sort={sort}
+                    page={group.pagination.currentPage}
+                    pageSize={FACTORY_STATUS_PAGE_SIZE}
+                    filteredCount={group.pagination.totalItems}
+                    totalPages={group.pagination.totalPages}
+                    onSort={handleSort}
+                    onPageChange={(nextPage) => {
+                      setPagesByFactory((current) => ({ ...current, [group.factory]: nextPage }));
+                    }}
+                    onRowClick={(row) => openLogsForEquipment(group.factory, row?.equipment)}
+                    rowKey={(row) => `${group.factory}-${row.equipment}`}
+                    getRowClassName={(row) => getFactoryStatusRowToneClass(row)}
+                    renderPageInfo={({ filteredCount, page, pageSize }) => (
+                      <span className="text-xs text-[var(--text-secondary)] font-mono">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize }, language)}</span>
+                    )}
+                    emptyTitle={isJa ? "一致する設備がありません" : "No matching machines"}
+                    emptyMessage={isJa ? "詳細フィルターを調整するか、最新データに更新してください。" : "Adjust the advanced filters or refresh the live factory data."}
+                    pageSizeLabel={isJa ? "件数" : "Rows"}
+                    layoutStorageKey="factory-status-table-layout"
+                    enableColumnResize
+                    enableColumnReorder
+                    tableClassName="ui-table-data min-w-full border-separate border-spacing-0 text-xs"
+                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+                    topBarClassName="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+                    bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+                  />
                   )}
-                  emptyTitle={isJa ? "一致する設備がありません" : "No matching machines"}
-                  emptyMessage={isJa ? "詳細フィルターを調整するか、最新データに更新してください。" : "Adjust the advanced filters or refresh the live factory data."}
-                  pageSizeLabel={isJa ? "件数" : "Rows"}
-                  layoutStorageKey="factory-status-table-layout"
-                  enableColumnResize
-                  enableColumnReorder
-                  tableClassName="ui-table-data min-w-full border-separate border-spacing-0 text-xs"
-                  className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
-                  topBarClassName="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
-                  bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
                 />
               </div>
             ))}

@@ -31,3 +31,20 @@ export async function fetchTwinFactories() {
   }
   return Array.isArray(data.factories) ? data.factories : [];
 }
+
+/**
+ * Real (unsubmitted) pieces of every machine that is running right now:
+ * cycle counter - today's submitted shots on that machine, x pcs per cycle.
+ * Backend: Kurachi GET /api/planner/live-production -> { machines: [{ machine, 背番号, cycles, pcPerCycle, pieces, ng, source, counter }] }
+ * Returns [] when the server cannot answer, so the caller degrades to submitted-only numbers.
+ */
+export async function fetchLiveProductionMachines(factoryName, date) {
+  try {
+    const params = new URLSearchParams({ factory: factoryName, date });
+    const response = await fetch(`${BASE_URL}api/planner/live-production?${params.toString()}`);
+    const data = await response.json().catch(() => ({}));
+    return response.ok && Array.isArray(data?.data?.machines) ? data.data.machines : [];
+  } catch {
+    return [];
+  }
+}
