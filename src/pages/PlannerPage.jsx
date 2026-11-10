@@ -19,6 +19,7 @@ import PlannerSmartSchedulingModal from "../components/planner/PlannerSmartSched
 import PlannerPrintModal from "../components/planner/PlannerPrintModal";
 import PlannerBulkEditGoalsModal from "../components/planner/PlannerBulkEditGoalsModal";
 import PlannerMachineStatusModal from "../components/planner/PlannerMachineStatusModal";
+import PlannerBarcodeScannerModal from "../components/planner/PlannerBarcodeScannerModal";
 import PlannerPreviewTab from "../components/planner/PlannerPreviewTab";
 import PlannerPublishedTab from "../components/planner/PlannerPublishedTab";
 import {
@@ -210,6 +211,10 @@ export default function PlannerPage() {
   // Bulk Edit Goals
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkEditBusy, setBulkEditBusy] = useState(false);
+
+  // Barcode scanner ("goals" = add goals, "slot" = add goals and schedule at the open slot)
+  const [scannerMode, setScannerMode] = useState(null);
+  const [scannerBusy, setScannerBusy] = useState(false);
 
   // Timeline Reconciliation
   const [reconciling, setReconciling] = useState(false);
@@ -934,7 +939,71 @@ export default function PlannerPage() {
     }
   }
 
-  async function handleSlotSchedule(queue) {
+  // Create the goal for each scanned 背番号 (or add to the one already set for this date).
+  async function applyScannedGoals(items) {
+    const existingGoals = await fetchPlannerGoals({ factory: factoryName, date: planDate });
+    const newGoals = [];
+    let merged = 0;
+
+    for (const item of items) {
+      const quantity = Math.max(0, Number(item.quantity) || 0);
+      if (quantity <= 0) continue;
+
+      const existing = existingGoals.find((goal) => goal.背番号 === item.product.背番号 && goal.date === planDate);
+      if (existing) {
+        await updatePlannerGoal(existing._id, {
+          targetQuantity: Number(existing.targetQuantity || 0) + quantity,
+          remainingQuantity: Number(existing.remainingQuantity || 0) + quantity,
+        });
+        merged += 1;
+      } else {
+        newGoals.push({
+          factory: factoryName,
+          date: planDate,
+          背番号: item.product.背番号,
+          品番: item.product.品番,
+          品名: item.product.品名,
+          targetQuantity: quantity,
+        });
+      }
+    }
+
+    if (newGoals.length) {
+      await batchCreatePlannerGoals(newGoals, getUserDisplayName(authUser));
+    }
+    return { created: newGoals.length, merged };
+  }
+
+  async function handleScannerConfirm(items) {
+    if (!factoryName || !planDate || !items.length) return;
+    setScannerBusy(true);
+
+    try {
+      const { created, merged } = await applyScannedGoals(items);
+      const mode = scannerMode;
+      setScannerMode(null);
+
+      if (mode === "slot") {
+        const freshGoals = await fetchPlannerGoals({ factory: factoryName, date: planDate });
+        const queue = items.map((item) => {
+          const goal = freshGoals.find((entry) => entry.背番号 === item.product.背番号 && entry.date === planDate);
+          return goal ? { _id: goal._id, 背番号: goal.背番号, 品番: goal.品番, quantity: Number(item.quantity) || 0 } : null;
+        }).filter(Boolean);
+        await handleSlotSchedule(queue, freshGoals);
+        return;
+      }
+
+      await refreshAfterMutation(isJa
+        ? `${created} 件の目標を追加、${merged} 件を加算しました。`
+        : `Added ${created} new goal${created === 1 ? "" : "s"}, merged ${merged}.`);
+    } catch (error) {
+      showFlash(error.message || (isJa ? "スキャンした目標の保存に失敗しました。" : "Failed to save scanned goals."), "error");
+    } finally {
+      setScannerBusy(false);
+    }
+  }
+
+  async function handleSlotSchedule(queue, goalsSource = goals) {
     setSlotSubmitting(true);
 
     try {
@@ -943,7 +1012,7 @@ export default function PlannerPage() {
       let nextStartMinutes = timeToMinutes(slotModalState.startTime);
 
       for (const queueItem of queue) {
-        const liveGoal = goals.find((goal) => goal._id === queueItem._id);
+        const liveGoal = goalsSource.find((goal) => goal._id === queueItem._id);
         if (!liveGoal) {
           throw new Error(`Goal ${queueItem.背番号 || queueItem.品番} is no longer available.`);
         }
@@ -1368,6 +1437,7 @@ export default function PlannerPage() {
             outOfSyncCount={outOfSyncCount}
             onGoalSearchChange={setGoalSearch}
             onCsvSelected={handleCsvSelected}
+            onOpenScanner={() => setScannerMode("goals")}
             onOpenManualGoal={() => {
               if (!factoryName) {
                 showFlash(isJa ? "目標を追加する前に工場を選択してください。" : "Select a factory before adding goals.", "warning");
@@ -1581,7 +1651,21 @@ export default function PlannerPage() {
           if (!slotSubmitting) setSlotModalState({ open: false, equipment: "", startTime: "" });
         }}
         onConfirm={handleSlotSchedule}
+        onOpenScanner={() => setScannerMode("slot")}
       />
+
+      {scannerMode ? (
+        <PlannerBarcodeScannerModal
+          products={products}
+          busy={scannerBusy}
+          confirmLabel={scannerMode === "slot" ? (isJa ? "確定してスケジュール" : "Confirm & Schedule") : undefined}
+          subtitle={scannerMode === "slot"
+            ? (isJa ? `スキャンした製品を ${slotModalState.equipment} の ${slotModalState.startTime} から順に配置します。` : `Scanned products are scheduled in order on ${slotModalState.equipment} from ${slotModalState.startTime}.`)
+            : undefined}
+          onConfirm={handleScannerConfirm}
+          onClose={() => { if (!scannerBusy) setScannerMode(null); }}
+        />
+      ) : null}
 
       <PlannerSmartSchedulingModal
         open={smartPreviewOpen}

@@ -56,6 +56,7 @@ export default function PlannerSlotSchedulingModal({
   submitting = false,
   onClose,
   onConfirm,
+  onOpenScanner,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -109,6 +110,17 @@ export default function PlannerSlotSchedulingModal({
       maxWidthClassName="max-w-6xl"
       footer={(
         <div className="flex justify-end gap-3">
+          {onOpenScanner ? (
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              disabled={submitting}
+              className="mr-auto flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>qr_code_scanner</span>
+              {isJa ? "バーコードで追加" : "Scan to Add"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onClose}
