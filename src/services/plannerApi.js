@@ -251,6 +251,14 @@ export async function fetchPlannerPlans({ factory, date } = {}) {
   }
 }
 
+// Breakdown list of the nearest earlier plan (a machine stays broken until it is marked repaired).
+// Returns the map, or null when no earlier plan has one. Throws if the server cannot answer.
+export async function fetchCarriedUnavailableEquipment({ factory, date } = {}) {
+  const params = new URLSearchParams({ factory: factory || "", date: date || "" });
+  const result = await requestJson(`api/production-plans/unavailable-carry?${params.toString()}`);
+  return result?.data?.unavailableEquipment || null;
+}
+
 export async function upsertPlannerPlan({ factory, date, products, breaks, createdBy, startTime, unavailableEquipment }) {
   const existingPlans = await fetchPlannerPlans({ factory, date });
   const payload = {

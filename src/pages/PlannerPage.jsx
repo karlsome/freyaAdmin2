@@ -50,6 +50,7 @@ import {
   schedulePlannerGoal,
   updatePlannerGoal,
   upsertPlannerPlan,
+  fetchCarriedUnavailableEquipment,
   fetchPlannerBreakDefaults,
   savePlannerBreakDefaults,
 } from "../services/plannerApi";
@@ -410,11 +411,21 @@ export default function PlannerPage() {
         setStartTime(currentPlan.startTime);
         localStorage.setItem("planner_start_time", currentPlan.startTime);
       }
-      const planUnavailable = currentPlan?.unavailableEquipment && typeof currentPlan.unavailableEquipment === "object"
-        ? normalizeUnavailableMap(currentPlan.unavailableEquipment)
-        : null;
-      const storedUnavailable = normalizeUnavailableMap(loadUnavailableEquipmentFromStorage(nextFactory));
-      const activeUnavailable = planUnavailable !== null ? planUnavailable : storedUnavailable;
+      // Same rule as the legacy Freya Admin: a machine stays broken down until it is marked repaired.
+      // The day's own plan wins; a day without a list inherits it from the nearest earlier plan.
+      let activeUnavailable;
+      if (currentPlan?.unavailableEquipment && typeof currentPlan.unavailableEquipment === "object") {
+        activeUnavailable = normalizeUnavailableMap(currentPlan.unavailableEquipment);
+      } else {
+        try {
+          const carried = await fetchCarriedUnavailableEquipment({ factory: nextFactory, date: nextDate });
+          activeUnavailable = normalizeUnavailableMap(carried);
+        } catch {
+          // server could not answer: keep what this browser last knew rather than showing everything as available
+          activeUnavailable = normalizeUnavailableMap(loadUnavailableEquipmentFromStorage(nextFactory));
+        }
+        if (requestId !== requestIdRef.current) return;
+      }
       setUnavailableEquipment(activeUnavailable);
       saveUnavailableEquipmentToStorage(nextFactory, activeUnavailable);
       setCurrentPlanId(currentPlan?._id || "");
