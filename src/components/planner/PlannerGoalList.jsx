@@ -7,7 +7,7 @@ import {
 } from "../../utils/planner";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, produced = null, onDeleteGoal, onScheduleGoal, onReconcileSingleGoal }) {
+function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, produced = null, live = 0, onDeleteGoal, onScheduleGoal, onReconcileSingleGoal }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -87,8 +87,8 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
             <div
               className="mt-2"
               title={isJa
-                ? "作業者が提出済みの生産実績（良品数）です。まだ提出されていない作業中の分は含みません。"
-                : "Good pieces already submitted by workers. Work still in progress and not yet submitted is not included."}
+                ? "作業者が提出済みの良品数に、稼働中の設備のサイクル数から推定した未提出分（推定）を加えた数です。"
+                : "Good pieces submitted by workers, plus an estimate for work still running (machine cycles x pcs per cycle, minus live NG)."}
             >
               <div className="mb-1 flex items-center justify-between gap-2 text-xs">
                 <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
@@ -107,6 +107,11 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
               </div>
               <div className="mt-1 text-[11px] text-[var(--text-secondary)] font-mono freya-tabular">
                 {produced} / {Number(goal.targetQuantity || 0)} {isJa ? "個" : "pcs"}
+                {live > 0 ? (
+                  <span className="ml-1 text-emerald-600 dark:text-emerald-400">
+                    ({isJa ? `稼働中 約${live}個を含む` : `incl. ~${live} running now`})
+                  </span>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -178,15 +183,19 @@ export default function PlannerGoalList({
   // Submitted production only exists for the plan date. When one 背番号 has several goals that day, fill the goals in
   // list order up to their target; whatever is left over goes to the last one.
   const producedByGoal = {};
+  const liveByGoal = {};
   const leftover = {};
-  Object.entries(producedBySerial).forEach(([serial, entry]) => { leftover[serial] = entry.good; });
+  Object.entries(producedBySerial).forEach(([serial, entry]) => { leftover[serial] = entry.good || 0; });
   const todaysGoals = (goalsByDate[currentDate] || []).filter((goal) => goal.背番号);
   todaysGoals.forEach((goal, index) => {
     const serial = goal.背番号;
     const isLastForSerial = !todaysGoals.slice(index + 1).some((other) => other.背番号 === serial);
     const left = leftover[serial] || 0;
     const take = isLastForSerial ? left : Math.min(left, Number(goal.targetQuantity || 0));
-    producedByGoal[goal._id] = take;
+    // Pieces still running (not submitted yet) belong to the last goal of that 背番号
+    const live = isLastForSerial ? Math.round(producedBySerial[serial]?.live || 0) : 0;
+    producedByGoal[goal._id] = take + live;
+    liveByGoal[goal._id] = live;
     leftover[serial] = left - take;
   });
 
@@ -226,6 +235,7 @@ export default function PlannerGoalList({
                 products={products}
                 productColors={productColors}
                 produced={goal.date === currentDate ? (producedByGoal[goal._id] ?? 0) : null}
+                live={goal.date === currentDate ? (liveByGoal[goal._id] ?? 0) : 0}
                 onDeleteGoal={onDeleteGoal}
                 onScheduleGoal={onScheduleGoal}
                 onReconcileSingleGoal={onReconcileSingleGoal}

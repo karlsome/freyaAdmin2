@@ -32,6 +32,7 @@ import {
   deletePlannerPlanByFactoryDate,
   deletePlannerPreviewDraft,
   fetchPlannerActualProduction,
+  fetchPlannerLiveProduction,
   fetchPlannerEquipment,
   fetchPlannerFactories,
   fetchPlannerGoals,
@@ -210,6 +211,7 @@ export default function PlannerPage() {
   const [goals, setGoals] = useState([]);
   const [scheduledProducts, setScheduledProducts] = useState([]);
   const [actualBlocks, setActualBlocks] = useState([]);
+  const [liveProduction, setLiveProduction] = useState({});
   const [inProgressMap, setInProgressMap] = useState({});
   const [breaks, setBreaks] = useState(cloneBreaks(DEFAULT_BREAKS));
   const [currentPlanId, setCurrentPlanId] = useState("");
@@ -313,8 +315,30 @@ export default function PlannerPage() {
         totals[serial] = entry;
       });
     });
+    // Work still running (not submitted yet), estimated from the machine cycle counters
+    Object.entries(liveProduction).forEach(([serial, live]) => {
+      const entry = totals[serial] || { good: 0, ng: 0, processed: 0 };
+      entry.live = Number(live?.good) || 0;
+      totals[serial] = entry;
+    });
     return totals;
-  }, [actualBlocks]);
+  }, [actualBlocks, liveProduction]);
+
+  // Poll the live estimate while viewing today's plan (the counters only mean something for the current production day)
+  useEffect(() => {
+    if (!factoryName || planDate !== todayStr()) {
+      setLiveProduction({});
+      return undefined;
+    }
+    let cancelled = false;
+    const load = async () => {
+      const next = await fetchPlannerLiveProduction({ factory: factoryName, date: planDate });
+      if (!cancelled) setLiveProduction(next);
+    };
+    load();
+    const timer = setInterval(load, 30000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [factoryName, planDate]);
   const filteredGoals = filterGoals(goals, goalSearch);
   const outOfSyncCount = useMemo(() => {
     return goals.reduce((count, goal) => {

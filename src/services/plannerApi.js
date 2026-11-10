@@ -259,6 +259,19 @@ export async function fetchCarriedUnavailableEquipment({ factory, date } = {}) {
   return result?.data?.unavailableEquipment || null;
 }
 
+// Live (not yet submitted) pieces per 背番号 of the machines running right now: { 背番号: { pieces, ng, good, machines, sources } }.
+// An estimate from the machine cycle counters; returns {} when the server cannot answer.
+export async function fetchPlannerLiveProduction({ factory, date } = {}) {
+  if (!factory || !date) return {};
+  try {
+    const params = new URLSearchParams({ factory, date });
+    const result = await requestJson(`api/planner/live-production?${params.toString()}`);
+    return result?.data?.bySerial || {};
+  } catch {
+    return {};
+  }
+}
+
 export async function upsertPlannerPlan({ factory, date, products, breaks, createdBy, startTime, unavailableEquipment }) {
   const existingPlans = await fetchPlannerPlans({ factory, date });
   const payload = {
