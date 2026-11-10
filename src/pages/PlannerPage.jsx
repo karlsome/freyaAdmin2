@@ -11,6 +11,7 @@ import PlannerTimelineView from "../components/planner/PlannerTimelineView";
 import PlannerKanbanView from "../components/planner/PlannerKanbanView";
 import PlannerTableView from "../components/planner/PlannerTableView";
 import PlannerBreakModal from "../components/planner/PlannerBreakModal";
+import PlannerQuickBreakModal from "../components/planner/PlannerQuickBreakModal";
 import PlannerManualGoalModal from "../components/planner/PlannerManualGoalModal";
 import PlannerDuplicateChoiceModal from "../components/planner/PlannerDuplicateChoiceModal";
 import PlannerGoalImportReviewModal from "../components/planner/PlannerGoalImportReviewModal";
@@ -49,6 +50,8 @@ import {
   schedulePlannerGoal,
   updatePlannerGoal,
   upsertPlannerPlan,
+  fetchPlannerBreakDefaults,
+  savePlannerBreakDefaults,
 } from "../services/plannerApi";
 import { getAuthUser } from "../utils/masterDB";
 import {
@@ -165,6 +168,10 @@ function filterGoals(goals, searchValue) {
   ));
 }
 
+const breaksSignature = (list) => JSON.stringify(
+  (Array.isArray(list) ? list : []).map((item) => [item.name || "", item.start, item.end, item.equipment || null]).sort(),
+);
+
 export default function PlannerPage() {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -200,6 +207,10 @@ export default function PlannerPage() {
   const [machineStatusModalOpen, setMachineStatusModalOpen] = useState(false);
   const [breakModalOpen, setBreakModalOpen] = useState(false);
   const [breakSaving, setBreakSaving] = useState(false);
+  const [quickBreak, setQuickBreak] = useState(null);
+  const [breakDefaults, setBreakDefaults] = useState(cloneBreaks(DEFAULT_BREAKS));
+  const breakDefaultsRef = useRef(breakDefaults);
+  useEffect(() => { breakDefaultsRef.current = breakDefaults; }, [breakDefaults]);
   const [manualGoalOpen, setManualGoalOpen] = useState(false);
   const [manualGoalSubmitting, setManualGoalSubmitting] = useState(false);
   const [duplicateState, setDuplicateState] = useState({ open: false, existingGoal: null, pendingGoal: null });
@@ -340,13 +351,14 @@ export default function PlannerPage() {
     setDataLoading(true);
 
     try {
-      const [nextEquipment, nextProducts, nextGoals, nextPlans, actualRows, inProgressRows] = await Promise.all([
+      const [nextEquipment, nextProducts, nextGoals, nextPlans, actualRows, inProgressRows, fetchedBreakDefaults] = await Promise.all([
         fetchPlannerEquipment(nextFactory),
         fetchPlannerProducts(),
         fetchPlannerGoals({ factory: nextFactory, date: nextDate, endDate: activeRangeEnd }),
         fetchPlannerPlans({ factory: nextFactory, date: nextDate }),
         fetchPlannerActualProduction(nextFactory, nextDate),
         fetchPlannerInProgress(nextFactory, nextDate),
+        fetchPlannerBreakDefaults(nextFactory).catch(() => null),
       ]);
 
       if (requestId !== requestIdRef.current) {
@@ -373,7 +385,9 @@ export default function PlannerPage() {
       setScheduledProducts(normalizePlanProducts(currentPlan?.products || [], nextProducts, nextColorMap));
       setActualBlocks(processActualProductionData(actualRows));
       setInProgressMap(processInProgressData(inProgressRows));
-      setBreaks(currentPlan?.breaks?.length ? cloneBreaks(currentPlan.breaks) : cloneBreaks(DEFAULT_BREAKS));
+      const nextBreakDefaults = fetchedBreakDefaults ? cloneBreaks(fetchedBreakDefaults) : cloneBreaks(DEFAULT_BREAKS);
+      setBreakDefaults(nextBreakDefaults);
+      setBreaks(currentPlan?.breaks?.length ? cloneBreaks(currentPlan.breaks) : cloneBreaks(nextBreakDefaults));
       if (currentPlan?.startTime) {
         setStartTime(currentPlan.startTime);
         localStorage.setItem("planner_start_time", currentPlan.startTime);
@@ -402,7 +416,8 @@ export default function PlannerPage() {
   async function persistPlan(nextProducts, nextBreaks, nextStartTime = startTime, nextUnavailable = unavailableEquipment) {
     if (!factoryName) return;
 
-    if (!nextProducts.length && !nextUnavailable?.length) {
+    const customBreaks = breaksSignature(nextBreaks) !== breaksSignature(breakDefaultsRef.current);
+    if (!nextProducts.length && !nextUnavailable?.length && !customBreaks) {
       await deletePlannerPlanByFactoryDate(factoryName, planDate);
       setCurrentPlanId("");
       return;
@@ -982,6 +997,31 @@ export default function PlannerPage() {
     }
   }
 
+  async function handleSaveBreakDefaults(nextDefaults) {
+    if (!factoryName) return;
+    setBreakSaving(true);
+
+    try {
+      const previousDefaults = breakDefaultsRef.current;
+      const saved = await savePlannerBreakDefaults({
+        factory: factoryName,
+        breaks: nextDefaults,
+        updatedBy: getUserDisplayName(authUser),
+      });
+      setBreakDefaults(cloneBreaks(saved));
+      // A day still using the old defaults follows the new ones.
+      if (breaksSignature(breaks) === breaksSignature(previousDefaults)) {
+        setBreaks(cloneBreaks(saved));
+        if (scheduledProducts.length) await persistPlan(scheduledProducts, saved);
+      }
+      showFlash(isJa ? "デフォルト休憩時間を保存しました。" : "Default break times saved.");
+    } catch (error) {
+      showFlash(error.message || "Failed to save default breaks.", "error");
+    } finally {
+      setBreakSaving(false);
+    }
+  }
+
   async function handleSaveBreaks(nextBreaks) {
     setBreakSaving(true);
 
@@ -1472,14 +1512,6 @@ export default function PlannerPage() {
           <>
             <button
               type="button"
-              onClick={() => setBreakModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
-              {isJa ? "休憩時間" : "Break Times"}
-            </button>
-            <button
-              type="button"
               onClick={() => loadPlannerData()}
               disabled={loadingFactories || dataLoading}
               className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
@@ -1627,6 +1659,14 @@ export default function PlannerPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
+                  onClick={() => setBreakModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
+                  {isJa ? "休憩時間" : "Break Times"}
+                </button>
+                <button
+                  type="button"
                   onClick={handleOpenCalendar}
                   disabled={!scheduledProducts.length}
                   className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
@@ -1674,6 +1714,8 @@ export default function PlannerPage() {
                   }
                   setSlotModalState({ open: true, equipment: equipmentName, startTime });
                 }}
+                onAddBreak={(equipmentName, slot) => setQuickBreak({ equipment: equipmentName, start: slot })}
+                onEditBreak={(breakItem, equipmentName) => setQuickBreak({ breakItem, equipment: equipmentName, start: breakItem.start })}
                 onMoveScheduledItem={handleMoveScheduledItem}
                 onRemoveScheduledItem={handleRemoveScheduledItem}
               />
@@ -1699,13 +1741,34 @@ export default function PlannerPage() {
         )}
       </div>
 
+      {quickBreak ? (
+        <PlannerQuickBreakModal
+          key={`${quickBreak.breakItem?.id || "new"}-${quickBreak.equipment}-${quickBreak.start}`}
+          target={quickBreak}
+          saving={breakSaving}
+          onClose={() => setQuickBreak(null)}
+          onSave={async (item) => {
+            const exists = breaks.some((entry) => entry.id === item.id);
+            const next = exists ? breaks.map((entry) => (entry.id === item.id ? item : entry)) : [...breaks, item];
+            await handleSaveBreaks(next);
+            setQuickBreak(null);
+          }}
+          onDelete={async (id) => {
+            await handleSaveBreaks(breaks.filter((entry) => entry.id !== id));
+            setQuickBreak(null);
+          }}
+        />
+      ) : null}
+
       <PlannerBreakModal
         open={breakModalOpen}
         breaks={breaks}
+        defaults={breakDefaults}
         equipmentOptions={equipment}
         saving={breakSaving}
         onClose={() => setBreakModalOpen(false)}
         onSave={handleSaveBreaks}
+        onSaveDefaults={handleSaveBreakDefaults}
       />
 
       <PlannerPrintModal

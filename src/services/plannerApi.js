@@ -514,3 +514,18 @@ export async function restorePlannerPublishedVersion({ factory, date, sourceVers
   invalidatePlannerPublishedCache(factory, date);
   return result?.data || result;
 }
+// Default break times, stored per factory in Sasaki_Coating_MasterDB.plannerBreakDefaults.
+export async function fetchPlannerBreakDefaults(factory) {
+  if (!factory) return null;
+  const result = await requestJson(`api/planner-break-defaults?factory=${encodeURIComponent(factory)}`);
+  return result?.data?.breaks || null;
+}
+
+export async function savePlannerBreakDefaults({ factory, breaks, updatedBy }) {
+  const result = await requestJson("api/planner-break-defaults", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ factory, breaks, updatedBy }),
+  });
+  return result?.data?.breaks || [];
+}
