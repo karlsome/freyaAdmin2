@@ -79,9 +79,10 @@ export default function PlannerPreviewTimeline({
               <div className="relative shrink-0" style={{ width: laneWidth, height: LANE_HEIGHT }}>
                 {/* Background cells */}
                 <div className="absolute inset-0 flex">
-                  {slots.map((slot) => {
+                  {slots.map((slot, slotIndex) => {
                     const minutes = timeToMinutes(slot);
                     const breakItem = isBreakAtSlot(minutes, equipment, ctx.breaks);
+                    const isBreakStart = breakItem && (slotIndex === 0 || !isBreakAtSlot(timeToMinutes(slots[slotIndex - 1]), equipment, ctx.breaks));
                     const key = `${equipment}|${slot}`;
                     const hovered = hoverKey === key;
                     return (
@@ -89,10 +90,13 @@ export default function PlannerPreviewTimeline({
                         key={slot}
                         data-slot={slot}
                         className={`group relative shrink-0 border-r border-[var(--border)]/50 transition-colors ${
-                          breakItem ? "bg-slate-200/70 dark:bg-slate-700/50" : hovered ? "bg-sky-500/20" : ""
+                          breakItem ? "border-slate-400/40 bg-slate-300/70 dark:bg-slate-600/60" : hovered ? "bg-sky-500/20" : ""
                         } ${editMode && !breakItem ? "cursor-pointer hover:bg-sky-500/10" : ""}`}
-                        style={{ width: SLOT_WIDTH }}
-                        title={breakItem ? breakItem.name : undefined}
+                        style={{
+                          width: SLOT_WIDTH,
+                          ...(breakItem ? { backgroundImage: "repeating-linear-gradient(135deg, rgba(100,116,139,0.45) 0, rgba(100,116,139,0.45) 4px, transparent 4px, transparent 8px)" } : {}),
+                        }}
+                        title={breakItem ? `${breakItem.name || "Break"} ${breakItem.start}-${breakItem.end}` : undefined}
                         onClick={() => { if (editMode && !breakItem && !draggingId) onSlotClick?.(equipment, slot); }}
                         onDragOver={(event) => {
                           if (!editMode || !draggingId || breakItem) return;
@@ -109,6 +113,11 @@ export default function PlannerPreviewTimeline({
                           if (editMode && id) onDrop?.(id, equipment, slot);
                         }}
                       >
+                        {isBreakStart ? (
+                          <span className="pointer-events-none absolute left-1 top-1/2 z-10 -translate-y-1/2 whitespace-nowrap rounded-[4px] bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm">
+                            {breakItem.name && breakItem.name !== "Break" ? breakItem.name : (isJa ? "休憩" : "BREAK")}
+                          </span>
+                        ) : null}
                         {editMode && !breakItem ? (
                           <span className="material-symbols-outlined pointer-events-none absolute inset-0 flex items-center justify-center text-[14px] text-sky-600 opacity-0 group-hover:opacity-60">add</span>
                         ) : null}
