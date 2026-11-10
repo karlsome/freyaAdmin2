@@ -5,6 +5,9 @@ import { useFactorySensors } from "../../hooks/useFactorySensors";
 import { useFactoryCallMonitor, CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
 import { useCallSounds } from "../../hooks/useCallSounds";
 import StopCallMonitorModal from "../twin/StopCallMonitorModal";
+import KensaDrawer from "../twin/KensaDrawer";
+import { kensaTodayFor } from "../twin/kensaLive";
+import { getFactory3DLayout } from "../../data/factoryLayouts";
 import {
   getFactoryAnnotations,
   saveFactoryAnnotations,
@@ -40,6 +43,7 @@ export default function TwinPanel({
   hasSensors = true,
   onOpenCamera,
   callSounds = false,
+  kensaToday = null,
 }) {
   const [viewKey, setViewKey] = useState(0);
   const [showSensors, setShowSensors] = useState(true);
@@ -91,6 +95,13 @@ export default function TwinPanel({
     loadDemoPreset,
   } = useFactoryCallMonitor(factory);
   const [soundOn, toggleSound] = useCallSounds(activeCalls, callSounds);
+
+  const kensaTable = useMemo(
+    () => (has3D && selectedId
+      ? (getFactory3DLayout(factory).zones?.kensaTables || []).find((k) => k.machine && k.machine === selectedId) || null
+      : null),
+    [has3D, factory, selectedId]
+  );
 
   const annotations = useMemo(() => getFactoryAnnotations(factory), [factory]);
   const defaultCameras = annotations.cameras || [];
@@ -383,6 +394,7 @@ export default function TwinPanel({
             activeCalls={activeCalls}
             callsByMachine={callsByMachine}
             liveMachines={liveMachines}
+            kensaToday={kensaToday}
             isCallStreamConnected={isCallStreamConnected}
             onSelectCamera={onOpenCamera}
             onOpenCallMonitor={() => setCallMonitorModalOpen(true)}
@@ -410,6 +422,19 @@ export default function TwinPanel({
             hasSensors={hasSensors}
           />
         )
+      )}
+
+      {/* Inspection table detail drawer (IT1 / IT2 = Kensa interactive) */}
+      {has3D && kensaTable && (
+        <KensaDrawer
+          machineId={kensaTable.machine}
+          title={isJa ? kensaTable.labelJa : kensaTable.labelEn}
+          live={liveMachines[kensaTable.machine]}
+          call={callsByMachine[kensaTable.machine] || null}
+          today={kensaTodayFor(kensaToday, kensaTable.machine)}
+          isJa={isJa}
+          onClose={() => onSelect(null)}
+        />
       )}
 
       {/* Needs attention & Active Call chips */}

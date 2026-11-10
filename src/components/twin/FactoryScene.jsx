@@ -6,6 +6,8 @@ import { Html } from "./HtmlOverlay";
 import NcCutter from "./NcCutter";
 import ManasMachine from "./ManasMachine";
 import { PsaMachine, SrsMachine, KensaTable } from "./ScnaMachines";
+import KensaBadge from "./KensaBadge";
+import { kensaStatus, kensaTodayFor } from "./kensaLive";
 import SensorMarker from "./SensorMarker";
 import CameraMarker from "./CameraMarker";
 import MachineCallEffect from "./MachineCallEffect";
@@ -904,6 +906,7 @@ function FactoryContents({
   activeCalls = [],
   callsByMachine = {},
   liveMachines = {},
+  kensaToday = null,
   isCallStreamConnected = false,
   onSelectCamera,
   onOpenCallMonitor,
@@ -956,7 +959,15 @@ function FactoryContents({
         <StaticGroup key={ent.id}><EntranceZone entrance={ent} isJa={isJa} /></StaticGroup>
       ))}
       {(layout.zones?.kensaTables || []).map((kt) => (
-        <KensaTable key={kt.id} position={kt.pos} size={kt.size} />
+        <KensaTable
+          key={kt.id}
+          id={kt.machine}
+          position={kt.pos}
+          size={kt.size}
+          status={kt.machine ? kensaStatus(liveMachines[kt.machine], callsByMachine[kt.machine]) : "off"}
+          selected={Boolean(kt.machine) && selectedId === kt.machine}
+          onSelect={kt.machine ? onSelect : undefined}
+        />
       ))}
 
       {/* Pair links on floor (e.g. OZNC pairs in 小瀬, or AOL-2/3 and AOL-4/5 in SCNA) */}
@@ -1210,6 +1221,23 @@ function FactoryContents({
         );
       })}
 
+      {/* Inspection 1 / Inspection 2 badges (live from the Kensa interactive tablets) */}
+      {(layout.zones?.kensaTables || []).filter((kt) => kt.machine).map((kt) => (
+        <KensaBadge
+          key={`badge-${kt.id}`}
+          machineId={kt.machine}
+          position={kt.pos}
+          height={2.15}
+          title={isJa ? kt.labelJa : kt.labelEn}
+          live={liveMachines[kt.machine]}
+          call={callsByMachine[kt.machine] || null}
+          today={kensaTodayFor(kensaToday, kt.machine)}
+          isJa={isJa}
+          selected={selectedId === kt.machine}
+          onSelect={onSelect}
+        />
+      ))}
+
       {/* Girasol 1 & Girasol 2 Badges */}
       {srsMachines.map((srs) => {
         const m = machinesById[srs.id];
@@ -1441,6 +1469,7 @@ export default function FactoryScene({
   activeCalls = [],
   callsByMachine = {},
   liveMachines = {},
+  kensaToday = null,
   isCallStreamConnected = false,
   onSelectCamera,
   onOpenCallMonitor,
@@ -1541,6 +1570,7 @@ export default function FactoryScene({
           activeCalls={activeCalls}
           callsByMachine={callsByMachine}
           liveMachines={liveMachines}
+          kensaToday={kensaToday}
           isCallStreamConnected={isCallStreamConnected}
           onSelectCamera={onSelectCamera}
           onOpenCallMonitor={onOpenCallMonitor}

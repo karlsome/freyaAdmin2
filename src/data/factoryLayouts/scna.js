@@ -109,11 +109,17 @@ export const SCNA_LAYOUT = {
     kensaTables: [
       {
         id: "kensa_1",
+        machine: "IT1", // Inspection 1 (left) = Kensa interactive ?machine=IT1
+        labelEn: "Inspection 1",
+        labelJa: "検査1",
         pos: [7.2, 3.35],
         size: [1.3, 3.2],
       },
       {
         id: "kensa_2",
+        machine: "IT2", // Inspection 2 (right) = Kensa interactive ?machine=IT2
+        labelEn: "Inspection 2",
+        labelJa: "検査2",
         pos: [7.2, -1.85],
         size: [1.3, 3.2],
       },
@@ -187,6 +193,8 @@ export function resolveScnaMachineId(id) {
 /** Floor position [x, z] of a machine on the SCNA map, or null. */
 export function getScnaMachinePosition(id) {
   const canonical = resolveScnaMachineId(id);
+  const kensa = (SCNA_LAYOUT.zones.kensaTables || []).find((k) => k.machine === canonical);
+  if (kensa) return kensa.pos;
   if (canonical === SCNA_LAYOUT.manas.id) return SCNA_LAYOUT.manas.pos;
   const nc = SCNA_LAYOUT.ncMachines.find((m) => m.id === canonical);
   if (nc) return nc.pos;
@@ -204,3 +212,6 @@ export const SCNA_TV_GRID = [
   "AOL-4", "AOL-5", "GAP", "SPACER", "SPACER",
 ];
 
+
+/** Inspection tables driven by the Kensa interactive tablets (not in SCNA_MACHINE_IDS: they are not production machines). */
+export const SCNA_KENSA_IDS = SCNA_LAYOUT.zones.kensaTables.map((k) => k.machine);

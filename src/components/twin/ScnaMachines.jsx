@@ -529,7 +529,7 @@ export const SrsMachine = memo(function SrsMachine({
  *     and overhanging top canopy with underslung fluorescent LED tube light.
  * Oriented along the Z axis (width = size[1]), facing -X toward the AOL machines.
  */
-export const KensaTable = memo(function KensaTable({ position, size = [1.3, 3.2] }) {
+export const KensaTable = memo(function KensaTable({ id, position, size = [1.3, 3.2], status = "off", selected = false, onSelect }) {
   const [d, w] = size;
   const halfW = w / 2;
   const halfD = d / 2;
@@ -538,7 +538,13 @@ export const KensaTable = memo(function KensaTable({ position, size = [1.3, 3.2]
   const riserX = halfD - 0.12;
 
   return (
-    <group position={[position[0], 0, position[1]]}>
+    <group
+      position={[position[0], 0, position[1]]}
+      onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(id); } : undefined}
+    >
+      {/* Live status glow under the table (Kensa interactive IT1 / IT2) */}
+      {onSelect && <StatusGlow width={d * 1.08} depth={w * 1.04} status={status} selected={selected} />}
+
       {/* ── 1. Lower Steel Frame & Legs ── */}
       {[-legX, legX].flatMap((lx) =>
         [-legZ, legZ].map((lz) => (

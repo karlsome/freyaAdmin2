@@ -2293,3 +2293,22 @@ html:not(.dark) .twin-edit-toast {
 .twin-tv-takeover__label { font-size: clamp(22px, 3vw, 48px); font-weight: 900; letter-spacing: 0.1em; }
 .twin-tv-takeover__machine { font-size: clamp(64px, 12vw, 180px); font-weight: 900; line-height: 0.95; text-shadow: 0 8px 40px rgba(0,0,0,0.4); }
 .twin-tv-takeover__rank { font-size: clamp(20px, 2.6vw, 40px); font-weight: 800; }
+
+/* ── Inspection table drawer (Kensa interactive IT1 / IT2) ── */
+.twin-kensa__product { font-size: 13px; line-height: 1.35; }
+.twin-kensa__muted { font-size: 11px; color: var(--text-muted, #94a3b8); margin-top: 2px; }
+.twin-kensa__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 4px; }
+.twin-kensa__stat { padding: 6px 4px; text-align: center; border-radius: 8px; background: color-mix(in srgb, var(--tone, #94a3b8) 12%, transparent); }
+.twin-kensa__stat-value { font-size: 18px; font-weight: 800; color: var(--tone, inherit); font-variant-numeric: tabular-nums; }
+.twin-kensa__stat-label { font-size: 10px; font-weight: 600; color: var(--text-muted, #94a3b8); }
+.twin-kensa__list { display: flex; flex-direction: column; gap: 5px; }
+.twin-kensa__row { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border, rgba(148, 163, 184, 0.25)); }
+.twin-kensa__row--cur { border-color: var(--status); background: color-mix(in srgb, var(--status) 10%, transparent); }
+.twin-kensa__row-main { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: 12px; font-weight: 700; }
+.twin-kensa__id { word-break: break-all; }
+.twin-kensa__row-sub { font-size: 11px; color: var(--text-muted, #94a3b8); margin-top: 2px; }
+.twin-kensa__ng { color: #ef4444; font-weight: 700; }
+.twin-kensa__tag { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 999px; background: rgba(148, 163, 184, 0.2); }
+.twin-kensa__tag--cur { background: var(--status); color: #fff; }
+.twin-kensa__chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.twin-kensa__chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(239, 68, 68, 0.14); color: #ef4444; }

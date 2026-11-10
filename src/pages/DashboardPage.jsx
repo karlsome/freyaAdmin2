@@ -10,6 +10,7 @@ import AICopilotPanel from "../components/dashboard/AICopilotPanel";
 import AIShapeRenderer from "../components/dashboard/AIShapeRenderer";
 import MachineDrawer from "../components/twin/MachineDrawer";
 import { getFactory3DLayout, has3DLayout, machineIdsFor, normalizeFactoryMachineId } from "../data/factoryLayouts";
+import { SCNA_KENSA_IDS } from "../data/factoryLayouts/scna";
 import { useSelectedFactory, useTwinFactories } from "../hooks/useTwinFactories";
 import { useAlertChime } from "../hooks/useAlertChime";
 import FactoryPicker from "../components/panels/FactoryPicker";
@@ -177,6 +178,8 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
   }, [machineIds, machinesById, data]);
 
   const selected = selectedId ? machinesById[selectedId] || { id: selectedId, status: "off" } : null;
+  // Inspection tables (IT1 / IT2) have their own drawer inside the twin panel
+  const isKensaSelected = Boolean(selectedId) && SCNA_KENSA_IDS.includes(selectedId) && factory === "SCNA";
   const selectedPartner = selected?.pair?.together ? machinesById[selected.pair.partner] : null;
 
   useEffect(() => {
@@ -247,6 +250,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
             has3D={has3D}
             units={units}
             hasSensors={Boolean(data?.hasCycleSensors)}
+            kensaToday={data?.kensaToday || null}
             onOpenCamera={(streamId) => openCamera(factory, streamId)}
           />
         );
@@ -402,7 +406,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
           </div>
 
           <MachineDrawer
-            machine={selected}
+            machine={isKensaSelected ? null : selected}
             partner={selectedPartner}
             isJa={isJa}
             onClose={() => setSelectedId(null)}
