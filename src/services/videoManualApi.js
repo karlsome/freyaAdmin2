@@ -91,6 +91,20 @@ export async function fetchVideoManualPlaylists() {
   return Array.isArray(data) ? data : [];
 }
 
+export async function patchVideoManualPlaylist(playlistId, updates) {
+  if (!playlistId) throw new Error("playlistId is required");
+  return request(`api/video-manuals-studio/playlists/${playlistId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteVideoManualPlaylist(playlistId) {
+  if (!playlistId) throw new Error("playlistId is required");
+  return request(`api/video-manuals-studio/playlists/${playlistId}`, { method: "DELETE" });
+}
+
 export async function fetchVideoManualPlaylistProjects(playlistId) {
   if (!playlistId) return [];
 

@@ -9,10 +9,12 @@ import { readStoredAuthUser } from "../utils/auth";
 import {
   canEditVideoManualProjects,
   createVideoManualProject,
+  deleteVideoManualPlaylist,
   deleteVideoManualProject,
   duplicateVideoManualProject,
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
+  patchVideoManualPlaylist,
   patchVideoManualProject,
 } from "../services/videoManualApi";
 
@@ -420,6 +422,78 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
   );
 }
 
+function EditPlaylistModal({ playlist, onClose, onSaved }) {
+  const { t } = useLanguage();
+  const [name, setName] = useState(playlist?.name || "");
+  const [description, setDescription] = useState(playlist?.description || "");
+  const [model, setModel] = useState(playlist?.model || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const handleKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose, saving]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const nextName = name.trim();
+    if (!nextName) { setError(t("Name is required.")); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const updates = { name: nextName, description: description.trim(), model: model.trim() };
+      await patchVideoManualPlaylist(playlist._id, updates);
+      onSaved({ ...playlist, ...updates, model: updates.model || null });
+    } catch (saveError) {
+      setError(saveError.message || t("Failed to save playlist."));
+      setSaving(false);
+    }
+  }
+
+  const inputClass = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] outline-none transition-all duration-150 focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]";
+  const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]";
+
+  return createPortal(
+    <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => { if (!saving) onClose(); }}>
+      <form
+        onSubmit={handleSubmit}
+        onClick={(event) => event.stopPropagation()}
+        className="freya-card flex w-full max-w-lg flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
+      >
+        <div className="border-b border-[var(--border)] px-6 py-4">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">{t("Edit playlist")}</h2>
+        </div>
+        <div className="space-y-3.5 px-6 py-5">
+          <label className="block">
+            <span className={labelClass}>{t("Name")}</span>
+            <input autoFocus type="text" value={name} onChange={(event) => setName(event.target.value)} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("Model")}</span>
+            <input type="text" value={model} onChange={(event) => setModel(event.target.value)} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("Description")}</span>
+            <textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className={`${inputClass} resize-y font-normal`} />
+          </label>
+          {error ? <p className="text-xs font-semibold text-[var(--status-danger)]">{error}</p> : null}
+        </div>
+        <div className="flex items-center justify-end gap-2.5 border-t border-[var(--border)] px-6 py-3.5">
+          <button type="button" onClick={onClose} disabled={saving} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] disabled:opacity-50">
+            {t("Cancel")}
+          </button>
+          <button type="submit" disabled={saving} className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+            {saving ? t("Saving...") : t("Save")}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body,
+  );
+}
+
 function EmptyState({ icon, title, description }) {
   return (
     <div className="glass-card rounded-2xl px-4 py-4 text-center">
@@ -450,10 +524,27 @@ export default function VideoManualPage() {
   const [actionError, setActionError] = useState("");
   const [copyingProject, setCopyingProject] = useState(null);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState(null);
   const [notice, setNotice] = useState("");
   const authRole = String(readStoredAuthUser()?.role || "");
   const canEditProjects = canEditVideoManualProjects(authRole);
   const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
+
+  async function handleDeletePlaylist() {
+    if (!selectedPlaylist) return;
+    const count = Number(selectedPlaylist.projectCount || projects.length || 0);
+    if (!window.confirm(t("Permanently delete playlist \"{name}\" and its {count} project(s)? This cannot be undone.", { name: selectedPlaylist.name || "", count }))) return;
+    setActionError("");
+    try {
+      await deleteVideoManualPlaylist(selectedPlaylist._id);
+      const remaining = playlists.filter((item) => String(item._id) !== String(selectedPlaylist._id));
+      setPlaylists(remaining);
+      setSelectedPlaylistId(String(remaining[0]?._id || ""));
+      setNotice(t("Deleted playlist \"{name}\".", { name: selectedPlaylist.name || "" }));
+    } catch (error) {
+      setActionError(error.message || t("Failed to delete playlist."));
+    }
+  }
 
   async function handleDeleteProject(project) {
     if (!window.confirm(t("Move project \"{title}\" to the recycle bin? You can restore it from there.", { title: project?.title || "" }))) return;
@@ -693,6 +784,28 @@ export default function VideoManualPage() {
             {canEditProjects ? (
               <button
                 type="button"
+                onClick={() => setEditingPlaylist(selectedPlaylist)}
+                disabled={!selectedPlaylist}
+                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl border border-separator/40 bg-surface-container-low px-3.5 py-2.5 text-xs font-bold text-on-surface transition-all duration-150 hover:bg-surface-container active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                {t("Edit playlist")}
+              </button>
+            ) : null}
+            {canDeleteProjects ? (
+              <button
+                type="button"
+                onClick={handleDeletePlaylist}
+                disabled={!selectedPlaylist}
+                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl border border-error/30 bg-error/10 px-3.5 py-2.5 text-xs font-bold text-error transition-all duration-150 hover:bg-error/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_delete</span>
+                {t("Delete playlist")}
+              </button>
+            ) : null}
+            {canEditProjects ? (
+              <button
+                type="button"
                 onClick={() => setTrashOpen(true)}
                 disabled={!selectedPlaylist}
                 className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl border border-separator/40 bg-surface-container-low px-3.5 py-2.5 text-xs font-bold text-on-surface transition-all duration-150 hover:bg-surface-container active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
@@ -794,6 +907,18 @@ export default function VideoManualPage() {
           onRestored={(restored) => {
             setNotice(t("Restored \"{title}\".", { title: restored?.title || "" }));
             fetchVideoManualPlaylistProjects(selectedPlaylistId).then(setProjects).catch(() => {});
+          }}
+        />
+      ) : null}
+
+      {editingPlaylist ? (
+        <EditPlaylistModal
+          playlist={editingPlaylist}
+          onClose={() => setEditingPlaylist(null)}
+          onSaved={(updated) => {
+            setEditingPlaylist(null);
+            setPlaylists((current) => current.map((item) => (String(item._id) === String(updated._id) ? { ...item, ...updated } : item)));
+            setNotice(t("Playlist updated."));
           }}
         />
       ) : null}
