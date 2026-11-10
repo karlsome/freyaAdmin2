@@ -186,6 +186,14 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                           {item.serial} <span className="font-semibold text-[var(--freya-blue)]">{formatNumber(item.quantity)}</span>
                         </span>
                       ))}
+                      {row.plannedItems.length > 1 ? (
+                        <span
+                          title={isJa ? "計画数量の合計" : "Total planned quantity"}
+                          className="rounded-[4px] border border-[var(--freya-blue)] bg-[var(--freya-blue)] px-1.5 py-0.5 font-mono text-[11px] font-bold text-white"
+                        >
+                          {isJa ? "合計" : "Total"} {formatNumber(row.plannedTotal)}
+                        </span>
+                      ) : null}
                     </div>
                   ) : <span className="text-[var(--text-muted)]">—</span>}
                 </td>
