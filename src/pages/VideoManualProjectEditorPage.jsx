@@ -1731,7 +1731,10 @@ export default function VideoManualProjectEditorPage() {
     for (let attempt = 0; attempt < VIDEO_MANUAL_RENDER_MAX_POLLS; attempt += 1) {
       const result = await fetchVideoManualRenderStatus(renderId);
       const status = String(result?.status || "").toLowerCase();
-      const progress = Number.isFinite(Number(result?.progress)) ? Number(result.progress) : null;
+      const reportedProgress = Number.isFinite(Number(result?.progress)) && Number(result.progress) > 0 ? Math.round(Number(result.progress)) : null;
+      // Shotstack's render API reports a stage, not a percentage, so map stages to an approximate progress.
+      const stageProgress = { queued: 10, fetching: 30, rendering: 60, saving: 90 }[status] ?? null;
+      const progress = reportedProgress ?? stageProgress;
 
       if (status === "done") return result;
       if (status === "failed") throw new Error(result?.message || "Render failed on Shotstack.");
@@ -1740,7 +1743,12 @@ export default function VideoManualProjectEditorPage() {
         type: "info",
         status: status ? status.toUpperCase() : "RENDERING",
         title: "Rendering video",
-        message: progress == null ? t("Shotstack is processing the selected revision.") : t("Shotstack is processing the selected revision ({progress}%).", { progress }),
+        message: ({
+          queued: t("Shotstack: queued, waiting for a render slot."),
+          fetching: t("Shotstack: downloading the source media."),
+          rendering: t("Shotstack: rendering the video."),
+          saving: t("Shotstack: saving the finished video."),
+        })[status] || t("Shotstack is processing the selected revision."),
         progress,
       });
 
