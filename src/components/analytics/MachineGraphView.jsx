@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ChartJS from "./chartSetup";
 import { exportEquipmentToCsv } from "./equipmentAnalyticsUtils";
+import RecordDetailModal from "../RecordDetailModal";
 
 const PAGE_SIZES = [10, 50, 100];
 
@@ -27,6 +28,7 @@ function rowOf(record) {
     defectRate: processQty > 0 ? (defects / processQty) * 100 : 0,
     Time_start: record.Time_start || "",
     Time_end: record.Time_end || "",
+    _record: record,
   };
 }
 
@@ -126,6 +128,7 @@ function MachineGraphSection({ item, isJa }) {
   const [sort, setSort] = useState({ key: "Date", dir: "desc" });
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const columns = COLUMNS(isJa);
 
   const rows = useMemo(() => {
@@ -238,7 +241,11 @@ function MachineGraphSection({ item, isJa }) {
           </thead>
           <tbody>
             {pageRows.map((row, index) => (
-              <tr key={`${row.Date}-${row.Time_start}-${index}`} className="hover:bg-[var(--surface-hover)]">
+              <tr
+                key={`${row.Date}-${row.Time_start}-${index}`}
+                onClick={() => setSelectedRecord({ ...row._record, _source: "pressDB", _process: "Press", _id: row._record._id?.$oid || row._record._id })}
+                className="cursor-pointer hover:bg-[var(--surface-hover)]"
+              >
                 {columns.map((column) => (
                   <td key={column.key} className={`border border-[var(--border)] px-3 py-2 text-${column.align} text-[var(--text-primary)]`}>
                     {column.key === "Time_start"
@@ -257,6 +264,14 @@ function MachineGraphSection({ item, isJa }) {
       <div className="mt-3 text-sm text-[var(--text-secondary)]">
         {isJa ? `${rows.length} 件中 ${from} ～ ${to} 件を表示` : `Showing ${from} to ${to} of ${rows.length} entries`}
       </div>
+      {selectedRecord ? (
+        <RecordDetailModal
+          record={selectedRecord}
+          processName="Press"
+          onClose={() => setSelectedRecord(null)}
+          zIndex="z-[10000]"
+        />
+      ) : null}
     </section>
   );
 }
