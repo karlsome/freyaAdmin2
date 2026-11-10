@@ -16,7 +16,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
-    "@shotstack/shotstack-studio": "file:../shotstack-studio-sdk",
+    "@shotstack/shotstack-studio": "file:./vendor/shotstack-shotstack-studio-2.4.2.tgz",
     "chart.js": "^4.5.1",
     "hls.js": "^1.6.16",
     "html5-qrcode": "^2.3.8",
