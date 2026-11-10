@@ -415,21 +415,6 @@ export default function PlannerPage() {
         : null;
       const storedUnavailable = normalizeUnavailableMap(loadUnavailableEquipmentFromStorage(nextFactory));
       const activeUnavailable = planUnavailable !== null ? planUnavailable : storedUnavailable;
-      // TEMP-DEBUG (broken-down machines): remove once the legacy breakdown shows up
-      console.log("[PlannerDebug] unavailable equipment " + JSON.stringify({
-        factory: nextFactory,
-        date: nextDate,
-        plansReturned: Array.isArray(nextPlans) ? nextPlans.length : nextPlans,
-        planId: currentPlan?._id,
-        planKeys: currentPlan ? Object.keys(currentPlan) : null,
-        rawPlanUnavailable: currentPlan?.unavailableEquipment,
-        rawPlanUnavailableType: Array.isArray(currentPlan?.unavailableEquipment) ? "array" : typeof currentPlan?.unavailableEquipment,
-        normalizedFromPlan: planUnavailable,
-        storedInLocalStorage: storedUnavailable,
-        localStorageKey: Object.keys(localStorage).filter((k) => k.includes("unavailable")),
-        used: activeUnavailable,
-        equipmentNames: (nextEquipment || []).map((e) => e?.name || e?.設備 || e),
-      }));
       setUnavailableEquipment(activeUnavailable);
       saveUnavailableEquipmentToStorage(nextFactory, activeUnavailable);
       setCurrentPlanId(currentPlan?._id || "");
