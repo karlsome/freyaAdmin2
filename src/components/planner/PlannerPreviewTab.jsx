@@ -1,5 +1,40 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { isEquipmentUnavailable } from "../../utils/planner";
+import {
+  adjustBoxes,
+  applyDrop,
+  blockLabel,
+  buildBasisRows,
+  buildDraftSimulation,
+  buildSimulation,
+  createPreviewContext,
+  draftIdOf,
+  getInsertOptions,
+  insertException,
+  normalizeAssignments,
+  priorityRowMapOf,
+} from "../../utils/plannerPreviewEngine";
+import PlannerPreviewTimeline from "./PlannerPreviewTimeline";
+import { PlannerDraftInsertModal, PlannerDraftQuantityModal } from "./PlannerPreviewDraftModals";
+
+function getMoveMessage(result, isJa) {
+  const block = result.block || (isJa ? "ブロック" : "This block");
+  switch (result.messageKey) {
+    case "selectValidLane": return isJa ? "有効な設備レーンを選択してください。" : "Select a valid machine lane for this draft move.";
+    case "ineligible": return isJa ? `${block} は ${result.equipment} では稼働できません（停止中）。` : `${block} cannot run on ${result.equipment} (machine is down).`;
+    case "invalidSlot": return isJa ? "有効な15分枠を選択してください。" : "Choose a valid 15-minute slot.";
+    case "breakSlot": return isJa ? "休憩時間内です。稼働中の枠にドロップしてください。" : "That slot is inside a break. Drop the block on a working tile.";
+    case "invalidStartTile": return isJa ? "この枠は開始位置にできません。" : "That tile cannot be used as the block start.";
+    case "movePastLimit": return isJa ? `この移動では ${result.time} を超えてしまいます。` : `This move would push the block beyond ${result.time}.`;
+    case "swapPastLimit": return isJa ? `この入替では ${block} が ${result.time} を超えてしまいます。` : `This swap would push ${block} beyond ${result.time}.`;
+    case "overlap": return isJa ? "対象設備の他のブロックと重なります。" : "That slot overlaps another block on the target machine.";
+    case "chooseAnother": return isJa ? "入れ替える別のブロックを選んでください。" : "Choose another block to swap with.";
+    case "swapNotFound": return isJa ? "対象の下書きブロックが見つかりません。" : "The draft block could not be located.";
+    case "insertFailed": return isJa ? "この枠に不足ラインを追加できません。" : "Unable to add that shortage line to this slot.";
+    default: return isJa ? "この操作はできません。" : "That draft change is not available.";
+  }
+}
 
 export default function PlannerPreviewTab({
   preview,
@@ -8,6 +43,11 @@ export default function PlannerPreviewTab({
   publishing = false,
   factoryName,
   planDate,
+  breaks = [],
+  unavailableEquipment = [],
+  productColors = {},
+  equipmentOptions = [],
+  onNotify,
   onRefresh,
   onSaveDraft,
   onDiscardDraft,
@@ -22,11 +62,183 @@ export default function PlannerPreviewTab({
   const [scheduleUntil, setScheduleUntil] = useState("17:30");
   const [note, setNote] = useState("");
 
-  console.log(`⏱️ [PlannerPreviewTab] Rendering preview tab (loading=${loading})`);
+  // Local, unsaved draft edits. null = no local draft yet.
+  const [viewMode, setViewMode] = useState(null); // null (auto-pick) | "auto" | "draft"
+  const [draft, setDraft] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [insertTarget, setInsertTarget] = useState(null);
+  const [quantityId, setQuantityId] = useState(null);
+
+  const notify = (message, type = "info") => onNotify?.(message, type);
 
   useEffect(() => {
     console.log(`✅ [PlannerPreviewTab] Rendered to DOM in ${(performance.now() - renderT0Ref.current).toFixed(1)}ms`);
   });
+
+  // Leaving the factory/date drops local edits.
+  useEffect(() => {
+    setDraft(null);
+    setViewMode(null);
+    setEditMode(false);
+    setInsertTarget(null);
+    setQuantityId(null);
+  }, [factoryName, planDate]);
+
+  const priorityRows = useMemo(() => (Array.isArray(preview?.priorityRows) ? preview.priorityRows : []), [preview]);
+  const inventoryRows = Array.isArray(preview?.inventoryRows) ? preview.inventoryRows : [];
+  const savedDraft = preview?.savedDraft || null;
+
+  const ctx = useMemo(
+    () => createPreviewContext({ priorityRows, breaks, unavailableEquipment, scheduleUntilTime: scheduleUntil, productColors }),
+    [priorityRows, breaks, unavailableEquipment, scheduleUntil, productColors],
+  );
+  const priorityRowMap = useMemo(() => priorityRowMapOf(priorityRows), [priorityRows]);
+
+  const autoSim = useMemo(() => buildSimulation(ctx, priorityRows), [ctx, priorityRows]);
+  const savedAssignments = useMemo(
+    () => (Array.isArray(savedDraft?.assignments) && savedDraft.assignments.length > 0 ? normalizeAssignments(ctx, savedDraft.assignments) : []),
+    [ctx, savedDraft],
+  );
+  const hasSaved = savedAssignments.length > 0;
+  const hasDraft = draft !== null || hasSaved;
+  const effectiveView = (viewMode ?? (hasSaved ? "draft" : "auto")) === "draft" && hasDraft ? "draft" : "auto";
+  const draftAssignments = draft ?? savedAssignments;
+
+  const basisRows = useMemo(() => {
+    const saved = Array.isArray(savedDraft?.basisRows) ? savedDraft.basisRows : [];
+    return saved.length > 0 ? saved : buildBasisRows(priorityRows);
+  }, [savedDraft, priorityRows]);
+
+  const draftSim = useMemo(
+    () => (hasDraft ? buildDraftSimulation(ctx, priorityRows, basisRows, draftAssignments) : null),
+    [ctx, priorityRows, basisRows, draftAssignments, hasDraft],
+  );
+  const sim = effectiveView === "draft" && draftSim ? draftSim : autoSim;
+  const isEditing = editMode && effectiveView === "draft" && draft !== null;
+
+  const laneNames = useMemo(() => {
+    const names = new Set(sim.equipmentList);
+    if (isEditing) {
+      (equipmentOptions || []).forEach((name) => {
+        const text = String(name || "").trim();
+        if (text && !isEquipmentUnavailable(text, unavailableEquipment)) names.add(text);
+      });
+    }
+    return Array.from(names).sort((l, r) => l.localeCompare(r));
+  }, [sim.equipmentList, isEditing, equipmentOptions, unavailableEquipment]);
+
+  const insertOptions = useMemo(() => (
+    insertTarget && draft
+      ? getInsertOptions(ctx, priorityRowMap, normalizeAssignments(ctx, draft), draftSim?.exceptions || [], insertTarget.equipment, insertTarget.time)
+      : []
+  ), [insertTarget, draft, ctx, priorityRowMap, draftSim]);
+
+  const quantityAssignment = quantityId && draft ? draft.find((a) => draftIdOf(a) === quantityId) || null : null;
+
+  const rawAssignments = sim.assignments;
+
+  // ─── Draft actions ────────────────────────────────────────────────────────
+  function startEditing() {
+    if (draft === null) {
+      const seed = hasSaved ? savedAssignments : autoSim.assignments;
+      if (seed.length === 0) {
+        notify(isJa ? "下書きにできるプレビュー行がありません。" : "No preview rows are available to draft yet.", "warning");
+        return;
+      }
+      setDraft(normalizeAssignments(ctx, seed));
+      notify(isJa
+        ? "下書きを作成しました。ブロックをドラッグで移動、別のブロックにドロップで入替できます。"
+        : "Preview Draft created. Drag a block to move it, or drop it onto another block to swap and auto-arrange timing.", "success");
+    }
+    setViewMode("draft");
+    setEditMode(true);
+  }
+
+  function stopEditing() {
+    setEditMode(false);
+    setInsertTarget(null);
+    setQuantityId(null);
+  }
+
+  function resetDraft() {
+    setDraft(null);
+    setEditMode(false);
+    setInsertTarget(null);
+    setQuantityId(null);
+    setViewMode(hasSaved ? "draft" : "auto");
+    notify(hasSaved
+      ? (isJa ? "未保存の変更を破棄し、保存済み下書きを表示します。" : "Unsaved draft changes discarded. Showing the saved draft again.")
+      : (isJa ? "下書きを自動計画に戻しました。" : "Preview Draft reset to the auto-generated calendar."), "success");
+  }
+
+  function handleDrop(draggedId, equipment, time) {
+    if (!draft) return;
+    const result = applyDrop(ctx, draft, draggedId, equipment, time);
+    if (!result.ok) {
+      notify(getMoveMessage(result, isJa), "warning");
+      return;
+    }
+    setDraft(result.assignments);
+    if (result.kind === "swap") {
+      const a = blockLabel(result.moving, "Block");
+      const b = blockLabel(result.target, "block");
+      notify(isJa
+        ? `${a} と ${b} を入れ替えました${result.startTimesChanged ? "（時間を自動調整）" : ""}。`
+        : `${a} swapped with ${b}${result.startTimesChanged ? " and the lane timing was auto-arranged" : ""}.`, "success");
+    } else {
+      notify(isJa
+        ? `${blockLabel(result.moving, "Block")} を ${result.moving.equipment} の ${result.moving.startTime} に移動しました。`
+        : `${blockLabel(result.moving, "Block")} moved to ${result.moving.startTime} on ${result.moving.equipment}.`, "success");
+    }
+  }
+
+  function handleAdjust(delta) {
+    if (!draft || !quantityId) return;
+    const result = adjustBoxes(ctx, draft, quantityId, delta);
+    if (!result.ok) {
+      notify(result.messageKey ? getMoveMessage(result, isJa) : (isJa ? "数量を調整できません。" : "Unable to adjust the draft quantity for this block."), "warning");
+      return;
+    }
+    if (result.unchanged) return;
+    setDraft(result.assignments);
+    if (result.removed) setQuantityId(null);
+  }
+
+  function handleInsert(exception) {
+    if (!draft || !insertTarget) return;
+    const result = insertException(ctx, priorityRowMap, draft, exception, insertTarget.equipment, insertTarget.time);
+    if (!result.ok) {
+      notify(getMoveMessage(result, isJa), "warning");
+      return;
+    }
+    setDraft(result.assignments);
+    setInsertTarget(null);
+    notify(isJa
+      ? `${blockLabel(result.assignment, "Block")} を ${result.assignment.equipment} の ${result.assignment.startTime} に追加しました。`
+      : `${blockLabel(result.assignment, "Block")} added at ${result.assignment.startTime} on ${result.assignment.equipment}.`, "success");
+  }
+
+  async function handleSave() {
+    const assignments = normalizeAssignments(ctx, effectiveView === "draft" ? draftAssignments : autoSim.assignments);
+    const ok = await onSaveDraft?.({ scheduleUntilTime: ctx.scheduleUntilTime, assignments, basisRows: buildBasisRows(priorityRows) });
+    if (ok !== false) {
+      setDraft(null);
+      setEditMode(false);
+      setInsertTarget(null);
+      setQuantityId(null);
+      setViewMode("draft");
+    }
+  }
+
+  async function handleDiscardSaved() {
+    if (!window.confirm(isJa
+      ? "保存済みの下書きを削除して自動表示に戻しますか？未保存の変更も破棄されます。"
+      : "Delete the saved Preview Draft and return to Auto view? Any unsaved local draft changes will also be discarded.")) return;
+    await onDiscardDraft?.();
+    setDraft(null);
+    setEditMode(false);
+    setViewMode("auto");
+  }
 
   if (!factoryName) {
     return (
@@ -56,21 +268,7 @@ export default function PlannerPreviewTab({
     );
   }
 
-  const summary = preview?.summary || {};
-  const priorityRows = Array.isArray(preview?.priorityRows) ? preview.priorityRows : [];
-  const inventoryRows = Array.isArray(preview?.inventoryRows) ? preview.inventoryRows : [];
-  const savedDraft = preview?.savedDraft || null;
   const isStale = savedDraft?.basisComparison?.isStale === true;
-
-  // Use saved draft assignments if available, otherwise simulation assignments
-  const rawAssignments = savedDraft?.assignments || preview?.simulation?.assignments || [];
-  const assignmentsByEquipment = {};
-  rawAssignments.forEach((item) => {
-    const eq = item.equipment || "Other";
-    if (!assignmentsByEquipment[eq]) assignmentsByEquipment[eq] = [];
-    assignmentsByEquipment[eq].push(item);
-  });
-  const equipmentList = Object.keys(assignmentsByEquipment).sort();
 
   return (
     <div className="space-y-4">
@@ -108,7 +306,7 @@ export default function PlannerPreviewTab({
 
             <button
               type="button"
-              onClick={() => onSaveDraft?.({ scheduleUntilTime: scheduleUntil, assignments: rawAssignments, basisRows: priorityRows })}
+              onClick={handleSave}
               disabled={saving || rawAssignments.length === 0}
               className="flex items-center gap-1.5 rounded-[6px] border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 disabled:opacity-40 transition-colors"
             >
@@ -119,7 +317,7 @@ export default function PlannerPreviewTab({
             {savedDraft && (
               <button
                 type="button"
-                onClick={onDiscardDraft}
+                onClick={handleDiscardSaved}
                 disabled={saving}
                 className="flex items-center gap-1.5 rounded-[6px] border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 disabled:opacity-40 transition-colors"
               >
@@ -132,7 +330,7 @@ export default function PlannerPreviewTab({
               type="button"
               onClick={() => onPublish?.({
                 scheduleUntilTime: scheduleUntil,
-                sourceMode: savedDraft ? "draft" : "auto",
+                sourceMode: effectiveView === "draft" ? "draft" : "auto",
                 sourceType: "auto-demand",
                 sourceLabel: isJa ? "需要計画プレビューから公開" : "Published from Demand Preview",
                 note,
@@ -185,7 +383,7 @@ export default function PlannerPreviewTab({
               {isJa ? "計画割当数量" : "Scheduled Qty"}
             </div>
             <div className="mt-1 text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-              {(summary.scheduledShortfallQuantity ?? rawAssignments.reduce((s, a) => s + (Number(a.quantity) || 0), 0)).toLocaleString()} <span className="text-xs font-normal text-[var(--text-muted)]">{isJa ? "個" : "pcs"}</span>
+              {Number(sim.scheduledShortfallQuantity || 0).toLocaleString()} <span className="text-xs font-normal text-[var(--text-muted)]">{isJa ? "個" : "pcs"}</span>
             </div>
           </div>
 
@@ -193,8 +391,8 @@ export default function PlannerPreviewTab({
             <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               {isJa ? "未計画残不足" : "Unscheduled Shortfall"}
             </div>
-            <div className={`mt-1 text-base font-bold font-mono ${(summary.unscheduledShortfallQuantity || 0) > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-              {(summary.unscheduledShortfallQuantity || 0).toLocaleString()} <span className="text-xs font-normal text-[var(--text-muted)]">{isJa ? "個" : "pcs"}</span>
+            <div className={`mt-1 text-base font-bold font-mono ${(sim.unscheduledShortfallQuantity || 0) > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+              {Number(sim.unscheduledShortfallQuantity || 0).toLocaleString()} <span className="text-xs font-normal text-[var(--text-muted)]">{isJa ? "個" : "pcs"}</span>
             </div>
           </div>
         </div>
@@ -338,62 +536,135 @@ export default function PlannerPreviewTab({
 
       {/* ── Auto-Plan Calendar Grid (Lane Schedule) ── */}
       <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h4 className="text-sm font-semibold text-[var(--text-primary)]">
               {isJa ? "自動計画タイムライン割当プレビュー" : "Planned Preview Timeline Schedule"}
             </h4>
             <p className="text-xs text-[var(--text-secondary)]">
-              {isJa
-                ? `設備別稼働時間帯 (${scheduleUntil} まで) に沿って自動配置された作業スロットです。`
-                : `Simulated assignment blocks scheduled across machine lanes up to ${scheduleUntil}.`}
+              {isEditing
+                ? (isJa
+                  ? "ブロックをドラッグで移動／別ブロックへドロップで入替。空き枠をクリックで時間超過ラインを追加、ブロックをクリックで箱数を調整。"
+                  : "Drag a block to move it, drop on another block to swap. Click an empty slot to add a shortage line, click a block to adjust boxes.")
+                : (isJa
+                  ? `設備別稼働時間帯 (${scheduleUntil} まで) に沿って自動配置された作業スロットです。`
+                  : `Simulated assignment blocks scheduled across machine lanes up to ${scheduleUntil}.`)}
             </p>
           </div>
-          <span className="text-xs font-mono text-[var(--text-muted)]">
-            {equipmentList.length} {isJa ? "台の設備" : "machines"} · {rawAssignments.length} {isJa ? "件の計画" : "jobs"}
-          </span>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex overflow-hidden rounded-[6px] border border-[var(--border)] text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => { stopEditing(); setViewMode("auto"); }}
+                className={`px-3 py-1.5 transition-colors ${effectiveView === "auto" ? "bg-[var(--freya-blue)] text-white" : "bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"}`}
+              >
+                {isJa ? "自動表示" : "View Auto"}
+              </button>
+              <button
+                type="button"
+                disabled={!hasDraft}
+                onClick={() => { stopEditing(); setViewMode("draft"); }}
+                className={`border-l border-[var(--border)] px-3 py-1.5 transition-colors disabled:opacity-40 ${effectiveView === "draft" ? "bg-[var(--freya-blue)] text-white" : "bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"}`}
+              >
+                {isJa ? "下書き表示" : "View Draft"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={isEditing ? stopEditing : startEditing}
+              disabled={saving}
+              className={`flex items-center gap-1.5 rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40 ${isEditing ? "border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{isEditing ? "lock_open" : "edit_calendar"}</span>
+              {isEditing ? (isJa ? "編集を終了" : "Stop Editing") : (isJa ? "下書きを編集" : "Edit Draft")}
+            </button>
+
+            {draft !== null && (
+              <button
+                type="button"
+                onClick={resetDraft}
+                className="flex items-center gap-1.5 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>restart_alt</span>
+                {isJa ? "変更を破棄" : "Reset Changes"}
+              </button>
+            )}
+
+            <span className="font-mono text-xs text-[var(--text-muted)]">
+              {sim.equipmentList.length} {isJa ? "台の設備" : "machines"} · {rawAssignments.length} {isJa ? "件の計画" : "jobs"}
+              {draft !== null ? (isJa ? " · 未保存" : " · unsaved") : ""}
+            </span>
+          </div>
         </div>
 
-        {equipmentList.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-[6px]">
-            {isJa ? "自動割当された設備スロットはありません。" : "No machine assignment slots scheduled."}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {equipmentList.map((eq) => {
-              const items = assignmentsByEquipment[eq] || [];
-              return (
-                <div key={eq} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-xs text-[var(--text-primary)] font-mono">{eq}</span>
-                    <span className="text-[11px] text-[var(--text-muted)] font-mono">
-                      {items.length} {isJa ? "件" : "items"}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map((it, idx) => (
-                      <div
-                        key={idx}
-                        className="flex flex-col gap-0.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 shadow-2xs text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-[var(--freya-blue)]">{it.背番号 || it.品番}</span>
-                          <span className="font-mono text-[11px] text-[var(--text-secondary)]">
-                            {Number(it.quantity || 0).toLocaleString()} {isJa ? "個" : "pcs"}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-[var(--text-muted)] font-mono">
-                          {it.startTime || "09:00"} → {it.endTime || "—"} ({it.estimatedTime || 0}m)
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+        <PlannerPreviewTimeline
+          ctx={ctx}
+          assignments={rawAssignments}
+          equipmentNames={laneNames}
+          editMode={isEditing}
+          onDrop={handleDrop}
+          onSlotClick={(equipment, time) => setInsertTarget({ equipment, time })}
+          onBlockClick={(assignment) => setQuantityId(draftIdOf(assignment))}
+        />
+
+        {/* Exceptions: lines that did not fit / have no machine mapping */}
+        {sim.exceptions.length > 0 && (
+          <div className="mt-4">
+            <div className="mb-1.5 text-xs font-semibold text-[var(--text-primary)]">
+              {isJa ? `未割当ライン (${sim.exceptions.length})` : `Unscheduled Lines (${sim.exceptions.length})`}
+            </div>
+            <div className="overflow-x-auto rounded-[6px] border border-[var(--border)]">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-secondary)]">
+                  <tr>
+                    <th className="px-3 py-1.5 font-semibold">{isJa ? "理由" : "Reason"}</th>
+                    <th className="px-3 py-1.5 font-semibold">{isJa ? "依頼番号" : "Request #"}</th>
+                    <th className="px-3 py-1.5 font-semibold">{isJa ? "背番号" : "背番号"}</th>
+                    <th className="px-3 py-1.5 text-right font-semibold">{isJa ? "不足数量" : "Shortfall Qty"}</th>
+                    <th className="px-3 py-1.5 font-semibold">{isJa ? "候補設備" : "Candidates"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)] text-[var(--text-primary)]">
+                  {sim.exceptions.map((exception, index) => (
+                    <tr key={`${exception.id}-${index}`}>
+                      <td className="px-3 py-1.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${exception.reason === "time-limit" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-rose-500/15 text-rose-700 dark:text-rose-300"}`}>
+                          {exception.reason === "time-limit"
+                            ? (isJa ? "時間超過" : "Time limit")
+                            : ({ unmapped: isJa ? "未設定" : "Unmapped", disabled: isJa ? "無効" : "Disabled", empty: isJa ? "設備なし" : "No machines" }[exception.reason] || exception.reason)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 font-mono text-[var(--freya-blue)]">{exception.requestNumber || "—"}</td>
+                      <td className="px-3 py-1.5 font-mono font-semibold">{exception.背番号 || exception.品番 || "—"}</td>
+                      <td className="px-3 py-1.5 text-right font-mono font-bold text-rose-600 dark:text-rose-400">{Number(exception.shortfallQuantity || 0).toLocaleString()}</td>
+                      <td className="px-3 py-1.5 font-mono text-[var(--text-secondary)]">{(exception.candidateEquipment || []).join(", ") || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
+
+      {isEditing && insertTarget && (
+        <PlannerDraftInsertModal
+          target={insertTarget}
+          options={insertOptions}
+          onPick={handleInsert}
+          onClose={() => setInsertTarget(null)}
+        />
+      )}
+      {isEditing && quantityAssignment && (
+        <PlannerDraftQuantityModal
+          ctx={ctx}
+          assignment={quantityAssignment}
+          onAdjust={handleAdjust}
+          onClose={() => setQuantityId(null)}
+        />
+      )}
     </div>
   );
 }

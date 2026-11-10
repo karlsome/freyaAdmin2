@@ -498,8 +498,10 @@ export default function PlannerPage() {
       });
       await loadPreview(true);
       showFlash(isJa ? "需要計画下書きを保存しました。" : "Preview draft saved successfully.", "success");
+      return true;
     } catch (err) {
       showFlash(err.message || (isJa ? "下書きの保存に失敗しました。" : "Failed to save draft."), "error");
+      return false;
     } finally {
       setPreviewSaving(false);
     }
@@ -1390,6 +1392,11 @@ export default function PlannerPage() {
             publishing={previewPublishing}
             factoryName={factoryName}
             planDate={planDate}
+            breaks={breaks}
+            unavailableEquipment={unavailableEquipment}
+            productColors={productColors}
+            equipmentOptions={equipment}
+            onNotify={showFlash}
             onRefresh={() => loadPreview(true)}
             onSaveDraft={handleSavePreviewDraft}
             onDiscardDraft={handleDiscardPreviewDraft}
