@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRecordByKey } from "../../services/api";
+import { fetchPlannerPlans } from "../../services/plannerApi";
 import { fetchDigitalTwin, fetchLiveProductionMachines } from "../../services/digitalTwinApi";
 import RecordDetailModal from "../RecordDetailModal";
 import { PlannerInProgressModal } from "../planner/PlannerSessionModals";
@@ -27,6 +28,7 @@ const runGood = (run) => (run.good != null ? Number(run.good) || 0 : Math.max(0,
 export default function FactoryEquipmentRealTable({ factory, date, refreshNonce = 0, onLiveTotals, isJa, fallback = null }) {
   const [twin, setTwin] = useState(null);
   const [live, setLive] = useState([]);
+  const [planned, setPlanned] = useState([]); // products of today's production plan (productionPlansDB)
   const [failed, setFailed] = useState(false);
   const [recordModal, setRecordModal] = useState(null); // submitted pressDB record (same modal as the factory overview)
   const [sessionModal, setSessionModal] = useState(null); // in-progress tablet session
@@ -53,10 +55,15 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
     async function load() {
       try {
         const nextTwin = await fetchDigitalTwin(factory);
-        const nextLive = await fetchLiveProductionMachines(factory, nextTwin.productionDate || date);
+        const planDate = nextTwin.productionDate || date;
+        const [nextLive, plans] = await Promise.all([
+          fetchLiveProductionMachines(factory, planDate),
+          fetchPlannerPlans({ factory, date: planDate }).catch(() => []),
+        ]);
         if (cancelled) return;
         setTwin(nextTwin);
         setLive(nextLive);
+        setPlanned(Array.isArray(plans?.[0]?.products) ? plans[0].products : []);
         setFailed(false);
       } catch {
         if (!cancelled) setFailed(true);
@@ -74,6 +81,12 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
       const together = unit.together;
       const runs = (together ? primary?.pair?.completedRuns : primary?.completedRuns) || [];
       const submitted = runs.reduce((sum, run) => sum + runGood(run), 0);
+      // Planned = what the planner scheduled on this machine/pair today, in schedule order
+      const plannedItems = planned
+        .filter((item) => String(item.equipment || "").split(",").map((x) => x.trim().toUpperCase()).some((id) => unit.ids.includes(id)))
+        .sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")))
+        .map((item) => ({ serial: item.背番号 || "", quantity: Number(item.quantity) || 0, startTime: item.startTime || "" }));
+      const plannedTotal = plannedItems.reduce((sum, item) => sum + item.quantity, 0);
       const liveMs = live.filter((m) => unit.ids.includes(m.machine));
       const hasLive = liveMs.length > 0;
       const activeRuns = unit.ids.map((id) => byId[id]?.activeRun).filter(Boolean);
@@ -91,6 +104,8 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
       return {
         ...unit,
         runs,
+        plannedItems,
+        plannedTotal,
         submitted,
         inProgress,
         ng,
@@ -105,7 +120,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
         sessionID: hasLive ? liveMs[0].sessionID || "" : "",
       };
     });
-  }, [twin, live, factory, date]);
+  }, [twin, live, planned, factory, date]);
 
   // Tell the page how many live (unsubmitted) pieces/NG this factory has, so its header chips include them
   const showingReal = Boolean(twin) && !failed && (!twin.productionDate || twin.productionDate === date);
@@ -126,7 +141,8 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
     submitted: acc.submitted + r.submitted,
     inProgress: acc.inProgress + r.inProgressGood,
     total: acc.total + r.total,
-  }), { submitted: 0, inProgress: 0, total: 0 });
+    planned: acc.planned + r.plannedTotal,
+  }), { submitted: 0, inProgress: 0, total: 0, planned: 0 });
 
   const th = "px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] whitespace-nowrap";
 
@@ -140,6 +156,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
             <th className={th}>{isJa ? "作業者" : "Operator"}</th>
             <th className={th} title={isJa ? "良品数（NG除く）" : "Good pieces (NG excluded)"}>{isJa ? "進行中" : "In progress"}</th>
             <th className={th} title={isJa ? "良品数（NG除く）" : "Good pieces (NG excluded)"}>{isJa ? "提出済み" : "Submitted"}</th>
+            <th className={th} title={isJa ? "本日の生産計画の数量" : "Quantity scheduled in today's production plan"}>{isJa ? "計画数量" : "Planned qty"}</th>
             <th className={`${th} text-right`}>{isJa ? "実数（合計）" : "Real total"}</th>
             <th className={th}>{isJa ? "カウンタ" : "Counter"}</th>
             <th className={th}>{isJa ? "最終サイクル" : "Last cycle"}</th>
@@ -194,6 +211,21 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
                     </div>
                   ) : "—"}
                 </td>
+                <td className="border-t border-[var(--border)] px-3 py-2.5">
+                  {row.plannedItems.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {row.plannedItems.map((item, index) => (
+                        <span
+                          key={`${item.serial}-${item.startTime}-${index}`}
+                          title={item.startTime ? `${isJa ? "開始" : "Starts"} ${item.startTime}` : undefined}
+                          className="rounded-[4px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/5 px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)]"
+                        >
+                          {item.serial} <span className="font-semibold text-[var(--freya-blue)]">{formatNumber(item.quantity)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : <span className="text-[var(--text-muted)]">—</span>}
+                </td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-right font-mono font-bold text-[var(--freya-blue)] freya-tabular">{formatNumber(row.total)}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 font-mono text-[var(--text-secondary)] whitespace-nowrap">{row.counters.some((c) => c !== null && c !== undefined) ? row.counters.map((c) => (c ?? "—")).join(" / ") : "—"}</td>
                 <td className="border-t border-[var(--border)] px-3 py-2.5 text-[var(--text-muted)] whitespace-nowrap">{formatAgo(row.lastCycle, isJa)}</td>
@@ -206,6 +238,7 @@ export default function FactoryEquipmentRealTable({ factory, date, refreshNonce 
             <td colSpan={3} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "合計" : "Total"}</td>
             <td className="px-3 py-2 font-mono font-semibold text-amber-600 dark:text-amber-400">{formatNumber(totals.inProgress)}</td>
             <td className="px-3 py-2 font-mono font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(totals.submitted)}</td>
+            <td className="px-3 py-2 font-mono font-semibold text-[var(--freya-blue)]">{formatNumber(totals.planned)}</td>
             <td className="px-3 py-2 text-right font-mono font-bold text-[var(--freya-blue)] freya-tabular">{formatNumber(totals.total)}</td>
             <td colSpan={2} />
           </tr>
