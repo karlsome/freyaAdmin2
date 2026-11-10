@@ -8,6 +8,7 @@ import {
   getProductForSlot,
   getScheduledSpan,
   getTimelineSlots,
+  hasSchedulingConflict,
   isBreakAtSlot,
   isEquipmentUnavailable,
   isGroupEquipment,
@@ -72,6 +73,25 @@ export default function PlannerTimelineView({
   onInProgressClick,
 }) {
   const [infoPopover, setInfoPopover] = useState(null);
+  const draggingIdRef = useRef(null);
+
+  // While a tile is dragged: allow the drop only where it would not overlap another schedule.
+  // Not calling preventDefault (and dropEffect "none") makes the browser show the not-allowed cursor.
+  function handleSlotDragOver(event, equipmentName, slot) {
+    const id = draggingIdRef.current;
+    const item = id ? scheduledProducts.find((entry) => entry._scheduleId === id) : null;
+    if (!item) {
+      event.preventDefault();
+      return;
+    }
+    const conflict = hasSchedulingConflict({ ...item, equipment: equipmentName, startTime: slot }, scheduledProducts, breaks, { ignoreScheduleId: id });
+    if (conflict.hasConflict) {
+      event.dataTransfer.dropEffect = "none";
+      return;
+    }
+    event.dataTransfer.dropEffect = "move";
+    event.preventDefault();
+  }
   const [imagePreview, setImagePreview] = useState(null);
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -295,12 +315,15 @@ export default function PlannerTimelineView({
                             draggable={showLabel}
                             onDragStart={(event) => {
                               if (!showLabel) return;
+                              draggingIdRef.current = product._scheduleId;
                               event.dataTransfer.setData("application/planner-item", JSON.stringify({ scheduleId: product._scheduleId }));
                               event.dataTransfer.effectAllowed = "move";
                             }}
-                            onDragOver={(event) => event.preventDefault()}
+                            onDragEnd={() => { draggingIdRef.current = null; }}
+                            onDragOver={(event) => handleSlotDragOver(event, equipmentName, slot)}
                             onDrop={(event) => {
                               event.preventDefault();
+                              draggingIdRef.current = null;
                               const payload = dropPayload(event);
                               if (payload?.scheduleId) {
                                 onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
@@ -373,9 +396,10 @@ export default function PlannerTimelineView({
                           key={`${equipmentName}-planned-${slot}`}
                           type="button"
                           onClick={() => onSlotSelect(equipmentName, slot)}
-                          onDragOver={(event) => event.preventDefault()}
+                          onDragOver={(event) => handleSlotDragOver(event, equipmentName, slot)}
                           onDrop={(event) => {
                             event.preventDefault();
+                            draggingIdRef.current = null;
                             const payload = dropPayload(event);
                             if (payload?.scheduleId) {
                               onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
