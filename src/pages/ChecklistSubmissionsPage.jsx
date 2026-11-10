@@ -854,7 +854,17 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
                             NG
                           </span>
                         )}
+                        {submission.record?.skipped && (
+                          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                            Skipped
+                          </span>
+                        )}
                       </div>
+                      {submission.record?.skipped && (
+                        <p className="mt-2 text-xs text-amber-700">
+                          Skipped by {submission.record.skippedBy || "leader"}{submission.record.skipReason ? ` — ${submission.record.skipReason}` : ""}
+                        </p>
+                      )}
                       <div className="mt-3 flex flex-wrap gap-3 text-xs text-outline">
                         <span className="inline-flex items-center gap-1">
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
@@ -1663,6 +1673,15 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
                 <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
               </div>
+              {record?.skipped && (
+                <div className="flex w-full items-start gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>bolt</span>
+                  <span>
+                    <span className="font-semibold">{isJa ? "リーダーによりスキップ" : "Skipped by leader"}: {record.skippedBy || "—"}</span>
+                    {record.skipReason ? <span className="block">{isJa ? "理由" : "Reason"}: {record.skipReason}</span> : null}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-sm">
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>schedule</span>
                 <span className="text-on-surface">
