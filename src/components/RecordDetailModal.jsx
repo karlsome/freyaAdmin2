@@ -579,10 +579,47 @@ function KensaTraceSection({ record }) {
         {hasStop && (
           <Block title={`${isJa ? "停止呼出" : "Stop Calls"} — ${stop.count ?? stopRecords.length}× · ${stop.totalWaitMinutes ?? 0} ${isJa ? "分" : "min"}`}>
             {stopRecords.length > 0 && (
-              <div className="space-y-1.5">
-                {stopRecords.map((r, i) => (
-                  <div key={i} className="text-xs text-[var(--text-secondary)] font-mono break-all">{JSON.stringify(r)}</div>
-                ))}
+              <div className="overflow-x-auto rounded-[6px] border border-[var(--border)]">
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-[var(--surface-subtle)]">
+                    <tr>
+                      <th className={th}>#</th>
+                      <th className={th}>{isJa ? "呼出" : "Called"}</th>
+                      <th className={th}>{isJa ? "到着" : "Arrived"}</th>
+                      <th className={`${th} text-right`}>{isJa ? "待ち時間" : "Wait"}</th>
+                      <th className={th}>{isJa ? "対応者" : "Responder"}</th>
+                      <th className={th}>{isJa ? "解除方法" : "Resolved by"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stopRecords.map((r, i) => {
+                      const waitSec = Number(r.waitSeconds);
+                      const wait = Number.isFinite(waitSec)
+                        ? (waitSec >= 60 ? `${Math.floor(waitSec / 60)}m ${waitSec % 60}s` : `${waitSec}s`)
+                        : (r.waitMinutes != null ? `${r.waitMinutes} ${isJa ? "分" : "min"}` : "—");
+                      const isAuto = r.leaderRole === "Auto" || r.leaderUsername === "system" || Boolean(r.resolvedBy);
+                      return (
+                        <tr key={i} className="border-t border-[var(--border)]">
+                          <td className={`${td} text-[var(--text-muted)] font-mono`}>{i + 1}</td>
+                          <td className={`${td} font-mono`}>{r.calledAt || "—"}</td>
+                          <td className={`${td} font-mono`}>{r.arrivedAt || "—"}</td>
+                          <td className={`${td} text-right font-mono freya-tabular`}>{wait}</td>
+                          <td className={td}>
+                            <div className="font-medium">{r.leaderName || "—"}</div>
+                            {r.leaderRole || r.leaderUsername ? (
+                              <div className="text-[11px] text-[var(--text-muted)]">
+                                {[r.leaderRole, r.leaderUsername && r.leaderUsername !== "system" ? `@${r.leaderUsername}` : ""].filter(Boolean).join(" · ")}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className={td}>
+                            {r.resolvedBy ? <Chip>{r.resolvedBy}</Chip> : isAuto ? <Chip>{isJa ? "自動" : "Auto"}</Chip> : <span className="text-[var(--text-muted)]">{isJa ? "班長" : "Leader"}</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </Block>
