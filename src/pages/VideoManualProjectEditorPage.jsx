@@ -2348,6 +2348,13 @@ export default function VideoManualProjectEditorPage() {
     return { x: clamp(px / width - 0.5), y: clamp(-(py / height - 0.5)) };
   }, []);
 
+  // Clicking the empty area around the canvas deselects the current clip.
+  const handleStageBackgroundPointerDown = useCallback((event) => {
+    if (event.target !== event.currentTarget) return;
+    editRef.current?.clearSelection?.();
+    setSelectedClip(null);
+  }, []);
+
   const handleCanvasDragOver = useCallback((event) => {
     if (!Array.from(event.dataTransfer?.types || []).includes(ELEMENT_DRAG_MIME)) return;
     event.preventDefault();
@@ -2993,7 +3000,7 @@ export default function VideoManualProjectEditorPage() {
             <VideoManualStepsPanel steps={steps} playbackTime={playbackTime} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
-              <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
+              <div onPointerDown={handleStageBackgroundPointerDown} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
                 <div ref={studioElRef} data-shotstack-studio onDragOver={handleCanvasDragOver} onDrop={handleCanvasDrop} className="h-full w-full max-w-[980px] overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
                 <BubbleTailHandle editRef={editRef} studioElRef={studioElRef} selectedClip={selectedClip} />
                 <style dangerouslySetInnerHTML={{ __html: `
