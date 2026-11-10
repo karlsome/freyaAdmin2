@@ -42,6 +42,13 @@ function SectionTitle({ children, action }) {
   );
 }
 
+export const ELEMENT_DRAG_MIME = "application/x-vm-element";
+
+function startElementDrag(event, payload) {
+  event.dataTransfer.setData(ELEMENT_DRAG_MIME, JSON.stringify(payload));
+  event.dataTransfer.effectAllowed = "copy";
+}
+
 function WideButton({ children, onClick, icon, trailingIcon = "arrow_forward", disabled = false }) {
   const tx = useTx();
 
@@ -61,13 +68,15 @@ function WideButton({ children, onClick, icon, trailingIcon = "arrow_forward", d
   );
 }
 
-function TileButton({ children, onClick, icon, preview }) {
+function TileButton({ children, onClick, icon, preview, dragPayload }) {
   const tx = useTx();
 
   return (
     <button
       type="button"
       onClick={onClick}
+      draggable={Boolean(dragPayload)}
+      onDragStart={dragPayload ? (event) => startElementDrag(event, dragPayload) : undefined}
       className="flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-lg bg-surface-container px-2 py-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
     >
       {preview || (icon ? <Icon className="text-[26px]">{icon}</Icon> : null)}
@@ -187,9 +196,9 @@ export default function VideoManualAddElementsSidebar({
           <div>
             <SectionTitle>Text Presets</SectionTitle>
             <div className="grid gap-2">
-              <button type="button" onClick={() => onAddText({ text: t("Title"), fontSize: 72, fontWeight: 600 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">{t("Headline Title")}</button>
-              <button type="button" onClick={() => onAddText({ text: t("Subtitle"), fontSize: 44, fontWeight: 500 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">{t("Subtitle")}</button>
-              <button type="button" onClick={() => onAddText({ text: t("Body text"), fontSize: 36, fontWeight: 400 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high">{t("Paragraph")}</button>
+              <button type="button" onClick={() => onAddText({ text: t("Title"), fontSize: 72, fontWeight: 600 })} draggable onDragStart={(event) => startElementDrag(event, { kind: "text", options: { text: t("Title"), fontSize: 72, fontWeight: 600 } })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">{t("Headline Title")}</button>
+              <button type="button" onClick={() => onAddText({ text: t("Subtitle"), fontSize: 44, fontWeight: 500 })} draggable onDragStart={(event) => startElementDrag(event, { kind: "text", options: { text: t("Subtitle"), fontSize: 44, fontWeight: 500 } })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">{t("Subtitle")}</button>
+              <button type="button" onClick={() => onAddText({ text: t("Body text"), fontSize: 36, fontWeight: 400 })} draggable onDragStart={(event) => startElementDrag(event, { kind: "text", options: { text: t("Body text"), fontSize: 36, fontWeight: 400 } })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high">{t("Paragraph")}</button>
             </div>
           </div>
 
@@ -198,7 +207,7 @@ export default function VideoManualAddElementsSidebar({
               Fonts
             </SectionTitle>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => onAddText({ text: "Work Sans", fontFamily: "Work Sans", fontSize: 36, fontWeight: 500 })} className="rounded-lg bg-surface-container px-3 py-4 text-center text-xs font-bold text-on-surface transition hover:bg-surface-container-high">Work Sans</button>
+              <button type="button" onClick={() => onAddText({ text: "Work Sans", fontFamily: "Work Sans", fontSize: 36, fontWeight: 500 })} draggable onDragStart={(event) => startElementDrag(event, { kind: "text", options: { text: "Work Sans", fontFamily: "Work Sans", fontSize: 36, fontWeight: 500 } })} className="rounded-lg bg-surface-container px-3 py-4 text-center text-xs font-bold text-on-surface transition hover:bg-surface-container-high">Work Sans</button>
               <button type="button" onClick={() => onComingSoon(t("More fonts"))} className="rounded-lg bg-surface-container px-3 py-4 text-center text-xs font-bold text-on-surface transition hover:bg-surface-container-high">{t("More Fonts")}</button>
             </div>
           </div>
@@ -211,10 +220,10 @@ export default function VideoManualAddElementsSidebar({
         <div>
           <SectionTitle>Shape Tools</SectionTitle>
           <div className="grid grid-cols-2 gap-2">
-            <TileButton onClick={() => onAddShape("rect")} preview={<div className="h-9 w-12 rounded border-2 border-slate-800" />}>Rectangle</TileButton>
-            <TileButton onClick={() => onAddShape("circle")} preview={<div className="h-11 w-11 rounded-full border-2 border-slate-800" />}>Circle</TileButton>
-            <TileButton onClick={() => onAddShape("arrow")} icon="call_made">Arrow</TileButton>
-            <TileButton onClick={() => onAddShape("line")} preview={<div className="h-1 w-12 bg-slate-800" />}>Line</TileButton>
+            <TileButton dragPayload={{ kind: "shape", shapeType: "rect" }} onClick={() => onAddShape("rect")} preview={<div className="h-9 w-12 rounded border-2 border-slate-800" />}>Rectangle</TileButton>
+            <TileButton dragPayload={{ kind: "shape", shapeType: "circle" }} onClick={() => onAddShape("circle")} preview={<div className="h-11 w-11 rounded-full border-2 border-slate-800" />}>Circle</TileButton>
+            <TileButton dragPayload={{ kind: "shape", shapeType: "arrow" }} onClick={() => onAddShape("arrow")} icon="call_made">Arrow</TileButton>
+            <TileButton dragPayload={{ kind: "shape", shapeType: "line" }} onClick={() => onAddShape("line")} preview={<div className="h-1 w-12 bg-slate-800" />}>Line</TileButton>
           </div>
         </div>
       );

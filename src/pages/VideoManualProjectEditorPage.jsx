@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { Canvas, Controls, Edit, Timeline, UIController, VideoExporter } from "@shotstack/shotstack-studio";
-import VideoManualAddElementsSidebar from "../components/videoManual/VideoManualAddElementsSidebar";
+import VideoManualAddElementsSidebar, { ELEMENT_DRAG_MIME } from "../components/videoManual/VideoManualAddElementsSidebar";
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
 import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
 import VideoManualEditorToolbar from "../components/videoManual/VideoManualEditorToolbar";
@@ -2061,7 +2061,7 @@ export default function VideoManualProjectEditorPage() {
     const edit = editRef.current;
     if (!edit) return;
 
-    const { text = "Change Text", fontSize = 48, fontWeight = 600, fontFamily = "Work Sans", color = "#111111", align = "center" } = options;
+    const { dropPoint, text = "Change Text", fontSize = 48, fontWeight = 600, fontFamily = "Work Sans", color = "#111111", align = "center" } = options;
     await edit.addTrack(0, {
       clips: [{
         asset: {
@@ -2074,13 +2074,14 @@ export default function VideoManualProjectEditorPage() {
         length: 5,
         width: 600,
         height: 150,
+        ...(dropPoint ? { position: "center", offset: dropPoint } : {}),
       }],
     });
     syncSteps();
     showNotice("Text added.");
   }, [getPlaybackTime, showNotice, syncSteps]);
 
-  const handleAddShape = useCallback(async (shapeType) => {
+  const handleAddShape = useCallback(async (shapeType, dropPoint = null) => {
     const edit = editRef.current;
     if (!edit) return;
 
@@ -2092,11 +2093,47 @@ export default function VideoManualProjectEditorPage() {
         length: 5,
         width: dimensions.width,
         height: dimensions.height,
+        ...(dropPoint ? { position: "center", offset: dropPoint } : {}),
       }],
     });
     syncSteps();
     showNotice(t("{name} added.", { name: t(shapeType === "rect" ? "Rectangle" : shapeType[0].toUpperCase() + shapeType.slice(1)) }));
   }, [getPlaybackTime, showNotice, syncSteps]);
+
+  // Convert a drop position on the canvas into a clip offset (fraction of the canvas, centre origin, y up).
+  const getCanvasDropOffset = useCallback((event) => {
+    const edit = editRef.current;
+    const container = edit?.getViewportContainer?.();
+    const root = studioElRef.current;
+    if (!edit || !container || !root || !container.scale?.x) return null;
+    const rect = root.getBoundingClientRect();
+    const width = edit.size?.width || 1;
+    const height = edit.size?.height || 1;
+    const px = (event.clientX - rect.left - container.position.x) / container.scale.x;
+    const py = (event.clientY - rect.top - container.position.y) / container.scale.y;
+    const clamp = (value) => Math.max(-0.5, Math.min(0.5, value));
+    return { x: clamp(px / width - 0.5), y: clamp(-(py / height - 0.5)) };
+  }, []);
+
+  const handleCanvasDragOver = useCallback((event) => {
+    if (!Array.from(event.dataTransfer?.types || []).includes(ELEMENT_DRAG_MIME)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleCanvasDrop = useCallback(async (event) => {
+    const raw = event.dataTransfer?.getData(ELEMENT_DRAG_MIME);
+    if (!raw) return;
+    event.preventDefault();
+    let payload;
+    try { payload = JSON.parse(raw); } catch { return; }
+    const dropPoint = getCanvasDropOffset(event);
+    if (payload?.kind === "shape" && payload.shapeType) {
+      await handleAddShape(payload.shapeType, dropPoint);
+    } else if (payload?.kind === "text") {
+      await handleAddText({ ...(payload.options || {}), dropPoint });
+    }
+  }, [getCanvasDropOffset, handleAddShape, handleAddText]);
 
   const loadAssetLibrary = useCallback(async (libraryType = assetLibrary.type, silent = false) => {
     if (!playlistId) {
@@ -2724,7 +2761,7 @@ export default function VideoManualProjectEditorPage() {
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
-                <div ref={studioElRef} data-shotstack-studio className="h-full w-full max-w-[980px] overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
+                <div ref={studioElRef} data-shotstack-studio onDragOver={handleCanvasDragOver} onDrop={handleCanvasDrop} className="h-full w-full max-w-[980px] overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
                 <style dangerouslySetInnerHTML={{ __html: `
                   [data-shotstack-studio] > div:not(canvas) { opacity: 0 !important; pointer-events: none !important; position: absolute !important; width: 0 !important; height: 0 !important; overflow: hidden !important; }
                 ` }} />
