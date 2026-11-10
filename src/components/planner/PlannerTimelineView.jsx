@@ -74,19 +74,25 @@ export default function PlannerTimelineView({
 }) {
   const [infoPopover, setInfoPopover] = useState(null);
   const draggingIdRef = useRef(null);
+  const dragOffsetRef = useRef(0); // slots between the tile head and the cell the user grabbed
   const [blockedSlot, setBlockedSlot] = useState(null); // `${equipment}|${slot}` the dragged tile cannot go to
 
   // While a tile is dragged: allow the drop only where it would not overlap another schedule.
   // Not calling preventDefault (and dropEffect "none") makes the browser show the not-allowed cursor.
-  function handleSlotDragOver(event, equipmentName, slot) {
+  // The tile head goes where (hovered slot - grab offset) is, so grabbing the middle of a tile moves it naturally.
+  function dragTargetSlot(slotIndex, fallbackSlot) {
+    return mappedSlots[Math.max(0, slotIndex - dragOffsetRef.current)]?.slot || fallbackSlot;
+  }
+
+  function handleSlotDragOver(event, equipmentName, slotIndex, slot) {
     const id = draggingIdRef.current;
     const item = id ? scheduledProducts.find((entry) => entry._scheduleId === id) : null;
     if (!item) {
       event.preventDefault();
       return;
     }
-    const key = `${equipmentName}|${slot}`
-    const conflict = hasSchedulingConflict({ ...item, equipment: equipmentName, startTime: slot }, scheduledProducts, breaks, { ignoreScheduleId: id });
+    const key = `${equipmentName}|${slot}`;
+    const conflict = hasSchedulingConflict({ ...item, equipment: equipmentName, startTime: dragTargetSlot(slotIndex, slot) }, scheduledProducts, breaks, { ignoreScheduleId: id });
     if (conflict.hasConflict) {
       event.dataTransfer.dropEffect = "none";
       setBlockedSlot((current) => (current === key ? current : key));
@@ -95,6 +101,32 @@ export default function PlannerTimelineView({
     setBlockedSlot((current) => (current === null ? current : null));
     event.dataTransfer.dropEffect = "move";
     event.preventDefault();
+  }
+
+  // Drag preview = the whole tile (all its slots wide), so the user can see how far it reaches.
+  function startTileDrag(event, equipmentName, product, slotIndex, plannedItems) {
+    const cells = mappedSlots
+      .map((entry, index) => ({ index, hit: getProductForSlot(entry.slotMinutes, equipmentName, plannedItems, breaks)?._scheduleId === product._scheduleId }))
+      .filter((entry) => entry.hit)
+      .map((entry) => entry.index);
+    const firstIdx = cells.length ? Math.min(...cells) : slotIndex;
+    const lastIdx = cells.length ? Math.max(...cells) : slotIndex;
+    draggingIdRef.current = product._scheduleId;
+    dragOffsetRef.current = Math.max(0, slotIndex - firstIdx);
+    event.dataTransfer.setData("application/planner-item", JSON.stringify({ scheduleId: product._scheduleId, offset: dragOffsetRef.current }));
+    event.dataTransfer.effectAllowed = "move";
+
+    try {
+      const ghost = document.createElement("div");
+      const width = (lastIdx - firstIdx + 1) * SLOT_WIDTH;
+      ghost.textContent = product.背番号 || "";
+      ghost.style.cssText = `position:fixed;top:-1000px;left:-1000px;box-sizing:border-box;width:${width}px;height:48px;display:flex;align-items:flex-end;padding:0 6px 4px;font:700 12px sans-serif;color:${darkenHex(product.color, 0.45)};background:${product.color}55;border:3px solid ${product.color};border-radius:4px;opacity:.92;`;
+      document.body.appendChild(ghost);
+      event.dataTransfer.setDragImage(ghost, Math.max(0, (slotIndex - firstIdx) * SLOT_WIDTH + SLOT_WIDTH / 2), 24);
+      setTimeout(() => ghost.remove(), 0);
+    } catch {
+      // default (single-cell) drag image is fine as a fallback
+    }
   }
   const [imagePreview, setImagePreview] = useState(null);
   const { language } = useLanguage();
@@ -316,25 +348,20 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-planned-${slot}`}
-                            draggable={showLabel}
-                            onDragStart={(event) => {
-                              if (!showLabel) return;
-                              draggingIdRef.current = product._scheduleId;
-                              event.dataTransfer.setData("application/planner-item", JSON.stringify({ scheduleId: product._scheduleId }));
-                              event.dataTransfer.effectAllowed = "move";
-                            }}
+                            draggable
+                            onDragStart={(event) => startTileDrag(event, equipmentName, product, slotIndex, plannedItems)}
                             onDragEnd={() => { draggingIdRef.current = null; setBlockedSlot(null); }}
-                            onDragOver={(event) => handleSlotDragOver(event, equipmentName, slot)}
+                            onDragOver={(event) => handleSlotDragOver(event, equipmentName, slotIndex, slot)}
                             onDrop={(event) => {
                               event.preventDefault();
                               draggingIdRef.current = null;
                               setBlockedSlot(null);
                               const payload = dropPayload(event);
                               if (payload?.scheduleId) {
-                                onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
+                                onMoveScheduledItem(payload.scheduleId, equipmentName, dragTargetSlot(slotIndex, slot));
                               }
                             }}
-                            className={`group relative ${showLabel ? "cursor-move" : "cursor-default"}`}
+                            className="group relative cursor-move"
                             style={{
                               width: SLOT_WIDTH,
                               backgroundColor: `${product.color}30`,
@@ -404,14 +431,14 @@ export default function PlannerTimelineView({
                           key={`${equipmentName}-planned-${slot}`}
                           type="button"
                           onClick={() => onSlotSelect(equipmentName, slot)}
-                          onDragOver={(event) => handleSlotDragOver(event, equipmentName, slot)}
+                          onDragOver={(event) => handleSlotDragOver(event, equipmentName, slotIndex, slot)}
                           onDrop={(event) => {
                             event.preventDefault();
                             draggingIdRef.current = null;
                             setBlockedSlot(null);
                             const payload = dropPayload(event);
                             if (payload?.scheduleId) {
-                              onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
+                              onMoveScheduledItem(payload.scheduleId, equipmentName, dragTargetSlot(slotIndex, slot));
                             }
                           }}
                           className={`group relative border-r transition ${isBroken ? "border-red-200/50 dark:border-red-900/30 hover:bg-red-500/10 cursor-pointer" : "border-[var(--border)] hover:bg-[var(--freya-blue)]/5 cursor-pointer"}`}
