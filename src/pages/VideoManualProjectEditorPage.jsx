@@ -1173,6 +1173,101 @@ export default function VideoManualProjectEditorPage() {
 
   const bubbleSyncingRef = useRef(false);
   const bubbleLastRef = useRef(new Map());
+  // Bubbles whose follower clip is being moved live while the leader is dragged: groupId -> original fields.
+  const bubbleLiveRef = useRef(new Map());
+  const selectedClipRef = useRef(null);
+  selectedClipRef.current = selectedClip;
+
+  // While a bubble's text (or shape) is dragged/resized on the canvas, move the other clip in real time.
+  // These are live document updates (no undo entries); reconcileBubbles() restores them and commits one clean update on release.
+  const followBubbleLive = useCallback(() => {
+    const edit = editRef.current;
+    const selection = selectedClipRef.current;
+    if (!edit || !selection || bubbleSyncingRef.current) return;
+
+    const editData = edit.getEdit();
+    const pair = findBubblePair(editData, selection.trackIndex, selection.clipIndex);
+    if (!pair) return;
+    const editSize = { width: edit.size.width, height: edit.size.height };
+    const origin = bubbleLiveRef.current.get(pair.groupId);
+    const baseline = origin || bubbleLastRef.current.get(pair.groupId);
+    if (!baseline) return;
+
+    const leaderRole = getBubbleAliasInfo(editData.timeline.tracks[selection.trackIndex]?.clips?.[selection.clipIndex])?.role;
+    if (!leaderRole) return;
+    const sigOf = (clip) => JSON.stringify([clip.width, clip.height, clip.position, clip.offset, clip.start, clip.length, clip.asset?.type === "svg" ? clip.asset.src : ""]);
+    const leader = pair[leaderRole];
+    const follower = pair[leaderRole === "text" ? "shape" : "text"];
+    const geometry = parseBubbleGeometry(pair.shape.clip.asset?.src);
+    const leaderBox = clipBoxFromDocument(leader.clip, editSize);
+    if (!geometry || !leaderBox) return;
+
+    // Remember the follower's original state the first time the leader diverges from its baseline
+    if (!origin) {
+      if (sigOf(leader.clip) === baseline[leaderRole]) return;
+      const fields = (clip) => ({ width: clip.width, height: clip.height, position: clip.position, offset: clip.offset });
+      const shapeBoxNow = clipBoxFromDocument(pair.shape.clip, editSize);
+      const textBoxNow = clipBoxFromDocument(pair.text.clip, editSize);
+      if (!shapeBoxNow || !textBoxNow) return;
+      bubbleLiveRef.current.set(pair.groupId, {
+        ...baseline,
+        leaderRole,
+        followerFields: fields(follower.clip),
+        // geometry of the untouched follower, taken from the baseline the first frame the leader moved
+        originalShapeBox: leaderRole === "text" ? shapeBoxNow : null,
+        originalGeometry: geometry,
+        originalTextBox: leaderRole === "shape" ? textBoxNow : null,
+        originalBody: leaderRole === "text" ? bubbleAbsFromBox(shapeBoxNow, geometry).body : null,
+        originalTip: leaderRole === "text" ? bubbleAbsFromBox(shapeBoxNow, geometry).tip : null,
+      });
+    }
+    const live = bubbleLiveRef.current.get(pair.groupId);
+    if (!live) return;
+
+    const followerId = edit.getClipId(follower.trackIndex, follower.clipIndex);
+    if (!followerId) return;
+    let fields;
+    if (leaderRole === "text") {
+      const resized = Math.abs(live.originalBody.width - leaderBox.width) > 0.5 || Math.abs(live.originalBody.height - leaderBox.height) > 0.5;
+      const tip = resized
+        ? live.originalTip
+        : { x: live.originalTip.x + (leaderBox.left - live.originalBody.left), y: live.originalTip.y + (leaderBox.top - live.originalBody.top) };
+      fields = documentFieldsFromBox(bubbleBoxFromAbs(leaderBox, tip).box, editSize);
+    } else {
+      fields = documentFieldsFromBox(bubbleAbsFromBox(leaderBox, live.originalGeometry).body, editSize);
+    }
+    edit.updateClipInDocument(followerId, fields);
+    edit.resolveClip(followerId);
+  }, []);
+
+  useEffect(() => {
+    let frame = 0;
+    let down = false;
+    const tick = () => {
+      if (!down) return;
+      try { followBubbleLive(); } catch (error) { console.error("Bubble live follow failed:", error); }
+      frame = window.requestAnimationFrame(tick);
+    };
+    const onDown = () => {
+      down = true;
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(tick);
+    };
+    const onUp = () => {
+      down = false;
+      window.cancelAnimationFrame(frame);
+      // The canvas commits its change on release; make sure the bubble is settled even if no commit event follows.
+      window.setTimeout(() => { if (bubbleLiveRef.current.size) editorHandlersRef.current.reconcileBubbles?.(); }, 150);
+    };
+    window.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("pointerup", onUp, true);
+    return () => {
+      window.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("pointerup", onUp, true);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [followBubbleLive]);
+
 
   // Keeps a speech bubble's svg shape and its text clip together. Canvas drags/resizes only emit a generic
   // `edit:changed`, so instead of relying on which clip fired, compare each bubble's clips with the last known
@@ -1200,12 +1295,28 @@ export default function VideoManualProjectEditorPage() {
     bubbleSyncingRef.current = true;
     try {
       const last = bubbleLastRef.current;
+      // Undo the live (history-less) follower updates so the committed update starts from the true original state
+      const forcedLeader = new Map();
+      for (const [groupId, live] of bubbleLiveRef.current) {
+        const group = collect().get(groupId);
+        const followerRole = live.leaderRole === "text" ? "shape" : "text";
+        const follower = group?.[followerRole];
+        const followerId = follower ? edit.getClipId(follower.trackIndex, follower.clipIndex) : null;
+        if (followerId) {
+          edit.updateClipInDocument(followerId, live.followerFields);
+          edit.resolveClip(followerId);
+        }
+        forcedLeader.set(groupId, live.leaderRole);
+      }
+      bubbleLiveRef.current = new Map();
+
       for (const [groupId, group] of collect()) {
         if (!group.shape || !group.text) continue;
         const previous = last.get(groupId);
         if (!previous) continue;
-        const shapeChanged = sigOf(group.shape.clip) !== previous.shape;
-        const textChanged = sigOf(group.text.clip) !== previous.text;
+        const forced = forcedLeader.get(groupId);
+        const shapeChanged = forced ? forced === "shape" : sigOf(group.shape.clip) !== previous.shape;
+        const textChanged = forced ? forced === "text" : sigOf(group.text.clip) !== previous.text;
         if (shapeChanged === textChanged) continue;
 
         const geometry = parseBubbleGeometry(group.shape.clip.asset?.src);
