@@ -13,6 +13,23 @@ import {
 } from "../services/videoManualApi";
 
 const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
+const SELECTED_PLAYLIST_STORAGE_KEY = "videoManual.selectedPlaylistId";
+
+function readRememberedPlaylistId() {
+  try {
+    return window.sessionStorage.getItem(SELECTED_PLAYLIST_STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberPlaylistId(playlistId) {
+  try {
+    if (playlistId) window.sessionStorage.setItem(SELECTED_PLAYLIST_STORAGE_KEY, playlistId);
+  } catch {
+    // Storage can be unavailable (private mode); the selection just won't persist.
+  }
+}
 
 function formatDateTime(value, fallback = "") {
   if (!value) return fallback;
@@ -378,7 +395,7 @@ export default function VideoManualPage() {
   const navigate = useNavigate();
   const [playlists, setPlaylists] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState("");
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState(readRememberedPlaylistId);
   const [playlistQuery, setPlaylistQuery] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
   const [playlistsLoading, setPlaylistsLoading] = useState(true);
@@ -402,6 +419,10 @@ export default function VideoManualPage() {
       setActionError(error.message || t("Failed to delete project."));
     }
   }
+
+  useEffect(() => {
+    rememberPlaylistId(selectedPlaylistId);
+  }, [selectedPlaylistId]);
 
   const deferredPlaylistQuery = useDeferredValue(playlistQuery);
   const deferredProjectQuery = useDeferredValue(projectQuery);
