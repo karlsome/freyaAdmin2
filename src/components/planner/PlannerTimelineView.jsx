@@ -219,19 +219,30 @@ export default function PlannerTimelineView({
                   </div>
 
                   <div className="flex">
-                    {mappedSlots.map(({ slot, slotMinutes }) => {
+                    {mappedSlots.map(({ slot, slotMinutes }, slotIndex) => {
                       const breakBlock = isBreakAtSlot(slotMinutes, equipmentName, breaks);
                       const product = getProductForSlot(slotMinutes, equipmentName, plannedItems, breaks);
                       const firstVisibleSlot = product ? product._firstSlot : null;
 
                       if (breakBlock) {
+                        const prevSlot = mappedSlots[slotIndex - 1];
+                        const isBreakStart = !prevSlot || !isBreakAtSlot(prevSlot.slotMinutes, equipmentName, breaks);
                         return (
                           <div
                             key={`${equipmentName}-planned-${slot}`}
-                            className="border-r border-[var(--border)] bg-[var(--surface-subtle)]"
-                            style={{ width: SLOT_WIDTH }}
+                            className="relative overflow-visible border-r border-slate-400/40 bg-slate-300/70 dark:bg-slate-600/60"
+                            style={{
+                              width: SLOT_WIDTH,
+                              backgroundImage: "repeating-linear-gradient(135deg, rgba(100,116,139,0.45) 0, rgba(100,116,139,0.45) 4px, transparent 4px, transparent 8px)",
+                            }}
                             title={breakBlock.name || "Break"}
-                          />
+                          >
+                            {isBreakStart ? (
+                              <span className="absolute left-1 top-1/2 z-10 -translate-y-1/2 whitespace-nowrap rounded-[4px] bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm">
+                                {isJa ? "休憩" : "BREAK"}
+                              </span>
+                            ) : null}
+                          </div>
                         );
                       }
 
