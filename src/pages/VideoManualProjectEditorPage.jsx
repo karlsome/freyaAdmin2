@@ -19,6 +19,7 @@ import {
   createShapeSvg,
   decorateAssetForPreview,
   DEFAULT_VIDEO_MANUAL_TEMPLATE,
+  prepareEditForEditor,
   getActiveKeyframeForClip,
   getAssetLibraryItemLabel,
   getAssetLibraryTypeLabel,
@@ -1163,7 +1164,7 @@ export default function VideoManualProjectEditorPage() {
     if (!studioElRef.current || !timelineElRef.current) return undefined;
 
     sdkInitialized.current = true;
-    const template = cloneJson(project.edit, cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE));
+    const { template, isPlaceholder: startsEmpty } = prepareEditForEditor(project.edit);
     let cancelled = false;
     let edit;
     let canvas;
@@ -1205,6 +1206,8 @@ export default function VideoManualProjectEditorPage() {
         await canvas.load();
         if (cancelled) { disposeSDK(); return; }
         await edit.load();
+        if (cancelled) { disposeSDK(); return; }
+        if (startsEmpty) await edit.deleteClip(0, 0); // drop the placeholder: the project really is empty
         if (cancelled) { disposeSDK(); return; }
         timeline = new Timeline(edit, timelineElRef.current, { resizable: false });
         await timeline.load();
@@ -1323,8 +1326,9 @@ export default function VideoManualProjectEditorPage() {
     const edit = editRef.current;
     if (!edit?.loadEdit) throw new Error("Editor is not ready.");
 
-    const nextEdit = cloneJson(editData || DEFAULT_VIDEO_MANUAL_TEMPLATE, cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE));
+    const { template: nextEdit, isPlaceholder } = prepareEditForEditor(editData);
     await edit.loadEdit(nextEdit);
+    if (isPlaceholder) await edit.deleteClip(0, 0);
     edit.pause?.();
 
     assetSourceMapRef.current = { ...(assetSourceMap || {}) };
@@ -1508,7 +1512,8 @@ export default function VideoManualProjectEditorPage() {
       throw new Error("This browser cannot create an MP4 fallback because WebCodecs is not available.");
     }
 
-    const template = cloneJson(snapshot?.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE));
+    const { template, isPlaceholder: exportIsEmpty } = prepareEditForEditor(snapshot?.edit);
+    if (exportIsEmpty) throw new Error("Nothing to export yet. Add a video or element to the timeline first.");
     const outputSize = template?.output?.size || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size;
     const outputFps = Number(template?.output?.fps) || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps;
     const liveEdit = editRef.current;

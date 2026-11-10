@@ -6,6 +6,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import {
   canEditVideoManualProjects,
+  createVideoManualProject,
   deleteVideoManualProject,
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
@@ -270,8 +271,9 @@ function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete }) 
   );
 }
 
-function EditProjectModal({ project, onClose, onSaved }) {
+function EditProjectModal({ project, playlistId, onClose, onSaved }) {
   const { t } = useLanguage();
+  const isCreate = !project;
   const [title, setTitle] = useState(project?.title || "");
   const [description, setDescription] = useState(project?.description || "");
   const [saving, setSaving] = useState(false);
@@ -290,8 +292,13 @@ function EditProjectModal({ project, onClose, onSaved }) {
     setSaving(true);
     setError("");
     try {
-      await patchVideoManualProject(project._id, { title: nextTitle, description: description.trim() });
-      onSaved({ ...project, title: nextTitle, description: description.trim() });
+      if (isCreate) {
+        const created = await createVideoManualProject(playlistId, { title: nextTitle, description: description.trim() });
+        onSaved({ ...created, _id: created?._id || created?.insertedId });
+      } else {
+        await patchVideoManualProject(project._id, { title: nextTitle, description: description.trim() });
+        onSaved({ ...project, title: nextTitle, description: description.trim() });
+      }
     } catch (saveError) {
       setError(saveError.message || t("Failed to save project."));
       setSaving(false);
@@ -313,7 +320,7 @@ function EditProjectModal({ project, onClose, onSaved }) {
         <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)] px-6 py-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("vmTitle")}</p>
-            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{t("Edit project")}</h2>
+            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{isCreate ? t("New project") : t("Edit project")}</h2>
           </div>
           <button
             type="button"
@@ -331,7 +338,7 @@ function EditProjectModal({ project, onClose, onSaved }) {
               <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>title</span>
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">{t("Title")}</span>
             </div>
-            <input autoFocus type="text" value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} />
+            <input autoFocus type="text" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={isCreate ? t("Project title") : undefined} className={inputClass} />
           </div>
 
           <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
@@ -369,7 +376,7 @@ function EditProjectModal({ project, onClose, onSaved }) {
             disabled={saving}
             className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? t("Saving...") : t("Save")}
+            {saving ? t("Saving...") : isCreate ? t("Create") : t("Save")}
           </button>
         </div>
       </form>
@@ -404,6 +411,7 @@ export default function VideoManualPage() {
   const [projectsError, setProjectsError] = useState("");
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [editingProject, setEditingProject] = useState(null);
+  const [creatingProject, setCreatingProject] = useState(false);
   const [actionError, setActionError] = useState("");
   const authRole = String(readStoredAuthUser()?.role || "");
   const canEditProjects = canEditVideoManualProjects(authRole);
@@ -626,6 +634,18 @@ export default function VideoManualPage() {
               </p>
             </div>
 
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            {canEditProjects ? (
+              <button
+                type="button"
+                onClick={() => setCreatingProject(true)}
+                disabled={!selectedPlaylist}
+                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                {t("New project")}
+              </button>
+            ) : null}
             <label className="flex w-full items-center gap-2 rounded-xl border border-separator/40 bg-surface-container-low px-3 py-2.5 text-on-surface transition-all duration-150 focus-within:border-primary/30 focus-within:bg-surface sm:w-72">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
@@ -636,6 +656,7 @@ export default function VideoManualPage() {
                 type="search"
               />
             </label>
+            </div>
           </div>
 
           {projectsError ? (
@@ -688,6 +709,18 @@ export default function VideoManualPage() {
         <div className="fixed bottom-6 left-1/2 z-[360] -translate-x-1/2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-lg" onClick={() => setActionError("")}>
           {actionError}
         </div>
+      ) : null}
+
+      {creatingProject && selectedPlaylistId ? (
+        <EditProjectModal
+          project={null}
+          playlistId={selectedPlaylistId}
+          onClose={() => setCreatingProject(false)}
+          onSaved={(created) => {
+            setCreatingProject(false);
+            navigate(`/videoManual/project/${created._id}`);
+          }}
+        />
       ) : null}
 
       {editingProject ? (

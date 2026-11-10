@@ -59,6 +59,31 @@ export const DEFAULT_VIDEO_MANUAL_TEMPLATE = {
   },
 };
 
+// The SDK refuses to construct/load an edit with no tracks, or with a track that has no clips.
+// A brand-new project (or one saved with empty step tracks) therefore needs a throw-away clip to
+// open the editor; callers remove it again once the editor has loaded.
+const EDITOR_PLACEHOLDER_CLIP = {
+  asset: { type: "svg", src: '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"></svg>' },
+  start: 0,
+  length: 1,
+  width: 2,
+  height: 2,
+};
+
+export function prepareEditForEditor(edit) {
+  const template = cloneJson(edit, null) || cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE);
+  const tracks = (template.timeline?.tracks || []).filter((track) => Array.isArray(track?.clips) && track.clips.length > 0);
+  const isPlaceholder = tracks.length === 0;
+
+  template.timeline = {
+    ...(template.timeline || {}),
+    tracks: isPlaceholder ? [{ clips: [cloneJson(EDITOR_PLACEHOLDER_CLIP, EDITOR_PLACEHOLDER_CLIP)] }] : tracks,
+  };
+  if (!template.output) template.output = cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE.output, DEFAULT_VIDEO_MANUAL_TEMPLATE.output);
+
+  return { template, isPlaceholder };
+}
+
 export const SHAPE_DIMENSIONS = {
   rect: { width: 220, height: 120 },
   circle: { width: 180, height: 180 },
