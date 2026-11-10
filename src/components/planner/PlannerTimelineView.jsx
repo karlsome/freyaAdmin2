@@ -235,7 +235,12 @@ export default function PlannerTimelineView({
         </div>
       </div>
 
-      <div className="overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
+      {/* Bounded height so the grid scrolls inside itself: the time header (sticky top) and the equipment column (sticky left)
+          stay in view like frozen panes in Excel. A sticky header cannot follow the page scroll from inside an overflow box. */}
+      <div
+        className="overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)]"
+        style={{ maxHeight: "calc(100vh - 200px)" }}
+      >
         <div className="relative min-w-max">
           {currentMarkerPosition != null ? (
             <div
@@ -246,8 +251,8 @@ export default function PlannerTimelineView({
             </div>
           ) : null}
 
-          <div className="sticky top-0 z-10 flex border-b border-[var(--border)] bg-[var(--surface-subtle)]">
-            <div className="sticky left-0 z-10 flex h-10 items-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]" style={{ width: LABEL_WIDTH }}>
+          <div className="sticky top-0 z-30 flex border-b border-[var(--border)] bg-[var(--surface-subtle)] shadow-[0_1px_0_var(--border)]">
+            <div className="sticky left-0 z-30 flex h-10 items-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]" style={{ width: LABEL_WIDTH }}>
               {isJa ? "設備" : "Equipment"}
             </div>
             {timeSlots.map((slot) => (
