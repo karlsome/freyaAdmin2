@@ -138,6 +138,24 @@ function readFileText(file, encoding = "Shift_JIS") {
   });
 }
 
+// Accepts the legacy map, or the array shape an earlier freyaAdmin2 build saved ([{ equipment, reason, ... }]).
+function normalizeUnavailableMap(value) {
+  if (!value || typeof value !== "object") return {};
+  if (!Array.isArray(value)) return value;
+  return value.reduce((map, item) => {
+    const name = typeof item === "string" ? item : item?.equipment;
+    if (name) {
+      map[name] = {
+        isUnavailable: true,
+        reason: item?.reason || "",
+        updatedAt: item?.reportedAt || item?.updatedAt || "",
+        reportedBy: item?.reportedBy || "",
+      };
+    }
+    return map;
+  }, {});
+}
+
 function buildDuplicateKey(item) {
   return [item.date, item.背番号 || "", item.品番 || ""].join("__");
 }
@@ -202,7 +220,7 @@ export default function PlannerPage() {
   const [flash, setFlash] = useState(null);
   const [hideUnavailableEquipment, setHideUnavailableEquipment] = useState(false);
   const [unavailableEquipment, setUnavailableEquipment] = useState(() =>
-    loadUnavailableEquipmentFromStorage(searchParams.get("factory") || localStorage.getItem("planner_selected_factory") || "")
+    normalizeUnavailableMap(loadUnavailableEquipmentFromStorage(searchParams.get("factory") || localStorage.getItem("planner_selected_factory") || ""))
   );
   const [machineStatusModalOpen, setMachineStatusModalOpen] = useState(false);
   const [breakModalOpen, setBreakModalOpen] = useState(false);
@@ -340,7 +358,7 @@ export default function PlannerPage() {
       setActualBlocks([]);
       setInProgressMap({});
       setBreaks(cloneBreaks(DEFAULT_BREAKS));
-      setUnavailableEquipment([]);
+      setUnavailableEquipment({});
       setCurrentPlanId("");
       return;
     }
@@ -392,8 +410,10 @@ export default function PlannerPage() {
         setStartTime(currentPlan.startTime);
         localStorage.setItem("planner_start_time", currentPlan.startTime);
       }
-      const planUnavailable = Array.isArray(currentPlan?.unavailableEquipment) ? currentPlan.unavailableEquipment : null;
-      const storedUnavailable = loadUnavailableEquipmentFromStorage(nextFactory);
+      const planUnavailable = currentPlan?.unavailableEquipment && typeof currentPlan.unavailableEquipment === "object"
+        ? normalizeUnavailableMap(currentPlan.unavailableEquipment)
+        : null;
+      const storedUnavailable = normalizeUnavailableMap(loadUnavailableEquipmentFromStorage(nextFactory));
       const activeUnavailable = planUnavailable !== null ? planUnavailable : storedUnavailable;
       setUnavailableEquipment(activeUnavailable);
       saveUnavailableEquipmentToStorage(nextFactory, activeUnavailable);
@@ -437,30 +457,17 @@ export default function PlannerPage() {
   async function handleUpdateMachineStatus(targetEquipment, isUnavailable, reason = "") {
     if (!factoryName || !targetEquipment) return;
 
-    const currentList = Array.isArray(unavailableEquipment) ? [...unavailableEquipment] : [];
-    let nextList;
+    // Same shape as the legacy Freya Admin: { [equipment]: { isUnavailable, reason, updatedAt, reportedBy } }
+    const nextList = { ...normalizeUnavailableMap(unavailableEquipment) };
     if (isUnavailable) {
-      const existingIdx = currentList.findIndex((item) => {
-        const name = typeof item === "string" ? item : item?.equipment;
-        return name === targetEquipment;
-      });
-      const newEntry = {
-        equipment: targetEquipment,
+      nextList[targetEquipment] = {
+        isUnavailable: true,
         reason: reason || (isJa ? "故障・メンテナンス中" : "Maintenance / Out of service"),
-        reportedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         reportedBy: getUserDisplayName(authUser),
       };
-      if (existingIdx >= 0) {
-        nextList = [...currentList];
-        nextList[existingIdx] = newEntry;
-      } else {
-        nextList = [...currentList, newEntry];
-      }
     } else {
-      nextList = currentList.filter((item) => {
-        const name = typeof item === "string" ? item : item?.equipment;
-        return name !== targetEquipment;
-      });
+      delete nextList[targetEquipment];
     }
 
     setUnavailableEquipment(nextList);
