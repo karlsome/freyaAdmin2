@@ -3006,3 +3006,32 @@ export async function resetTwinAnnotations(factoryName) {
 
 
 
+
+// ─── MDB import (materialMasterDB3 / bomMasterDB / processMasterDB) ─────────
+async function _mdbJson(res) {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  return data;
+}
+
+export async function startMdbImportPreview(file, username) {
+  const form = new FormData();
+  form.append("username", username || "");
+  form.append("originalName", file.name);
+  form.append("file", file);
+  return _mdbJson(await fetch(BASE_URL + "api/masterdb/import-mdb/preview", { method: "POST", body: form }));
+}
+
+export async function startMdbImportApply(previewJobId, username) {
+  return _mdbJson(
+    await fetch(BASE_URL + "api/masterdb/import-mdb/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ previewJobId, username }),
+    })
+  );
+}
+
+export async function getMdbImportJob(jobId) {
+  return _mdbJson(await fetch(BASE_URL + `api/masterdb/import-mdb/jobs/${jobId}`));
+}

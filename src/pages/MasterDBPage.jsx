@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterBatchEditModal from "../components/MasterBatchEditModal";
+import MdbImportModal from "../components/MdbImportModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
 import MaterialDetailModal from "../components/MaterialDetailModal";
@@ -129,6 +130,7 @@ export default function MasterDBPage() {
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvFileName, setCsvFileName] = useState("");
   const [csvRows, setCsvRows] = useState([]);
+  const [mdbModalOpen, setMdbModalOpen] = useState(false);
   const [flash, setFlash] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const requestIdRef = useRef(0);
@@ -689,6 +691,17 @@ export default function MasterDBPage() {
               {isJa ? "更新" : "Refresh"}
             </button>
 
+            {activeTab === "materialDB" && (
+              <button
+                type="button"
+                onClick={() => setMdbModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] shadow-2xs"
+              >
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>database_upload</span>
+                {isJa ? "MDBインポート" : "Import MDB"}
+              </button>
+            )}
+
             {!isSpecialTab && (
               <button
                 type="button"
@@ -702,6 +715,8 @@ export default function MasterDBPage() {
           </div>
         )}
       />
+
+      <MdbImportModal open={mdbModalOpen} onClose={() => setMdbModalOpen(false)} onImported={handleRefresh} />
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} isJa={isJa} />
 
