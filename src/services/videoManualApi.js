@@ -118,6 +118,14 @@ export async function patchVideoManualProject(projectId, updates) {
   });
 }
 
+export async function deleteVideoManualProject(projectId) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}`, { method: "DELETE" });
+}
+
 export async function createVideoManualRevision(projectId, snapshot, revisionName) {
   if (!projectId) {
     throw new Error("projectId is required");

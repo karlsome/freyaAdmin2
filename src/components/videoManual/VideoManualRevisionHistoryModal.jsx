@@ -204,13 +204,14 @@ export default function VideoManualRevisionHistoryModal({
                 const deployActionId = `${revisionId}:deploy`;
 
                 return (
-                  <article key={revisionId || `${revision.revisionNumber}-${revision.createdAt}`} className="rounded-2xl border border-separator bg-surface p-4 shadow-sm">
+                  <article key={revisionId || `${revision.revisionNumber}-${revision.createdAt}`} className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${revision.isDeployed ? "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-300/70 dark:border-emerald-700 dark:bg-emerald-950/30" : "border-separator bg-surface"}`}>
+                    {revision.isDeployed ? <span className="absolute inset-y-0 left-0 w-1.5 bg-emerald-500" /> : null}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="min-w-0 truncate text-sm font-black text-on-surface">{getRevisionLabel(revision)}</h4>
                           {revision.isDeployed ? (
-                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{t("Live")}</span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />{t("Live")}</span>
                           ) : null}
                           {isPreviewing ? (
                             <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-primary">{t("Preview")}</span>

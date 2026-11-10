@@ -1,10 +1,15 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import { useLanguage } from "../contexts/LanguageContext";
+import { readStoredAuthUser } from "../utils/auth";
 import {
+  canEditVideoManualProjects,
+  deleteVideoManualProject,
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
+  patchVideoManualProject,
 } from "../services/videoManualApi";
 
 const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
@@ -61,11 +66,61 @@ function getProjectPreviewMedia(project) {
   };
 }
 
-function ProjectCard({ project, onOpen }) {
+function InfoPopover({ anchorRef, onClose, children }) {
+  const [position, setPosition] = useState(null);
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return undefined;
+
+    const place = () => {
+      const rect = anchor.getBoundingClientRect();
+      const width = 260;
+      const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < 190 ? Math.max(8, rect.top - 190) : rect.bottom + 6;
+      setPosition({ top, left, width });
+    };
+    const handlePointerDown = (event) => {
+      if (popoverRef.current?.contains(event.target) || anchor.contains(event.target)) return;
+      onClose();
+    };
+    const handleKey = (event) => { if (event.key === "Escape") onClose(); };
+
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", onClose, true);
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", onClose, true);
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [anchorRef, onClose]);
+
+  if (!position) return null;
+  return createPortal(
+    <div
+      ref={popoverRef}
+      style={{ position: "fixed", top: position.top, left: position.left, width: position.width }}
+      className="z-[400] rounded-xl border border-separator/40 bg-surface px-3 py-3 shadow-xl"
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
+function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete }) {
   const { t } = useLanguage();
   const [showInfo, setShowInfo] = useState(false);
   const [isHoveringPreview, setIsHoveringPreview] = useState(false);
   const videoRef = useRef(null);
+  const infoButtonRef = useRef(null);
+  const closeInfo = useCallback(() => setShowInfo(false), []);
   const { previewUrl, thumbnailUrl } = getProjectPreviewMedia(project);
   const latestRevision = Number(project?.currentRevisionNumber || 0) > 0 ? `${t("vmRevision")} ${project.currentRevisionNumber}` : t("vmNone");
   const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `${t("vmRevision")} ${project.deployedRevisionNumber}` : t("vmNotDeployed"));
@@ -139,8 +194,31 @@ function ProjectCard({ project, onOpen }) {
           </div>
         ) : null}
 
-        <div className="absolute right-2 top-2">
+        <div className="absolute right-2 top-2 flex items-center gap-1">
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); onEdit(project); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100"
+              aria-label={t("Edit project")}
+              title={t("Edit project")}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); onDelete(project); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+              aria-label={t("Delete project")}
+              title={t("Delete project")}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+            </button>
+          ) : null}
           <button
+            ref={infoButtonRef}
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -153,17 +231,14 @@ function ProjectCard({ project, onOpen }) {
           </button>
 
           {showInfo ? (
-            <div
-              onClick={(event) => event.stopPropagation()}
-              className="absolute right-0 top-9 z-10 w-56 cursor-default rounded-xl border border-separator/40 bg-surface px-3 py-3 shadow-lg"
-            >
+            <InfoPopover anchorRef={infoButtonRef} onClose={closeInfo}>
               <div className="space-y-2 text-xs text-on-surface-variant">
                 <p><span className="font-bold text-on-surface">{t("vmCreatedBy")}</span> {project?.createdBy || t("vmUnknown")}</p>
                 <p><span className="font-bold text-on-surface">{t("vmLastEdited")}</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt, t("vmNotUpdated"))}</p>
                 <p><span className="font-bold text-on-surface">{t("vmDeployedLabel")}</span> {deployedRevision}</p>
                 <p><span className="font-bold text-on-surface">{t("vmLatestLabel")}</span> {latestRevision}</p>
               </div>
-            </div>
+            </InfoPopover>
           ) : null}
         </div>
       </div>
@@ -175,6 +250,61 @@ function ProjectCard({ project, onOpen }) {
         </p>
       </div>
     </article>
+  );
+}
+
+function EditProjectModal({ project, onClose, onSaved }) {
+  const { t } = useLanguage();
+  const [title, setTitle] = useState(project?.title || "");
+  const [description, setDescription] = useState(project?.description || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const nextTitle = title.trim();
+    if (!nextTitle) { setError(t("Title is required.")); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await patchVideoManualProject(project._id, { title: nextTitle, description: description.trim() });
+      onSaved({ ...project, title: nextTitle, description: description.trim() });
+    } catch (saveError) {
+      setError(saveError.message || t("Failed to save project."));
+      setSaving(false);
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[350] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-separator bg-surface p-5 shadow-2xl">
+        <h3 className="text-lg font-black text-on-surface">{t("Edit project")}</h3>
+        <label className="mt-4 block text-xs font-bold text-on-surface-variant">
+          {t("Title")}
+          <input
+            autoFocus
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-separator bg-surface px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary"
+          />
+        </label>
+        <label className="mt-3 block text-xs font-bold text-on-surface-variant">
+          {t("Description")}
+          <textarea
+            rows={4}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            className="mt-1 w-full resize-none rounded-lg border border-separator bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+          />
+        </label>
+        {error ? <p className="mt-3 text-xs font-bold text-red-600">{error}</p> : null}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container disabled:opacity-50">{t("Cancel")}</button>
+          <button type="submit" disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary disabled:opacity-50">{saving ? t("Saving...") : t("Save")}</button>
+        </div>
+      </form>
+    </div>,
+    document.body,
   );
 }
 
@@ -203,6 +333,22 @@ export default function VideoManualPage() {
   const [playlistsError, setPlaylistsError] = useState("");
   const [projectsError, setProjectsError] = useState("");
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [editingProject, setEditingProject] = useState(null);
+  const [actionError, setActionError] = useState("");
+  const authRole = String(readStoredAuthUser()?.role || "");
+  const canEditProjects = canEditVideoManualProjects(authRole);
+  const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
+
+  async function handleDeleteProject(project) {
+    if (!window.confirm(t("Delete project \"{title}\"? It will be removed from this list.", { title: project?.title || "" }))) return;
+    setActionError("");
+    try {
+      await deleteVideoManualProject(project._id);
+      setProjects((current) => current.filter((item) => String(item._id) !== String(project._id)));
+    } catch (error) {
+      setActionError(error.message || t("Failed to delete project."));
+    }
+  }
 
   const deferredPlaylistQuery = useDeferredValue(playlistQuery);
   const deferredProjectQuery = useDeferredValue(projectQuery);
@@ -447,6 +593,10 @@ export default function VideoManualPage() {
                   key={project?._id}
                   project={project}
                   onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}`)}
+                  canEdit={canEditProjects}
+                  canDelete={canDeleteProjects}
+                  onEdit={setEditingProject}
+                  onDelete={handleDeleteProject}
                 />
               ))}
             </div>
@@ -459,6 +609,23 @@ export default function VideoManualPage() {
           )}
         </section>
       </div>
+
+      {actionError ? (
+        <div className="fixed bottom-6 left-1/2 z-[360] -translate-x-1/2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-lg" onClick={() => setActionError("")}>
+          {actionError}
+        </div>
+      ) : null}
+
+      {editingProject ? (
+        <EditProjectModal
+          project={editingProject}
+          onClose={() => setEditingProject(null)}
+          onSaved={(updated) => {
+            setProjects((current) => current.map((item) => (String(item._id) === String(updated._id) ? { ...item, title: updated.title, description: updated.description } : item)));
+            setEditingProject(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
