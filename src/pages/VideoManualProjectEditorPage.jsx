@@ -545,6 +545,8 @@ export default function VideoManualProjectEditorPage() {
   const [stepDescriptions, setStepDescriptions] = useState([]);
   const [selectedClip, setSelectedClip] = useState(null);
   const [playbackTime, setPlaybackTime] = useState(0);
+  const [ccPreviewOn, setCcPreviewOn] = useState(true);
+  const [videoFrame, setVideoFrame] = useState(null); // on-screen rect of the video frame inside the studio element
   const [keyframeDraft, setKeyframeDraft] = useState(null);
   const [keyframeEditMode, setKeyframeEditMode] = useState(null);
   const [timelineHeight, setTimelineHeight] = useState(TIMELINE_DEFAULT_HEIGHT);
@@ -734,6 +736,39 @@ export default function VideoManualProjectEditorPage() {
       console.warn("Failed to sync steps", error);
     }
   }, []);
+
+  // Keep the subtitle simulation aligned with the (letterboxed) video frame.
+  const updateVideoFrame = useCallback(() => {
+    const edit = editRef.current;
+    const container = edit?.getViewportContainer?.();
+    if (!edit || !container?.scale?.x) return;
+    const next = {
+      left: container.position.x,
+      top: container.position.y,
+      width: (edit.size?.width || 0) * container.scale.x,
+      height: (edit.size?.height || 0) * container.scale.x,
+    };
+    setVideoFrame((current) => (current && Object.keys(next).every((key) => Math.abs(current[key] - next[key]) < 0.5) ? current : next));
+  }, []);
+
+  useEffect(() => {
+    updateVideoFrame();
+  }, [updateVideoFrame, playbackTime, steps, loadingProject]);
+
+  useEffect(() => {
+    const root = studioElRef.current;
+    if (!root || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => updateVideoFrame());
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [updateVideoFrame, loadingProject]);
+
+  // Simulation of the CC overlay in the monitor / tablet players: the description of the step playing now.
+  const ccPreviewText = useMemo(() => {
+    const step = steps.find((item, index) => playbackTime >= item.startTime && (playbackTime < item.endTime || (index === steps.length - 1 && playbackTime <= item.endTime)));
+    if (!step) return "";
+    return String(stepDescriptions.find((entry) => Math.abs(Number(entry.start) - step.startTime) < STEP_DESCRIPTION_MATCH_TOLERANCE)?.description || "").trim();
+  }, [playbackTime, stepDescriptions, steps]);
 
   const handleStepDescriptionChange = useCallback((step, description) => {
     setStepDescriptions((current) => {
@@ -2968,7 +3003,29 @@ export default function VideoManualProjectEditorPage() {
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div onPointerDown={handleStageBackgroundPointerDown} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
-                <div ref={studioElRef} data-shotstack-studio onDragOver={handleCanvasDragOver} onDrop={handleCanvasDrop} className="h-full w-full max-w-[980px] overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
+                <div className="relative h-full w-full max-w-[980px]">
+                  <div ref={studioElRef} data-shotstack-studio onDragOver={handleCanvasDragOver} onDrop={handleCanvasDrop} className="h-full w-full overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
+                  {videoFrame ? (
+                    <div className="pointer-events-none absolute overflow-hidden" style={{ left: videoFrame.left, top: videoFrame.top, width: videoFrame.width, height: videoFrame.height, containerType: "inline-size" }}>
+                      {ccPreviewOn && ccPreviewText ? (
+                        <div
+                          className="absolute left-1/2 max-w-[82%] -translate-x-1/2 whitespace-pre-line rounded-lg bg-black/70 px-[1.4cqw] py-[0.4cqw] text-center font-semibold leading-snug text-white"
+                          style={{ bottom: "9%", fontSize: "max(10px, 2.3cqw)" }}
+                        >
+                          {ccPreviewText}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setCcPreviewOn((value) => !value)}
+                    title={t("Preview how step descriptions appear as CC subtitles in the monitor and tablet players")}
+                    className={`absolute right-2 top-2 z-10 rounded-full px-3 py-1 text-xs font-bold shadow transition ${ccPreviewOn ? "bg-primary text-on-primary" : "bg-surface/80 text-on-surface-variant"}`}
+                  >
+                    {ccPreviewOn ? t("CC preview: On") : t("CC preview: Off")}
+                  </button>
+                </div>
                 <BubbleTailHandle editRef={editRef} studioElRef={studioElRef} selectedClip={selectedClip} />
                 <style dangerouslySetInnerHTML={{ __html: `
                   [data-shotstack-studio] > div:not(canvas) { opacity: 0 !important; pointer-events: none !important; position: absolute !important; width: 0 !important; height: 0 !important; overflow: hidden !important; }
