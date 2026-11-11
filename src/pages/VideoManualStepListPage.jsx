@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
+import VideoManualStepPlayerModal from "../components/videoManual/VideoManualStepPlayerModal";
 import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
 import { buildRevisionSnapshot } from "../components/videoManual/videoManualEditorUtils";
 import {
@@ -62,7 +63,7 @@ function stepDuration(step) {
   return end || Number(step?.durationSeconds) || 0;
 }
 
-function StepThumbnail({ step }) {
+function StepThumbnail({ step, onPlay }) {
   const first = stepVideoClips(step)[0];
   const src = first ? (step.assetSourceMap?.[first.asset.src] || first.asset.src) : "";
   if (!src) {
@@ -73,13 +74,12 @@ function StepThumbnail({ step }) {
     );
   }
   return (
-    <video
-      src={`${src}#t=0.1`}
-      preload="metadata"
-      muted
-      playsInline
-      className="h-[72px] w-[128px] flex-shrink-0 rounded-[6px] bg-black object-cover"
-    />
+    <button type="button" onClick={onPlay} title="Play" className="group relative h-[72px] w-[128px] flex-shrink-0 overflow-hidden rounded-[6px] bg-black">
+      <video src={`${src}#t=0.1`} preload="metadata" muted playsInline className="pointer-events-none h-full w-full object-cover" />
+      <span className="absolute inset-0 flex items-center justify-center bg-black/10 transition group-hover:bg-black/35">
+        <span className="material-symbols-outlined flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-[22px] text-white">play_arrow</span>
+      </span>
+    </button>
   );
 }
 
@@ -99,6 +99,7 @@ export default function VideoManualStepListPage() {
   const [dragId, setDragId] = useState("");
   const [overId, setOverId] = useState("");
   const [focusStepId, setFocusStepId] = useState("");
+  const [playStepId, setPlayStepId] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [exportStatus, setExportStatus] = useState(null);
@@ -393,7 +394,7 @@ export default function VideoManualStepListPage() {
                     </span>
                   ) : null}
                   <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--freya-blue)]/15 text-xs font-bold text-[var(--freya-blue)]">{index + 1}</span>
-                  <StepThumbnail step={step} />
+                  <StepThumbnail step={step} onPlay={() => setPlayStepId(step.id)} />
                   <div className="min-w-0 flex-1">
                     <input
                       ref={(el) => { titleRefs.current[step.id] = el; }}
@@ -431,6 +432,10 @@ export default function VideoManualStepListPage() {
           </button>
         ) : null}
       </div>
+
+      {playStepId ? (
+        <VideoManualStepPlayerModal steps={steps} stepId={playStepId} onClose={() => setPlayStepId("")} onChangeStep={setPlayStepId} />
+      ) : null}
 
       <VideoManualExportStatusModal
         open={exportOpen}
