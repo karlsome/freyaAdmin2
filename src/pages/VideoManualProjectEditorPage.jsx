@@ -2250,17 +2250,6 @@ export default function VideoManualProjectEditorPage() {
     showNotice("Text added.");
   }, [getPlaybackTime, showNotice, syncSteps]);
 
-  // Subtitles are stored on the project (not burned in) and published to the player on deploy.
-  const handleSaveSubtitles = useCallback(async (tracks) => {
-    try {
-      await patchVideoManualProject(projectId, { subtitles: tracks });
-      setProject((current) => (current ? { ...current, subtitles: tracks } : current));
-      showNotice(t("Subtitles saved. Deploy to publish them to the player."));
-    } catch (error) {
-      showNotice(error.message || t("Failed to save subtitles."), "error");
-    }
-  }, [projectId, showNotice, t]);
-
   const handleAddShape = useCallback(async (shapeType, dropPoint = null) => {
     const edit = editRef.current;
     if (!edit) return;
@@ -3004,8 +2993,6 @@ export default function VideoManualProjectEditorPage() {
                 setAddDrawerOpen((currentOpen) => !(currentOpen && activeAddCategory === category));
               }}
               onAddText={handleAddText}
-              subtitleTracks={project?.subtitles}
-              onSaveSubtitles={handleSaveSubtitles}
               onAddShape={handleAddShape}
               onOpenAssetLibrary={(libraryType) => loadAssetLibrary(libraryType)}
               onSetBackgroundColor={handleSetBackgroundColor}

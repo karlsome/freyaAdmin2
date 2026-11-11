@@ -462,12 +462,3 @@ export async function permanentlyDeleteVideoManualProject(projectId) {
 
   return request(`api/video-manuals-studio/projects/${projectId}/permanent`, { method: "DELETE" });
 }
-
-export async function translateVideoManualText(text, sourceLang, targetLang) {
-  const data = await request("api/translate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, langpair: `${sourceLang}|${targetLang}` }),
-  });
-  return data?.translatedText || text;
-}

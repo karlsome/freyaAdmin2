@@ -1,19 +1,5 @@
 // SRT parsing / building helpers for the Video Manual subtitle feature.
 
-export const SUBTITLE_LANGUAGES = [
-  { code: "ja", label: "日本語 (Japanese)" },
-  { code: "en", label: "English" },
-  { code: "vi", label: "Tiếng Việt (Vietnamese)" },
-  { code: "zh-CN", label: "中文 (Chinese)" },
-  { code: "ko", label: "한국어 (Korean)" },
-  { code: "th", label: "ไทย (Thai)" },
-  { code: "id", label: "Bahasa Indonesia" },
-  { code: "es", label: "Español" },
-  { code: "pt", label: "Português" },
-  { code: "fr", label: "Français" },
-  { code: "de", label: "Deutsch" },
-];
-
 function parseTimestamp(value) {
   const match = /^(\d+):(\d{2}):(\d{2})[,.](\d{1,3})$/.exec(value.trim());
   if (!match) return null;
