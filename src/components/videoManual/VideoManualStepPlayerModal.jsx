@@ -42,7 +42,13 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
 
   const currentRangeIndex = Math.max(0, ranges.findIndex((range) => time >= range.start && time < range.end));
   const currentRange = time >= duration && ranges.length ? ranges[ranges.length - 1] : ranges[currentRangeIndex];
+  const activeStepRef = useRef(null);
   const activeCue = cues.filter((cue) => time >= cue.start && time < cue.end).pop();
+
+  const activeRangeId = currentRange?.id || "";
+  useEffect(() => {
+    activeStepRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [activeRangeId]);
 
   // Put the <video> at global time `at` (switches source when the cut changes).
   const seekTo = useCallback((at, { play = false } = {}) => {
@@ -119,7 +125,7 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
 
   return createPortal(
     <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-[12px] bg-[var(--surface-raised)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <div className="flex w-full max-w-6xl flex-col overflow-hidden rounded-[12px] bg-[var(--surface-raised)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
@@ -132,48 +138,85 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
           </button>
         </div>
 
-        <div className="relative aspect-video w-full bg-black">
-          {clips.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm font-semibold text-white/70">{t("Nothing to play yet.")}</div>
-          ) : (
-            <video
-              ref={videoRef}
-              playsInline
-              onClick={togglePlay}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onTimeUpdate={handleTimeUpdate}
-              className="h-full w-full object-contain"
-            />
-          )}
-          {activeCue?.text ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-[5%] flex justify-center px-6">
-              <span className="max-w-[90%] whitespace-pre-line rounded bg-black/75 px-3 py-1 text-center text-base font-medium leading-snug text-yellow-300">{activeCue.text}</span>
+        <div className="flex min-h-0 flex-col lg:flex-row">
+          <div className="min-w-0 flex-1">
+            <div className="relative aspect-video w-full bg-black">
+              {clips.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm font-semibold text-white/70">{t("Nothing to play yet.")}</div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  playsInline
+                  onClick={togglePlay}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                  onTimeUpdate={handleTimeUpdate}
+                  className="h-full w-full object-contain"
+                />
+              )}
+              {activeCue?.text ? (
+                <div className="pointer-events-none absolute inset-x-0 bottom-[5%] flex justify-center px-6">
+                  <span className="max-w-[90%] whitespace-pre-line rounded bg-black/75 px-3 py-1 text-center text-base font-medium leading-snug text-yellow-300">{activeCue.text}</span>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
 
-        <div className="flex items-center gap-3 px-4 py-3">
-          <button type="button" onClick={() => jumpStep(-1)} disabled={!ranges.length} title={t("Previous step")} className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:opacity-30"><Icon>skip_previous</Icon></button>
-          <button type="button" onClick={togglePlay} disabled={!clips.length} title={playing ? t("Pause") : t("Play")} className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--freya-blue)] text-white hover:bg-[var(--freya-blue-hover)] disabled:opacity-40"><Icon>{playing ? "pause" : "play_arrow"}</Icon></button>
-          <button type="button" onClick={() => jumpStep(1)} disabled={!ranges.length || ranges.indexOf(currentRange) >= ranges.length - 1} title={t("Next step")} className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:opacity-30"><Icon>skip_next</Icon></button>
-          <span className="w-[96px] flex-shrink-0 text-xs tabular-nums text-[var(--text-muted)]">{formatTime(time)} / {formatTime(duration)}</span>
-          <div className="relative min-w-0 flex-1">
-            <input
-              type="range"
-              min={0}
-              max={duration || 1}
-              step={0.1}
-              value={Math.min(time, duration || 1)}
-              onChange={(event) => seekTo(Number(event.target.value), { play: playing })}
-              className="relative z-10 w-full accent-[var(--freya-blue)]"
-              aria-label={t("Seek")}
-            />
-            {/* step boundaries */}
-            {ranges.slice(1).map((range) => (
-              <span key={range.id} title={range.title} className="pointer-events-none absolute top-1/2 h-3 w-px -translate-y-1/2 bg-[var(--text-muted)]/60" style={{ left: `${(range.start / (duration || 1)) * 100}%` }} />
-            ))}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <button type="button" onClick={() => jumpStep(-1)} disabled={!ranges.length} title={t("Previous step")} className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:opacity-30"><Icon>skip_previous</Icon></button>
+              <button type="button" onClick={togglePlay} disabled={!clips.length} title={playing ? t("Pause") : t("Play")} className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--freya-blue)] text-white hover:bg-[var(--freya-blue-hover)] disabled:opacity-40"><Icon>{playing ? "pause" : "play_arrow"}</Icon></button>
+              <button type="button" onClick={() => jumpStep(1)} disabled={!ranges.length || ranges.indexOf(currentRange) >= ranges.length - 1} title={t("Next step")} className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:opacity-30"><Icon>skip_next</Icon></button>
+              <span className="w-[96px] flex-shrink-0 text-xs tabular-nums text-[var(--text-muted)]">{formatTime(time)} / {formatTime(duration)}</span>
+              <div className="relative min-w-0 flex-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 1}
+                  step={0.1}
+                  value={Math.min(time, duration || 1)}
+                  onChange={(event) => seekTo(Number(event.target.value), { play: playing })}
+                  className="relative z-10 w-full accent-[var(--freya-blue)]"
+                  aria-label={t("Seek")}
+                />
+                {/* step boundaries */}
+                {ranges.slice(1).map((range) => (
+                  <span key={range.id} title={range.title} className="pointer-events-none absolute top-1/2 h-3 w-px -translate-y-1/2 bg-[var(--text-muted)]/60" style={{ left: `${(range.start / (duration || 1)) * 100}%` }} />
+                ))}
+              </div>
+            </div>
           </div>
+
+          {ranges.length > 1 ? (
+            <aside className="relative max-h-[40vh] w-full flex-shrink-0 border-t border-[var(--border)] lg:max-h-none lg:w-[300px] lg:border-l lg:border-t-0">
+              <ol className="space-y-1.5 overflow-y-auto p-2 lg:absolute lg:inset-0">
+                {ranges.map((range, index) => {
+                  const isActive = range.id === activeRangeId;
+                  const isDone = time >= range.end && !isActive;
+                  const fraction = isActive ? Math.min(1, Math.max(0, (time - range.start) / Math.max(0.1, range.end - range.start))) : isDone ? 1 : 0;
+                  return (
+                    <li key={range.id} ref={isActive ? activeStepRef : null}>
+                      <button
+                        type="button"
+                        onClick={() => seekTo(range.start, { play: true })}
+                        aria-current={isActive ? "step" : undefined}
+                        className={`relative flex w-full items-start gap-2.5 overflow-hidden rounded-[8px] border px-2.5 py-2 text-left transition ${isActive ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10 shadow-sm" : "border-transparent hover:bg-[var(--surface-hover)]"}`}
+                      >
+                        <span className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${isActive ? "bg-[var(--freya-blue)] text-white" : isDone ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--surface-subtle)] text-[var(--text-muted)]"}`}>
+                          {isDone ? <Icon className="text-[14px]">check</Icon> : index + 1}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={`block text-[13px] leading-snug ${isActive ? "font-semibold text-[var(--text-primary)]" : "font-medium text-[var(--text-primary)]"}`}>{range.title}</span>
+                          <span className="block text-[11px] tabular-nums text-[var(--text-muted)]">{formatTime(range.start)} · {formatTime(range.end - range.start)}</span>
+                        </span>
+                        <span className="absolute inset-x-0 bottom-0 h-[3px] bg-transparent">
+                          <span className={`block h-full ${isActive ? "bg-[var(--freya-blue)]" : "bg-emerald-500/50"}`} style={{ width: `${fraction * 100}%` }} />
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </aside>
+          ) : null}
         </div>
       </div>
     </div>,
