@@ -2,11 +2,13 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useRef } from "react";
 import VideoManualClipPropertiesPanel from "./VideoManualClipPropertiesPanel";
 import VideoManualKeyframePanel from "./VideoManualKeyframePanel";
+import VideoManualSubtitlesPanel from "./VideoManualSubtitlesPanel";
 import { getClipCategory } from "./videoManualEditorUtils";
 
 const ADD_CATEGORIES = [
   { id: "text", label: "Text", icon: "text_fields" },
   { id: "shapes", label: "Shapes", icon: "select_all" },
+  { id: "subtitles", label: "Subtitles", icon: "subtitles" },
   { id: "media", label: "Media", icon: "video_library" },
   { id: "animation", label: "Anim", icon: "show_chart" },
   { id: "background", label: "Background", icon: "palette" },
@@ -128,6 +130,8 @@ export default function VideoManualAddElementsSidebar({
   onClose,
   onSelectCategory,
   onAddText,
+  subtitleTracks,
+  onSaveSubtitles,
   onAddShape,
   onOpenAssetLibrary,
   onSetBackgroundColor,
@@ -188,6 +192,10 @@ export default function VideoManualAddElementsSidebar({
           onAddKeyframe={onAddKeyframe}
         />
       );
+    }
+
+    if (activeCategory === "subtitles") {
+      return <VideoManualSubtitlesPanel tracks={subtitleTracks} onSaveTracks={onSaveSubtitles} />;
     }
 
     if (activeCategory === "text") {
