@@ -93,7 +93,7 @@ function getPreviewStatus(asset) {
   return String(asset?.processingStatus || "").trim().toLowerCase();
 }
 
-function AssetPreview({ asset }) {
+function AssetPreview({ asset, onOpenPreview = null }) {
   const { t } = useLanguage();
   const type = normalizePlaylistAssetType(asset?.type, asset?.mimeType);
   const imageUrl = getDisplayImageUrl(asset);
@@ -143,10 +143,23 @@ function AssetPreview({ asset }) {
             ref={videoRef}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isHovering ? "opacity-100" : "opacity-0"}`}
             muted
+            loop
             playsInline
             preload="none"
             src={hoverPreviewUrl}
           />
+        ) : null}
+        {onOpenPreview ? (
+          <button
+            type="button"
+            onClick={onOpenPreview}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-transparent group"
+            title={t("Click to preview clip")}
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <Icon className="text-[22px]">play_circle</Icon>
+            </span>
+          </button>
         ) : null}
         {previewStatus === "processing" ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/38 px-4 text-center text-[11px] font-black uppercase tracking-[0.18em] text-white">
@@ -496,19 +509,7 @@ export default function VideoManualAssetLibraryModal({
                       {isSelected ? <Icon className="text-[15px]">check</Icon> : null}
                     </button>
                   ) : null}
-                  {!editMode && assetType === "video" ? (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewAsset(asset)}
-                      className="absolute inset-0 z-10 flex items-center justify-center bg-transparent group"
-                      title={t("Click to preview clip")}
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                        <Icon className="text-[22px]">play_circle</Icon>
-                      </span>
-                    </button>
-                  ) : null}
-                  <AssetPreview asset={asset} />
+                  <AssetPreview asset={asset} onOpenPreview={!editMode && assetType === "video" ? () => setPreviewAsset(asset) : null} />
                   {assetType === "video" ? (
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
                       <span className="truncate mr-2">{previewStatus === "processing" ? t("Processing") : previewStatus === "failed" ? t("Unavailable") : asset?.previewUrl ? name : t("No Preview")}</span>
