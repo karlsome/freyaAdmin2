@@ -5,6 +5,8 @@ import PageHeader from "../components/PageHeader";
 import VideoManualCopyProjectModal from "../components/videoManual/VideoManualCopyProjectModal";
 import VideoManualProjectTrashModal from "../components/videoManual/VideoManualProjectTrashModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import VideoManualStepPlayerModal from "../components/videoManual/VideoManualStepPlayerModal";
+import { getPlayableSteps } from "../components/videoManual/videoManualPlaybackUtils";
 import { readStoredAuthUser } from "../utils/auth";
 import {
   canEditVideoManualProjects,
@@ -13,6 +15,7 @@ import {
   deleteVideoManualProject,
   duplicateVideoManualProject,
   fetchVideoManualPlaylistProjects,
+  fetchVideoManualProject,
   fetchVideoManualPlaylists,
   patchVideoManualPlaylist,
   previewVideoManualPlaylistDelete,
@@ -138,7 +141,7 @@ function InfoPopover({ anchorRef, onClose, children }) {
   );
 }
 
-function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo }) {
+function ProjectCard({ project, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo }) {
   const { t } = useLanguage();
   const [showInfo, setShowInfo] = useState(false);
   const [isHoveringPreview, setIsHoveringPreview] = useState(false);
@@ -227,6 +230,16 @@ function ProjectCard({ project, onOpen, canEdit, canDelete, onEdit, onDelete, on
             {t("Deployed")}
           </div>
         ) : null}
+
+        <button
+          type="button"
+          onClick={(event) => { event.stopPropagation(); onPlay(project); }}
+          className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white opacity-0 shadow-md transition-opacity duration-150 hover:bg-[var(--freya-blue)] focus-visible:opacity-100 group-hover:opacity-100"
+          aria-label={t("Play whole manual")}
+          title={t("Play whole manual")}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>play_arrow</span>
+        </button>
 
         <div className="absolute right-2 top-2 flex items-center gap-1">
           {canEdit ? (
@@ -554,6 +567,7 @@ export default function VideoManualPage() {
   const [trashOpen, setTrashOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState(null);
   const [notice, setNotice] = useState("");
+  const [playback, setPlayback] = useState(null);
   const authRole = String(readStoredAuthUser()?.role || "");
   const canEditProjects = canEditVideoManualProjects(authRole);
   const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
@@ -599,6 +613,19 @@ export default function VideoManualPage() {
       setProjects((current) => current.filter((item) => String(item._id) !== String(project._id)));
     } catch (error) {
       setActionError(error.message || t("Failed to delete project."));
+    }
+  }
+
+  // Play the whole manual (all steps back to back) right from the explorer.
+  async function handlePlayProject(project) {
+    setActionError("");
+    try {
+      const full = await fetchVideoManualProject(project._id);
+      const steps = getPlayableSteps(full);
+      if (!steps.length) { setActionError(t("Nothing to play yet.")); return; }
+      setPlayback({ steps });
+    } catch (error) {
+      setActionError(error.message || t("Failed to load project."));
     }
   }
 
@@ -914,6 +941,7 @@ export default function VideoManualPage() {
                 <ProjectCard
                   key={project?._id}
                   project={project}
+                  onPlay={handlePlayProject}
                   onOpen={(nextProject) => navigate(nextProject.structure === "steps" ? `/videoManual/project/${nextProject._id}/steps` : `/videoManual/project/${nextProject._id}`)}
                   canEdit={canEditProjects}
                   canDelete={canDeleteProjects}
@@ -984,6 +1012,8 @@ export default function VideoManualPage() {
           }}
         />
       ) : null}
+
+      {playback ? <VideoManualStepPlayerModal steps={playback.steps} onClose={() => setPlayback(null)} /> : null}
 
       {creatingProject && selectedPlaylistId ? (
         <EditProjectModal

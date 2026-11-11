@@ -339,6 +339,9 @@ export default function VideoManualStepListPage() {
             ) : null}
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("Steps are combined in this order into one continuous video when exported.")}</p>
           </div>
+          <button type="button" disabled={loading || !steps.some((step) => stepVideoClips(step).length > 0)} onClick={() => setPlayStepId("__all__")} className={buttonClass}>
+            <Icon>play_circle</Icon>{t("Play all steps")}
+          </button>
           {canDeploy ? (
             <div className="flex items-center gap-2">
               {project?.deployedRevisionId ? (
@@ -434,7 +437,7 @@ export default function VideoManualStepListPage() {
       </div>
 
       {playStepId ? (
-        <VideoManualStepPlayerModal steps={steps} stepId={playStepId} onClose={() => setPlayStepId("")} onChangeStep={setPlayStepId} />
+        <VideoManualStepPlayerModal steps={steps} startStepId={playStepId === "__all__" ? "" : playStepId} onClose={() => setPlayStepId("")} />
       ) : null}
 
       <VideoManualExportStatusModal
