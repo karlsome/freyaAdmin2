@@ -446,7 +446,7 @@ export default function VideoManualAssetLibraryModal({
           </div>
         ) : null}
 
-        <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto bg-surface-container-low px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-1 content-start gap-4 overflow-y-auto bg-surface-container-low px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
           {listLoading ? (
             <p className="col-span-full py-12 text-center text-sm font-bold text-outline">{t("Loading playlist library...")}</p>
           ) : null}
