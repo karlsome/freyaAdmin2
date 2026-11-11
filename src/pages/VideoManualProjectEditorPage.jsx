@@ -10,6 +10,7 @@ import VideoManualEditorToolbar from "../components/videoManual/VideoManualEdito
 import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
 import VideoManualRevisionHistoryModal from "../components/videoManual/VideoManualRevisionHistoryModal";
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
+import { buildSrtFromSteps, cuesToStepDescriptions, parseSrt } from "../components/videoManual/subtitleUtils";
 import BubbleTailHandle from "../components/videoManual/BubbleTailHandle";
 import {
   bubbleAbsFromBox,
@@ -741,6 +742,41 @@ export default function VideoManualProjectEditorPage() {
     });
     setHasUnsavedChanges(true);
   }, []);
+
+  // Import an SRT: every cue is written into the description of the step it overlaps.
+  const handleImportStepSrt = useCallback(async (file) => {
+    try {
+      const cues = parseSrt(await file.text());
+      const imported = cuesToStepDescriptions(cues, steps);
+      if (!imported.length) {
+        showNotice(t("No subtitle lines matched any step."), "error");
+        return;
+      }
+      setStepDescriptions((current) => [
+        ...current.filter((entry) => !imported.some((item) => Math.abs(Number(item.start) - Number(entry.start)) < STEP_DESCRIPTION_MATCH_TOLERANCE)),
+        ...imported,
+      ]);
+      setHasUnsavedChanges(true);
+      showNotice(t("Imported {n} step descriptions. Save to keep them.", { n: imported.length }));
+    } catch (error) {
+      showNotice(error.message || t("Failed to import SRT."), "error");
+    }
+  }, [showNotice, steps, t]);
+
+  const handleDownloadStepSrt = useCallback(() => {
+    const findDescription = (step) => stepDescriptions.find((entry) => Math.abs(Number(entry.start) - step.startTime) < STEP_DESCRIPTION_MATCH_TOLERANCE)?.description || "";
+    const srt = buildSrtFromSteps(steps, findDescription);
+    if (!srt) {
+      showNotice(t("No step descriptions to export."), "error");
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([srt], { type: "text/plain;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${(project?.title || "video-manual").replace(/[\\/:*?"<>|]+/g, "_")}.srt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [project?.title, showNotice, stepDescriptions, steps, t]);
 
   const buildProjectSettings = useCallback(() => ({
     ...(project?.settings || {}),
@@ -2939,7 +2975,7 @@ export default function VideoManualProjectEditorPage() {
       ) : (
         <div ref={editorBodyRef} className={`relative flex min-h-0 flex-1 flex-col ${timelineResizing ? "select-none" : ""}`}>
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
-            <VideoManualStepsPanel steps={steps} playbackTime={playbackTime} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
+            <VideoManualStepsPanel steps={steps} playbackTime={playbackTime} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} onImportSrt={handleImportStepSrt} onDownloadSrt={handleDownloadStepSrt} />
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div onPointerDown={handleStageBackgroundPointerDown} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">

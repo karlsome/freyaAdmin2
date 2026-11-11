@@ -22,10 +22,11 @@ function findActiveStepIndex(steps, time) {
   return index;
 }
 
-export default function VideoManualStepsPanel({ steps, playbackTime = 0, stepDescriptions = [], onDescriptionChange, descriptionTolerance, onSelectStep, onAddStep }) {
+export default function VideoManualStepsPanel({ steps, playbackTime = 0, stepDescriptions = [], onDescriptionChange, descriptionTolerance, onSelectStep, onAddStep, onImportSrt, onDownloadSrt }) {
   const { t } = useLanguage();
   const activeIndex = findActiveStepIndex(steps, playbackTime);
   const activeCardRef = useRef(null);
+  const srtInputRef = useRef(null);
 
   useEffect(() => {
     activeCardRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
@@ -80,7 +81,38 @@ export default function VideoManualStepsPanel({ steps, playbackTime = 0, stepDes
         ) : null}
       </div>
 
-      <div className="border-t border-separator p-2">
+      <div className="space-y-1.5 border-t border-separator p-2">
+        <input
+          ref={srtInputRef}
+          type="file"
+          accept=".srt,text/plain"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onImportSrt?.(file);
+          }}
+        />
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={() => srtInputRef.current?.click()}
+            title={t("Import SRT into step descriptions")}
+            className="flex h-9 items-center justify-center gap-1 rounded-lg bg-surface-container text-xs font-bold text-on-surface-variant transition hover:bg-surface-container-high"
+          >
+            <Icon>upload_file</Icon>
+            {t("Import SRT")}
+          </button>
+          <button
+            type="button"
+            onClick={onDownloadSrt}
+            title={t("Download step descriptions as SRT")}
+            className="flex h-9 items-center justify-center gap-1 rounded-lg bg-surface-container text-xs font-bold text-on-surface-variant transition hover:bg-surface-container-high"
+          >
+            <Icon>download</Icon>
+            {t("Download SRT")}
+          </button>
+        </div>
         <button
           type="button"
           onClick={onAddStep}

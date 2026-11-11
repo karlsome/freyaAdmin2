@@ -39,3 +39,40 @@ export function parseSrt(raw = "") {
   if (!cues.length) throw new Error("No subtitles found in this SRT file.");
   return cues;
 }
+
+// Maps each cue to the step it overlaps most; several cues in one step are joined line by line.
+// Returns [{ start, description }] keyed by the step start time (same shape as settings.stepDescriptions).
+export function cuesToStepDescriptions(cues, steps) {
+  const byStep = new Map();
+  cues.forEach((cue) => {
+    let best = null;
+    let bestOverlap = 0;
+    steps.forEach((step) => {
+      const overlap = Math.min(cue.end, step.endTime) - Math.max(cue.start, step.startTime);
+      if (overlap > bestOverlap) { bestOverlap = overlap; best = step; }
+    });
+    if (!best) return;
+    byStep.set(best, [...(byStep.get(best) || []), cue.text]);
+  });
+  return [...byStep.entries()].map(([step, texts]) => ({
+    start: Math.round(step.startTime * 1000) / 1000,
+    description: texts.join("\n"),
+  }));
+}
+
+function formatTimestamp(seconds) {
+  const total = Math.max(0, Math.round(seconds * 1000));
+  const pad = (n, w = 2) => String(n).padStart(w, "0");
+  return `${pad(Math.floor(total / 3600000))}:${pad(Math.floor(total / 60000) % 60)}:${pad(Math.floor(total / 1000) % 60)},${pad(total % 1000, 3)}`;
+}
+
+// One cue per step that has a description, spanning the step's start to end.
+export function buildSrtFromSteps(steps, getDescription) {
+  const blocks = [];
+  steps.forEach((step) => {
+    const text = String(getDescription(step) || "").trim();
+    if (!text || step.endTime <= step.startTime) return;
+    blocks.push(`${blocks.length + 1}\n${formatTimestamp(step.startTime)} --> ${formatTimestamp(step.endTime)}\n${text}`);
+  });
+  return blocks.join("\n\n") + (blocks.length ? "\n" : "");
+}
