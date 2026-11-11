@@ -327,7 +327,6 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
   const isCreate = !project;
   const [title, setTitle] = useState(project?.title || "");
   const [description, setDescription] = useState(project?.description || "");
-  const [structure, setStructure] = useState("flat");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -345,7 +344,7 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
     setError("");
     try {
       if (isCreate) {
-        const created = await createVideoManualProject(playlistId, { title: nextTitle, description: description.trim(), structure });
+        const created = await createVideoManualProject(playlistId, { title: nextTitle, description: description.trim() });
         onSaved({ ...created, _id: created?._id || created?.insertedId });
       } else {
         await patchVideoManualProject(project._id, { title: nextTitle, description: description.trim() });
@@ -392,32 +391,6 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
             </div>
             <input autoFocus type="text" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={isCreate ? t("Project title") : undefined} className={inputClass} />
           </div>
-
-          {isCreate ? (
-            <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-              <div className="mb-2 flex items-center gap-1.5 text-[var(--text-muted)]">
-                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>account_tree</span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">{t("Manual type")}</span>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {[
-                  { value: "flat", title: t("Single timeline"), hint: t("One timeline; every video clip is a step.") },
-                  { value: "steps", title: t("Step by step (beta)"), hint: t("Create steps first. Each step has its own cuts, overlays and subtitles, and steps can be reordered.") },
-                ].map((option) => (
-                  <label
-                    key={option.value}
-                    className={`cursor-pointer rounded-[8px] border px-3 py-2.5 transition-colors ${structure === option.value ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10" : "border-[var(--border)] hover:border-[var(--border-strong)]"}`}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                      <input type="radio" name="vm-structure" value={option.value} checked={structure === option.value} onChange={() => setStructure(option.value)} />
-                      {option.title}
-                    </span>
-                    <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">{option.hint}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
             <div className="mb-2 flex items-center gap-1.5 text-[var(--text-muted)]">
@@ -942,7 +915,7 @@ export default function VideoManualPage() {
                   key={project?._id}
                   project={project}
                   onPlay={handlePlayProject}
-                  onOpen={(nextProject) => navigate(nextProject.structure === "steps" ? `/videoManual/project/${nextProject._id}/steps` : `/videoManual/project/${nextProject._id}`)}
+                  onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`)}
                   canEdit={canEditProjects}
                   canDelete={canDeleteProjects}
                   onEdit={setEditingProject}
@@ -1022,7 +995,7 @@ export default function VideoManualPage() {
           onClose={() => setCreatingProject(false)}
           onSaved={(created) => {
             setCreatingProject(false);
-            navigate(created.structure === "steps" ? `/videoManual/project/${created._id}/steps` : `/videoManual/project/${created._id}`);
+            navigate(`/videoManual/project/${created._id}/steps`);
           }}
         />
       ) : null}

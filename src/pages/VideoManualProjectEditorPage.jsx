@@ -604,12 +604,9 @@ export default function VideoManualProjectEditorPage() {
           }
           return;
         }
-        if (nextProject?.structure === "steps") {
-          // Step-based projects are managed from the step list, not the single-timeline editor.
-          if (!cancelled) navigate(`/videoManual/project/${projectId}/steps`, { replace: true });
-          return;
-        }
-        if (!cancelled) setProject(nextProject);
+        // Every manual is step-based now: the project page is the step list (it converts old projects on open).
+        if (!cancelled) navigate(`/videoManual/project/${projectId}/steps`, { replace: true });
+        return;
       } catch (error) {
         if (!cancelled) {
           setProject(null);

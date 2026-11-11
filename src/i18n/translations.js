@@ -1350,6 +1350,7 @@ const translations = {
     "Add step": "ステップを追加",
     "Step": "ステップ",
     "Subtitles": "字幕",
+    "This manual still uses the old format. Ask an editor to open it once to convert it.": "このマニュアルは旧形式のままです。編集権限のある方が一度開くと変換されます。",
     "Play all steps": "全ステップを再生",
     "Play whole manual": "マニュアル全体を再生",
     "Nothing to play yet.": "再生できる動画がありません。",

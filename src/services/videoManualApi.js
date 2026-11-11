@@ -137,7 +137,7 @@ export async function patchVideoManualProject(projectId, updates) {
   });
 }
 
-export async function createVideoManualProject(playlistId, { title, description = "", structure = "flat" } = {}) {
+export async function createVideoManualProject(playlistId, { title, description = "" } = {}) {
   if (!playlistId) {
     throw new Error("playlistId is required");
   }
@@ -145,7 +145,7 @@ export async function createVideoManualProject(playlistId, { title, description 
   return request(`api/video-manuals-studio/playlists/${playlistId}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, description, structure }),
+    body: JSON.stringify({ title, description }),
   });
 }
 

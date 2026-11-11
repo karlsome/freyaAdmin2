@@ -15,6 +15,7 @@ import {
 import {
   canDeployVideoManualProjects,
   canEditVideoManualProjects,
+  convertVideoManualProjectToSteps,
   createVideoManualRevision,
   createVideoManualStep,
   deleteVideoManualStep,
@@ -114,7 +115,13 @@ export default function VideoManualStepListPage() {
         const data = await fetchVideoManualProject(projectId);
         if (cancelled) return;
         if (data?.structure !== "steps") {
-          navigate(`/videoManual/project/${projectId}`, { replace: true });
+          // Old single-timeline project: every video clip becomes a step (done once, on the server).
+          if (!canEdit) throw new Error(t("This manual still uses the old format. Ask an editor to open it once to convert it."));
+          await convertVideoManualProjectToSteps(projectId);
+          const converted = await fetchVideoManualProject(projectId);
+          if (cancelled) return;
+          setProject(converted);
+          setSteps(Array.isArray(converted.steps) ? converted.steps : []);
           return;
         }
         setProject(data);
@@ -126,7 +133,8 @@ export default function VideoManualStepListPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [navigate, projectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canEdit, projectId]);
 
   useEffect(() => {
     if (!focusStepId) return;
