@@ -418,15 +418,14 @@ export async function fetchScnaBox(boxId) {
   return parseJsonResponse(response, "Failed to fetch box");
 }
 
-// SRS (…-S001) and Kensa (…-K001) labels, with the press boxes / SRS labels they were made from and the submitted records.
-export async function fetchScnaLabelChain(kind, labelId) {
-  const path = kind === "srs" ? "srs-boxes" : "kensa-boxes";
+// The whole chain around a press box (…-B001), SRS label (…-S001) or Kensa label (…-K001): earlier and later processes.
+export async function fetchScnaTrace(id) {
   const response = await fetch(
-    `${BASE_URL}api/${path}/${encodeURIComponent(labelId)}?chain=1`,
+    `${BASE_URL}api/scna-trace/${encodeURIComponent(id)}`,
     { method: "GET", headers: { "Content-Type": "application/json" } }
   );
   if (response.status === 404) return null;
-  return parseJsonResponse(response, "Failed to fetch label");
+  return parseJsonResponse(response, "Failed to fetch trace");
 }
 
 export async function fetchScnaBoxesByLot(lotNumber) {

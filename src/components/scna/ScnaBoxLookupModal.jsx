@@ -1,8 +1,10 @@
 import { useState } from "react";
 import ModalShell from "../ModalShell";
 import ScnaProductionDetailModal from "./ScnaProductionDetailModal";
+import RecordDetailModal from "../RecordDetailModal";
+import ScnaTraceChain from "./ScnaTraceChain";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot, fetchScnaLabelChain } from "../../services/scnaApi";
+import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot, fetchScnaTrace } from "../../services/scnaApi";
 
 const fmtNum = (v) => {
   const n = Number(v);
@@ -23,13 +25,6 @@ function parseBoxId(text) {
   return parts.length ? parts[parts.length - 1].trim() : "";
 }
 
-// SRS labels end in -S001, Kensa labels in -K001; everything else is a press (DCP) box ID.
-function labelKind(boxId) {
-  if (/-S\d+$/i.test(boxId)) return "srs";
-  if (/-K\d+$/i.test(boxId)) return "kensa";
-  return "press";
-}
-
 function Field({ label, children }) {
   return (
     <div>
@@ -38,129 +33,6 @@ function Field({ label, children }) {
         {children || "—"}
       </dd>
     </div>
-  );
-}
-
-// Result card for an SRS or Kensa label: the label, its lines, the drafts it replaced and the submitted records.
-function LabelResult({ result, isJa, onOpen }) {
-  const { kind, boxId, label } = result;
-  const { box, parents = [], srsBoxes = [], srsRecords = [], kensaRecords = [] } = label;
-  const records = kind === "srs" ? srsRecords : kensaRecords;
-  const kindName = kind === "srs" ? "SRS" : "Kensa";
-  const idLink = (id) => (
-    <button
-      type="button"
-      onClick={() => onOpen(id)}
-      className="font-mono font-semibold text-[var(--freya-blue)] underline decoration-dotted underline-offset-2"
-    >
-      {id}
-    </button>
-  );
-  const lineSource = (l) => (l.boxId ? idLink(l.boxId) : l.srsId ? idLink(l.srsId) : l.legacy ? (isJa ? "旧データ" : "Legacy") : "—");
-  return (
-    <>
-      <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h4 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-          {kindName} {isJa ? "ラベル " : "label "}
-          <span className="font-mono">{boxId}</span>
-          {box.status && (
-            <span className="ml-2 rounded-[4px] bg-[var(--surface-hover)] px-1.5 py-0.5 text-[11px] font-medium">{box.status}</span>
-          )}
-        </h4>
-        <div className="grid grid-cols-2 gap-4 text-xs md:grid-cols-3">
-          <Field label="品番">{box["品番"]}</Field>
-          <Field label="背番号">{box["背番号"]}</Field>
-          <Field label="収容数 (label)">{fmtNum(box.qtyLabel)}</Field>
-          <Field label={isJa ? "箱内の実数" : "Measured pcs in box"}>{fmtNum(box.qtyMeasured)}</Field>
-          <Field label="Machine">{box.machine}{box.lane ? ` / ${box.lane}` : ""}</Field>
-          <Field label="Workers">{box.workers}</Field>
-          {kind === "srs" && <Field label="Work order">{box.workOrder}</Field>}
-          <Field label="Printed">{fmtTime(box.printedAt)}</Field>
-          {box.parentSrsId || box.parentKensaId ? (
-            <Field label={isJa ? "前のドラフト" : "Resumed from"}>{box.parentSrsId || box.parentKensaId}</Field>
-          ) : null}
-        </div>
-        {(box.lines || []).length > 0 && (
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[var(--border)] text-left text-[11px] text-[var(--text-muted)]">
-                  <th className="py-2 pr-3 font-medium">{isJa ? "元の箱" : "Source"}</th>
-                  <th className="py-2 pr-3 text-right font-medium">Good</th>
-                  <th className="py-2 pr-3 text-right font-medium">NG</th>
-                  <th className="py-2 font-medium">Lots</th>
-                </tr>
-              </thead>
-              <tbody>
-                {box.lines.map((l, i) => (
-                  <tr key={i} className="border-b border-[var(--border)]/60 last:border-0">
-                    <td className="py-2 pr-3">{lineSource(l)}{l.carried ? " ↩" : ""}</td>
-                    <td className="py-2 pr-3 text-right font-mono font-semibold">{fmtNum(l.good)}</td>
-                    <td className="py-2 pr-3 text-right font-mono">{fmtNum(l.ngTotal)}</td>
-                    <td className="py-2 font-mono">
-                      {(l.lots || l.lotDetails || []).map((x) => (typeof x === "string" ? x : x.lotNumber)).filter(Boolean).join(", ") || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {kind === "kensa" && srsBoxes.length > 0 && (
-          <p className="mt-4 text-xs text-[var(--text-secondary)]">
-            {isJa ? "SRSラベル: " : "SRS labels: "}
-            {srsBoxes.map((b) => <span key={b.srsId} className="mr-2">{idLink(b.srsId)}</span>)}
-          </p>
-        )}
-        {parents.length > 0 && (
-          <p className="mt-2 text-xs text-[var(--text-secondary)]">
-            {isJa ? "置き換えたドラフト: " : "Replaced drafts: "}
-            {parents.map((p) => (
-              <span key={p.srsId || p.kensaId} className="mr-2 font-mono">{p.srsId || p.kensaId}</span>
-            ))}
-          </p>
-        )}
-      </div>
-      <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h4 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-          {isJa ? "提出済み記録" : "Submitted records"} ({records.length})
-        </h4>
-        {records.length === 0 ? (
-          <p className="text-xs text-[var(--text-muted)]">
-            {isJa ? "このラベルの提出記録はまだありません。" : "No submitted record uses this label yet."}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[var(--border)] text-left text-[11px] text-[var(--text-muted)]">
-                  <th className="py-2 pr-3 font-medium">Date</th>
-                  <th className="py-2 pr-3 font-medium">設備</th>
-                  <th className="py-2 pr-3 font-medium">背番号</th>
-                  <th className="py-2 pr-3 font-medium">Worker</th>
-                  <th className="py-2 pr-3 text-right font-medium">Total</th>
-                  <th className="py-2 pr-3 text-right font-medium">NG</th>
-                  <th className="py-2 font-medium">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={String(r._id)} className="border-b border-[var(--border)]/60 last:border-0">
-                    <td className="py-2 pr-3 font-mono">{r.Date || "—"}</td>
-                    <td className="py-2 pr-3">{r["設備"] || "—"}</td>
-                    <td className="py-2 pr-3 font-mono">{r["背番号"] || "—"}</td>
-                    <td className="py-2 pr-3">{r.Worker_Name || "—"}</td>
-                    <td className="py-2 pr-3 text-right font-mono font-semibold">{fmtNum(r.Total ?? r.Process_Quantity)}</td>
-                    <td className="py-2 pr-3 text-right font-mono">{fmtNum(r.Total_NG)}</td>
-                    <td className="py-2 font-mono">{[r.Time_start, r.Time_end].filter(Boolean).join(" – ") || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </>
   );
 }
 
@@ -175,6 +47,7 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
   const [mode, setMode] = useState("box"); // "box" | "lot"
   const [lotResult, setLotResult] = useState(null); // { lot, boxes }
   const [copied, setCopied] = useState(false);
+  const [traceRecord, setTraceRecord] = useState(null); // { rec, processName }
 
   async function searchLot() {
     const lot = input.trim();
@@ -201,15 +74,12 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
     setError("");
     setResult(null);
     try {
-      const kind = labelKind(boxId);
-      if (kind !== "press") {
-        const chain = await fetchScnaLabelChain(kind, boxId);
-        if (chain) {
-          setResult({ boxId, kind, label: chain });
-          return;
-        }
-        // not a registered label: fall through to the press-box / production-record lookup
+      const trace = await fetchScnaTrace(boxId);
+      if (trace) {
+        setResult({ boxId, trace });
+        return;
       }
+      // not registered as a box or label: fall back to the production-record lookup
       const box = await fetchScnaBox(boxId);
       // Find the production record: by the box's run, else by the box ID inside Box_IDs.
       const search = box?.runId || boxId;
@@ -260,7 +130,7 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
     }
   }
 
-  const label = result?.label;
+  const trace = result?.trace;
   const box = result?.box;
   const record = result?.record;
   const workOrder = box?.workOrderNumber || record?.WorkOrder_Info?.workOrderNumber || "";
@@ -277,7 +147,7 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={!result || Boolean(label)}
+            disabled={!result || Boolean(trace)}
             onClick={() => onViewData?.({ search: result?.boxId, date: record?.Date || "" })}
             className="h-9 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
           >
@@ -414,9 +284,16 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
           </div>
         )}
 
-        {label && <LabelResult result={result} isJa={isJa} onOpen={(id) => searchBoxId(id, true)} />}
+        {trace && (
+          <ScnaTraceChain
+            key={trace.rootId}
+            trace={trace}
+            isJa={isJa}
+            onOpenRecord={(rec, processName) => setTraceRecord({ rec, processName })}
+          />
+        )}
 
-        {result && !label && (
+        {result && !trace && (
           <>
             <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5">
               <h4 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
@@ -516,6 +393,14 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
           </>
         )}
       </div>
+      {traceRecord && (
+        <RecordDetailModal
+          record={traceRecord.rec}
+          processName={traceRecord.processName}
+          onClose={() => setTraceRecord(null)}
+          zIndex="z-[70]"
+        />
+      )}
       <ScnaProductionDetailModal
         open={recordOpen && Boolean(record)}
         record={record}
