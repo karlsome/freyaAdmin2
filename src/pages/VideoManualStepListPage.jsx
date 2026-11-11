@@ -2,14 +2,36 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
+import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
+import { buildRevisionSnapshot } from "../components/videoManual/videoManualEditorUtils";
 import {
+  buildVideoManualDeploymentFileName,
+  buildVideoManualDownloadActionUrl,
+  openVideoManualUrl,
+  prepareVideoManualEditForRender,
+  triggerVideoManualUrlDownload,
+} from "../components/videoManual/videoManualDeployUtils";
+import {
+  canDeployVideoManualProjects,
   canEditVideoManualProjects,
+  createVideoManualRevision,
   createVideoManualStep,
   deleteVideoManualStep,
+  deployVideoManualRenderedRevision,
+  deployVideoManualRevision,
   fetchVideoManualProject,
+  fetchVideoManualRenderStatus,
+  fetchVideoManualRevision,
+  getVideoManualApiBaseUrl,
   patchVideoManualStep,
+  renderVideoManualEdit,
   reorderVideoManualSteps,
+  undeployVideoManualProject,
 } from "../services/videoManualApi";
+
+const RENDER_POLL_INTERVAL_MS = 5000;
+const RENDER_MAX_POLLS = 120;
+const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 function Icon({ children, className = "" }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: 18 }}>{children}</span>;
@@ -67,6 +89,7 @@ export default function VideoManualStepListPage() {
   const navigate = useNavigate();
   const authUser = useMemo(() => readStoredAuthUser(), []);
   const canEdit = canEditVideoManualProjects(authUser?.role);
+  const canDeploy = canDeployVideoManualProjects(authUser?.role);
 
   const [project, setProject] = useState(null);
   const [steps, setSteps] = useState([]);
@@ -76,6 +99,9 @@ export default function VideoManualStepListPage() {
   const [dragId, setDragId] = useState("");
   const [overId, setOverId] = useState("");
   const [focusStepId, setFocusStepId] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportStatus, setExportStatus] = useState(null);
   const titleRefs = useRef({});
 
   useEffect(() => {
@@ -193,6 +219,104 @@ export default function VideoManualStepListPage() {
     applyOrder(next);
   }, [applyOrder, dragId, steps]);
 
+  // ---- Export / deploy: the server keeps project.edit = all steps joined in order, so this is one render. ----
+  const waitForRender = useCallback(async (renderId) => {
+    for (let attempt = 0; attempt < RENDER_MAX_POLLS; attempt += 1) {
+      const result = await fetchVideoManualRenderStatus(renderId);
+      const status = String(result?.status || "").toLowerCase();
+      if (status === "done") return result;
+      if (status === "failed") throw new Error(result?.message || "Render failed on Shotstack.");
+      setExportStatus({
+        type: "info",
+        status: status ? status.toUpperCase() : "RENDERING",
+        title: "Rendering video",
+        message: t("Shotstack is rendering all steps into one video."),
+        progress: { queued: 10, fetching: 30, rendering: 60, saving: 90 }[status] ?? null,
+      });
+      await sleep(RENDER_POLL_INTERVAL_MS);
+    }
+    throw new Error("Render timeout after 10 minutes.");
+  }, [t]);
+
+  const handleExport = useCallback(async () => {
+    if (exportBusy) return;
+    setExportBusy(true);
+    let modalOpened = false;
+    const openModal = (status) => { modalOpened = true; setExportStatus(status); setExportOpen(true); };
+    try {
+      const fresh = await fetchVideoManualProject(projectId); // always export what the server has saved
+      const hasVideo = (fresh.edit?.timeline?.tracks || []).some((track) => (track?.clips || []).some((clip) => clip?.asset?.type === "video"));
+      if (!hasVideo) throw new Error(t("Nothing to export yet. Add a video to at least one step first."));
+
+      // Reuse the last revision when nothing changed since; otherwise save a new one.
+      const sameAsLast = async () => {
+        if (!fresh.lastRevisionId) return null;
+        const last = await fetchVideoManualRevision(String(fresh.lastRevisionId));
+        const key = (v) => JSON.stringify([v?.edit, v?.assetSourceMap, v?.settings?.steps, v?.settings?.subtitles]);
+        return key(last?.snapshot) === key(fresh) ? last : null;
+      };
+      let revision = await sameAsLast();
+      let revisionId = revision ? String(revision._id?.$oid || revision._id || revision.revisionId) : "";
+      let revisionNumber = revision?.revisionNumber;
+      if (!revision) {
+        const nextNumber = (Number(fresh.currentRevisionNumber) || 0) + 1;
+        const name = window.prompt(t("Export requires a saved revision. Revision name:"), `${fresh.title} Rev ${String(nextNumber).padStart(2, "0")}`);
+        if (!name || !name.trim()) return;
+        const created = await createVideoManualRevision(projectId, buildRevisionSnapshot(fresh, fresh.edit, fresh.assetSourceMap || {}), name.trim());
+        revisionId = String(created.revisionId);
+        revisionNumber = created.revisionNumber;
+        revision = await fetchVideoManualRevision(revisionId);
+      }
+
+      openModal({ type: "info", status: "PREPARING", title: "Preparing export", message: "Checking whether this revision already has a flattened video ready to download.", progress: null });
+      let deployData = await deployVideoManualRevision(projectId, revisionId, { reuseExistingDeployment: true, allowMissingReusableDeployment: true });
+      if (deployData?.needsRender) deployData = null;
+
+      if (!deployData) {
+        const snapshot = revision.snapshot || {};
+        const editJson = prepareVideoManualEditForRender(snapshot.edit, snapshot.assetSourceMap || {});
+        setExportStatus({ type: "info", status: "SUBMITTING", title: "Sending to Shotstack", message: "Submitting the revision to Shotstack for online rendering.", progress: null });
+        const renderStart = await renderVideoManualEdit(editJson, fresh.title || "Video Manual");
+        if (!renderStart?.renderId) throw new Error("Render request did not return a render id.");
+        const renderResult = await waitForRender(renderStart.renderId);
+        setExportStatus({ type: "info", status: "UPLOADING", title: "Uploading render", message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.", progress: null });
+        deployData = await deployVideoManualRenderedRevision(projectId, revisionId, { renderId: renderStart.renderId, downloadUrl: renderResult?.downloadUrl || null });
+      }
+
+      const next = await fetchVideoManualProject(projectId);
+      setProject(next);
+      const url = deployData?.deployedVideoUrl || next?.deployedVideoUrl || "";
+      const fileName = deployData?.deployedVideoFileName || next?.deployedVideoFileName || buildVideoManualDeploymentFileName(next?.title, deployData?.revisionNumber || revisionNumber);
+      setExportStatus({
+        type: "success",
+        status: "COMPLETE",
+        title: "Export Complete!",
+        message: t("All steps were joined in order into one video and deployed."),
+        progress: 100,
+        downloadUrl: url,
+        openUrl: url,
+        copyUrl: url,
+        downloadActionUrl: buildVideoManualDownloadActionUrl(getVideoManualApiBaseUrl(), url, fileName),
+        fileName,
+      });
+      setExportOpen(true);
+    } catch (exportError) {
+      if (modalOpened) {
+        setExportStatus({ type: "error", status: "FAILED", title: "Export Failed", message: exportError.message || "The video could not be exported.", progress: null });
+      } else {
+        setError(exportError.message || "Export failed.");
+      }
+    } finally {
+      setExportBusy(false);
+    }
+  }, [exportBusy, projectId, t, waitForRender]);
+
+  const handleUndeploy = useCallback(() => run(async () => {
+    if (!window.confirm(t("Hide \"{name}\" from the factory side?", { name: project?.title || "" }))) return;
+    await undeployVideoManualProject(projectId);
+    setProject(await fetchVideoManualProject(projectId));
+  }), [project?.title, projectId, run, t]);
+
   const buttonClass = "inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-2xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50";
   const iconButtonClass = "flex h-7 w-7 items-center justify-center rounded-[6px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-30";
 
@@ -209,8 +333,23 @@ export default function VideoManualStepListPage() {
             <p className="mt-1 text-xs text-[var(--text-muted)]">
               {t("Steps")}: {steps.length} · {t("Total length")}: {formatDuration(totalSeconds)}
             </p>
+            {project?.deployedRevisionId ? (
+              <p className="mt-0.5 text-xs font-semibold text-emerald-600">{t("Deployed")}: {project.deployedRevisionName || `Rev ${project.deployedRevisionNumber}`}</p>
+            ) : null}
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("Steps are combined in this order into one continuous video when exported.")}</p>
           </div>
+          {canDeploy ? (
+            <div className="flex items-center gap-2">
+              {project?.deployedRevisionId ? (
+                <button type="button" disabled={busy || exportBusy} onClick={handleUndeploy} className={buttonClass}>
+                  <Icon>visibility_off</Icon>{t("Undeploy")}
+                </button>
+              ) : null}
+              <button type="button" disabled={busy || exportBusy || loading || steps.length === 0} onClick={handleExport} className={buttonClass}>
+                <Icon className={exportBusy ? "animate-spin" : ""}>{exportBusy ? "progress_activity" : "download"}</Icon>{exportBusy ? t("Exporting...") : t("Export video")}
+              </button>
+            </div>
+          ) : null}
           {canEdit ? (
             <button type="button" disabled={busy || loading} onClick={() => handleAddStep()} className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[var(--freya-blue-hover)] disabled:opacity-50">
               <Icon>add</Icon>{t("Add step")}
@@ -270,7 +409,7 @@ export default function VideoManualStepListPage() {
                       {empty ? t("Empty - no video yet") : `${formatDuration(stepDuration(step))} · ${t("{n} cuts", { n: cuts })} · ${t("{n} subtitles", { n: (step.subtitles || []).length })}`}
                     </p>
                   </div>
-                  <button type="button" disabled title={t("Video editing for steps is coming in the next update.")} className={buttonClass}>
+                  <button type="button" disabled={busy} onClick={() => navigate(`/videoManual/project/${projectId}/step/${step.id}`)} className={buttonClass}>
                     <Icon>edit</Icon>{t("Edit video")}
                   </button>
                   {canEdit ? (
@@ -292,6 +431,16 @@ export default function VideoManualStepListPage() {
           </button>
         ) : null}
       </div>
+
+      <VideoManualExportStatusModal
+        open={exportOpen}
+        status={exportStatus}
+        busy={exportBusy}
+        onClose={() => { if (!exportBusy) setExportOpen(false); }}
+        onDownload={exportStatus?.downloadActionUrl ? () => triggerVideoManualUrlDownload(exportStatus.downloadActionUrl, exportStatus.fileName || "video-manual.mp4") : null}
+        onOpenUrl={exportStatus?.openUrl ? () => openVideoManualUrl(exportStatus.openUrl) : null}
+        onCopyUrl={exportStatus?.copyUrl ? () => navigator.clipboard?.writeText(exportStatus.copyUrl).catch(() => {}) : null}
+      />
     </section>
   );
 }

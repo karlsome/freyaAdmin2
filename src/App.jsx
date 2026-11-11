@@ -243,6 +243,7 @@ function App() {
               <Route path="/videoManual" element={<VideoManualPage />} />
               <Route path="/videoManual/project/:projectId" element={<VideoManualProjectEditorPage />} />
               <Route path="/videoManual/project/:projectId/steps" element={<VideoManualStepListPage />} />
+              <Route path="/videoManual/project/:projectId/step/:stepId" element={<VideoManualProjectEditorPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

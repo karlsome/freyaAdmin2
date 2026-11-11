@@ -71,6 +71,9 @@ export default function VideoManualEditorToolbar({
   onAutoFit,
   onZoomIn,
   onExport,
+  stepMode = false,
+  stepTitle = "",
+  onApplyStep,
 }) {
   const { t } = useLanguage();
 
@@ -81,9 +84,16 @@ export default function VideoManualEditorToolbar({
         <IconButton icon="arrow_back" title={t("vmBackToProjects")} onClick={onBack} disabled={busy} />
         <div className="min-w-0">
           <div className="max-w-[320px] truncate text-sm font-black leading-tight text-on-surface">
-            {projectTitle || "Video Manual"}
+            {stepMode ? `${projectTitle || "Video Manual"} › ${stepTitle}` : (projectTitle || "Video Manual")}
           </div>
-          <SaveState hasUnsavedChanges={hasUnsavedChanges} revisionNumber={revisionNumber} />
+          {stepMode ? (
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${hasUnsavedChanges ? "text-amber-700 dark:text-amber-300" : "text-outline"}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${hasUnsavedChanges ? "bg-amber-500" : "bg-emerald-500"}`} />
+              {hasUnsavedChanges ? t("vmUnsaved") : t("Step saved")}
+            </span>
+          ) : (
+            <SaveState hasUnsavedChanges={hasUnsavedChanges} revisionNumber={revisionNumber} />
+          )}
         </div>
       </div>
 
@@ -106,22 +116,41 @@ export default function VideoManualEditorToolbar({
 
       {/* Right: save / history / export */}
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-        <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving || busy} title={t("vmSaveRevisionTitle")}>
-          <span className="hidden lg:inline">{t("vmSaveRevision")}</span>
-        </ToolbarButton>
-        <ToolbarButton icon="history" onClick={onShowHistory} disabled={busy} title={t("vmHistoryTitle")}>
-          <span className="hidden lg:inline">{t("vmHistory")}</span>
-        </ToolbarButton>
+        {stepMode ? (
+          <>
+            <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving || busy} title={t("Save this step")}>
+              <span className="hidden lg:inline">{t("Save step")}</span>
+            </ToolbarButton>
+            <button
+              type="button"
+              onClick={onApplyStep}
+              disabled={saving || busy}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-black text-on-primary shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Icon className="text-[18px]">check</Icon>
+              {t("Apply changes and return")}
+            </button>
+          </>
+        ) : (
+          <>
+          <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving || busy} title={t("vmSaveRevisionTitle")}>
+            <span className="hidden lg:inline">{t("vmSaveRevision")}</span>
+          </ToolbarButton>
+          <ToolbarButton icon="history" onClick={onShowHistory} disabled={busy} title={t("vmHistoryTitle")}>
+            <span className="hidden lg:inline">{t("vmHistory")}</span>
+          </ToolbarButton>
 
-        <button
-          type="button"
-          onClick={onExport}
-          disabled={saving || busy}
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-black text-on-primary shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Icon className={busy ? "animate-spin text-[18px]" : "text-[18px]"}>{busy ? "progress_activity" : "download"}</Icon>
-          {busy ? t("vmExporting") : t("vmExport")}
-        </button>
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={saving || busy}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-black text-on-primary shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Icon className={busy ? "animate-spin text-[18px]" : "text-[18px]"}>{busy ? "progress_activity" : "download"}</Icon>
+            {busy ? t("vmExporting") : t("vmExport")}
+          </button>
+          </>
+        )}
       </div>
     </header>
   );

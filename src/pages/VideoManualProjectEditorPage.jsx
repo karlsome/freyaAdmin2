@@ -10,7 +10,8 @@ import VideoManualEditorToolbar from "../components/videoManual/VideoManualEdito
 import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
 import VideoManualRevisionHistoryModal from "../components/videoManual/VideoManualRevisionHistoryModal";
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
-import { buildSrtFromSteps, cuesToStepDescriptions, parseSrt } from "../components/videoManual/subtitleUtils";
+import VideoManualSubtitlePanel from "../components/videoManual/VideoManualSubtitlePanel";
+import { buildSrtFromCues, buildSrtFromSteps, cuesToStepDescriptions, parseSrt } from "../components/videoManual/subtitleUtils";
 import BubbleTailHandle from "../components/videoManual/BubbleTailHandle";
 import {
   bubbleAbsFromBox,
@@ -73,6 +74,7 @@ import {
   fetchVideoManualRevisions,
   getVideoManualApiBaseUrl,
   patchVideoManualProject,
+  patchVideoManualStep,
   permanentlyDeleteVideoManualPlaylistAssets,
   previewVideoManualPlaylistAssetDelete,
   renderVideoManualEdit,
@@ -82,6 +84,7 @@ import {
   uploadVideoManualPlaylistAsset,
 } from "../services/videoManualApi";
 import { readStoredAuthUser } from "../utils/auth";
+import { getRevisionId, getRevisionDisplayName, prepareVideoManualEditForRender, buildVideoManualDeploymentFileName, triggerVideoManualUrlDownload, openVideoManualUrl, buildVideoManualDownloadActionUrl } from "../components/videoManual/videoManualDeployUtils";
 
 const CANVAS_ZOOM_STEP = 1.12;
 const CANVAS_MIN_ZOOM = 0.1;
@@ -116,65 +119,6 @@ const TIMELINE_TRACK_HEIGHTS = {
   default: 48,
 };
 
-function getRevisionId(revision) {
-  return String(revision?._id?.$oid || revision?._id || revision?.revisionId || "");
-}
-
-function getRevisionDisplayName(revision, t = (key) => key) {
-  return revision?.revisionName || (revision?.revisionNumber ? t("Revision {n}", { n: revision.revisionNumber }) : t("revision"));
-}
-
-function getPublicRenderSource(sourceUrl, assetSourceMap = {}) {
-  const mappedSrc = assetSourceMap[sourceUrl];
-  if (mappedSrc && mappedSrc !== sourceUrl) return mappedSrc;
-
-  try {
-    const parsed = new URL(sourceUrl, window.location.href);
-    if (parsed.pathname.includes("/api/video-manual-media/")) {
-      const upstreamUrl = parsed.searchParams.get("url");
-      if (upstreamUrl) return upstreamUrl;
-    }
-  } catch {
-    return mappedSrc || sourceUrl;
-  }
-
-  return mappedSrc || sourceUrl;
-}
-
-function prepareVideoManualEditForRender(editJson, assetSourceMap = {}) {
-  const preparedEdit = cloneJson(editJson, null);
-  if (!preparedEdit) throw new Error("Revision snapshot is missing edit data.");
-
-  const unresolvedSources = [];
-  (preparedEdit.timeline?.tracks || []).forEach((track) => {
-    (track.clips || []).forEach((clip) => {
-      if (!clip?.asset?.src || typeof clip.asset.src !== "string") return;
-
-      const currentSrc = clip.asset.src;
-      const mappedSrc = getPublicRenderSource(currentSrc, assetSourceMap);
-      if (mappedSrc) {
-        clip.asset.src = mappedSrc;
-      }
-
-      if (clip.asset.src.startsWith("blob:")
-        || clip.asset.src.includes("/api/video-manuals/stream/")
-        || clip.asset.src.includes("/api/video-manual-media/")) {
-        unresolvedSources.push(clip.asset.src);
-      }
-    });
-  });
-
-  if (unresolvedSources.length) {
-    throw new Error("Some uploaded assets are still using preview URLs. Wait for upload to finish, then try deploy again.");
-  }
-
-  return preparedEdit;
-}
-
-function buildVideoManualDeploymentFileName(title, revisionNumber) {
-  return `${String(title || "video-manual").trim() || "video-manual"}-rev-${revisionNumber || "deploy"}.mp4`;
-}
-
 function normalizeVideoManualComparableValue(value) {
   if (Array.isArray(value)) {
     return value.map((entry) => normalizeVideoManualComparableValue(entry));
@@ -190,34 +134,6 @@ function normalizeVideoManualComparableValue(value) {
 
 function buildVideoManualComparableSignature(value, fallback) {
   return JSON.stringify(normalizeVideoManualComparableValue(cloneJson(value, fallback)));
-}
-
-function triggerVideoManualUrlDownload(downloadUrl, fileName = "video-manual.mp4", { openInNewTab = false } = {}) {
-  const anchor = document.createElement("a");
-  anchor.href = downloadUrl;
-  anchor.download = fileName;
-  if (openInNewTab) {
-    anchor.target = "_blank";
-    anchor.rel = "noopener";
-  }
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-}
-
-function openVideoManualUrl(downloadUrl) {
-  if (!downloadUrl) return;
-  window.open(downloadUrl, "_blank", "noopener,noreferrer");
-}
-
-function buildVideoManualDownloadActionUrl(apiBaseUrl, downloadUrl, fileName = "video-manual.mp4") {
-  if (!downloadUrl || !apiBaseUrl) return "";
-
-  const proxyUrl = new URL(`${String(apiBaseUrl).replace(/\/$/, "")}/api/video-manual-media`);
-  proxyUrl.searchParams.set("url", downloadUrl);
-  proxyUrl.searchParams.set("download", "1");
-  if (fileName) proxyUrl.searchParams.set("fileName", fileName);
-  return proxyUrl.toString();
 }
 
 function clampNumber(value, min, max) {
@@ -529,7 +445,8 @@ function buildKeyframeSourceClipFromSnapshot(clip, snapshot) {
 export default function VideoManualProjectEditorPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { projectId } = useParams();
+  const { projectId, stepId } = useParams();
+  const stepMode = Boolean(stepId); // editing ONE step of a step-based project (project.structure === "steps")
 
   const [authUser] = useState(() => readStoredAuthUser());
   const [project, setProject] = useState(null);
@@ -546,6 +463,7 @@ export default function VideoManualProjectEditorPage() {
   const [selectedClip, setSelectedClip] = useState(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [ccPreviewOn, setCcPreviewOn] = useState(true);
+  const [subtitles, setSubtitles] = useState([]); // step mode: timed cues { id, start, end, text } on the step timeline
   const [videoFrame, setVideoFrame] = useState(null); // on-screen rect of the video frame inside the studio element
   const [keyframeDraft, setKeyframeDraft] = useState(null);
   const [keyframeEditMode, setKeyframeEditMode] = useState(null);
@@ -667,6 +585,25 @@ export default function VideoManualProjectEditorPage() {
 
       try {
         const nextProject = await fetchVideoManualProject(projectId);
+        if (stepMode) {
+          const step = nextProject?.structure === "steps" ? (nextProject.steps || []).find((item) => item.id === stepId) : null;
+          if (!step) {
+            if (!cancelled) navigate(nextProject?.structure === "steps" ? `/videoManual/project/${projectId}/steps` : `/videoManual/project/${projectId}`, { replace: true });
+            return;
+          }
+          // Present the step to the editor as if it were the project: its own edit, asset map and subtitles.
+          if (!cancelled) {
+            setProject({
+              ...nextProject,
+              edit: step.edit,
+              assetSourceMap: step.assetSourceMap || {},
+              settings: { ...(nextProject.settings || {}), stepDescriptions: [] },
+              stepTitle: step.title,
+              stepSubtitles: Array.isArray(step.subtitles) ? step.subtitles : [],
+            });
+          }
+          return;
+        }
         if (nextProject?.structure === "steps") {
           // Step-based projects are managed from the step list, not the single-timeline editor.
           if (!cancelled) navigate(`/videoManual/project/${projectId}/steps`, { replace: true });
@@ -687,13 +624,14 @@ export default function VideoManualProjectEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, stepId]);
 
   useEffect(() => {
     if (!project) return;
     const editData = project.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE;
     assetSourceMapRef.current = { ...(project.assetSourceMap || {}) };
     setStepDescriptions(Array.isArray(project.settings?.stepDescriptions) ? project.settings.stepDescriptions : []);
+    setSubtitles(Array.isArray(project.stepSubtitles) ? project.stepSubtitles : []);
     timelineHeightUserSetRef.current = false;
     setTimelineBackground(editData?.timeline?.background || DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
     setOutputSize(getOutputSize(editData));
@@ -770,10 +708,44 @@ export default function VideoManualProjectEditorPage() {
 
   // Simulation of the CC overlay in the monitor / tablet players: the description of the step playing now.
   const ccPreviewText = useMemo(() => {
+    if (stepMode) {
+      const active = subtitles.filter((cue) => playbackTime >= cue.start && playbackTime < cue.end && String(cue.text || "").trim());
+      return String(active[active.length - 1]?.text || "").trim();
+    }
     const step = steps.find((item, index) => playbackTime >= item.startTime && (playbackTime < item.endTime || (index === steps.length - 1 && playbackTime <= item.endTime)));
     if (!step) return "";
     return String(stepDescriptions.find((entry) => Math.abs(Number(entry.start) - step.startTime) < STEP_DESCRIPTION_MATCH_TOLERANCE)?.description || "").trim();
-  }, [playbackTime, stepDescriptions, steps]);
+  }, [playbackTime, stepDescriptions, stepMode, steps, subtitles]);
+
+  const handleSubtitlesChange = useCallback((next) => {
+    setSubtitles(next);
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleImportSubtitleSrt = useCallback(async (file) => {
+    try {
+      const cues = parseSrt(await file.text());
+      setSubtitles((current) => [...current, ...cues.map((cue, index) => ({ id: `srt-${Date.now().toString(36)}-${index}`, start: cue.start, end: cue.end, text: cue.text }))]);
+      setHasUnsavedChanges(true);
+      showNotice(t("Imported {n} subtitles. Save to keep them.", { n: cues.length }));
+    } catch (error) {
+      showNotice(error.message || t("Failed to import SRT."), "error");
+    }
+  }, [showNotice, t]);
+
+  const handleDownloadSubtitleSrt = useCallback(() => {
+    const srt = buildSrtFromCues(subtitles);
+    if (!srt) {
+      showNotice(t("No step descriptions to export."), "error");
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([srt], { type: "text/plain;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${(project?.stepTitle || "step").replace(/[\\/:*?"<>|]+/g, "_")}.srt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [project?.stepTitle, showNotice, subtitles, t]);
 
   const handleStepDescriptionChange = useCallback((step, description) => {
     setStepDescriptions((current) => {
@@ -1718,6 +1690,28 @@ export default function VideoManualProjectEditorPage() {
     }
   }, [buildProjectSettings, loadRevisionHistory, project, projectId, revisionPreview, saving, showNotice]);
 
+  // Step mode: save this step's edit + subtitles (the server recomposes the whole project). Returns true on success.
+  const handleSaveStep = useCallback(async () => {
+    if (!editRef.current || saving) return false;
+    setSaving(true);
+    try {
+      const cues = subtitles.filter((cue) => String(cue.text || "").trim() && cue.end > cue.start);
+      await patchVideoManualStep(projectId, stepId, { edit: editRef.current.getEdit(), assetSourceMap: assetSourceMapRef.current, subtitles: cues });
+      setHasUnsavedChanges(false);
+      showNotice(t("Step saved."));
+      return true;
+    } catch (error) {
+      showNotice(error.message || "Step save failed.", "error");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [projectId, saving, showNotice, stepId, subtitles, t]);
+
+  const handleApplyStep = useCallback(async () => {
+    if (await handleSaveStep()) navigate(`/videoManual/project/${projectId}/steps`);
+  }, [handleSaveStep, navigate, projectId]);
+
   const handleShowHistory = useCallback(() => {
     loadRevisionHistory({ open: true });
   }, [loadRevisionHistory]);
@@ -2015,8 +2009,8 @@ export default function VideoManualProjectEditorPage() {
 
     if (hasUnsavedChanges && !window.confirm(t("vmLeaveConfirm"))) return;
 
-    navigate("/videoManual");
-  }, [exportBusy, hasUnsavedChanges, navigate, showNotice, t]);
+    navigate(stepMode ? `/videoManual/project/${projectId}/steps` : "/videoManual");
+  }, [exportBusy, hasUnsavedChanges, navigate, projectId, showNotice, stepMode, t]);
 
   const handleDeployRevision = useCallback(async (revision) => {
     const revisionId = getRevisionId(revision);
@@ -2957,7 +2951,10 @@ export default function VideoManualProjectEditorPage() {
         onBack={handleToolbarBack}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onSaveRevision={handleSaveRevision}
+        onSaveRevision={stepMode ? handleSaveStep : handleSaveRevision}
+        stepMode={stepMode}
+        stepTitle={project?.stepTitle || ""}
+        onApplyStep={handleApplyStep}
         onShowHistory={handleShowHistory}
         onZoomOut={() => handleZoom(-1)}
         onAutoFit={handleAutoFit}
@@ -3004,7 +3001,11 @@ export default function VideoManualProjectEditorPage() {
       ) : (
         <div ref={editorBodyRef} className={`relative flex min-h-0 flex-1 flex-col ${timelineResizing ? "select-none" : ""}`}>
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
-            <VideoManualStepsPanel steps={steps} playbackTime={playbackTime} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} onImportSrt={handleImportStepSrt} onDownloadSrt={handleDownloadStepSrt} />
+            {stepMode ? (
+              <VideoManualSubtitlePanel subtitles={subtitles} playbackTime={playbackTime} onChange={handleSubtitlesChange} onSeek={(time) => editRef.current?.seek?.(time)} onImportSrt={handleImportSubtitleSrt} onDownloadSrt={handleDownloadSubtitleSrt} />
+            ) : (
+              <VideoManualStepsPanel steps={steps} playbackTime={playbackTime} stepDescriptions={stepDescriptions} onDescriptionChange={handleStepDescriptionChange} descriptionTolerance={STEP_DESCRIPTION_MATCH_TOLERANCE} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} onImportSrt={handleImportStepSrt} onDownloadSrt={handleDownloadStepSrt} />
+            )}
 
             <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
               <div onPointerDown={handleStageBackgroundPointerDown} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">

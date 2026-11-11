@@ -62,3 +62,12 @@ export function buildSrtFromSteps(steps, getDescription) {
   });
   return blocks.join("\n\n") + (blocks.length ? "\n" : "");
 }
+
+// Timed cues ({ start, end, text }, seconds) -> SRT text. Used by step-based projects.
+export function buildSrtFromCues(cues) {
+  return [...(Array.isArray(cues) ? cues : [])]
+    .filter((cue) => String(cue?.text || "").trim() && cue.end > cue.start)
+    .sort((a, b) => a.start - b.start)
+    .map((cue, index) => `${index + 1}\n${formatTimestamp(cue.start)} --> ${formatTimestamp(cue.end)}\n${String(cue.text).trim()}`)
+    .join("\n\n");
+}
