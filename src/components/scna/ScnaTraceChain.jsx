@@ -54,7 +54,20 @@ function Cell({ label, children }) {
   );
 }
 
-function NodeCard({ node, isRoot, isJa, onOpenRecord }) {
+function WorkOrderLink({ number, onOpen }) {
+  if (!number) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen?.(number)}
+      className="font-mono text-xs font-semibold text-[var(--freya-blue)] underline decoration-dotted underline-offset-2 hover:opacity-80"
+    >
+      {number}
+    </button>
+  );
+}
+
+function NodeCard({ node, isRoot, isJa, onOpenRecord, onOpenWorkOrder }) {
   const meta = KIND_META[node.kind];
   const L = node.label || {};
   const lots = lotsOf(node);
@@ -108,8 +121,8 @@ function NodeCard({ node, isRoot, isJa, onOpenRecord }) {
             <Cell label="Worker">{node.kind === "press" ? L.worker || rec?.Worker_Name : L.workers || rec?.Worker_Name}</Cell>
             <Cell label="Printed">{fmtTime(L.printedAt || L.finishedAt)}</Cell>
             <Cell label="Lots">{lots.join(", ")}</Cell>
-            {node.kind === "srs" && <Cell label="Work order">{L.workOrder}</Cell>}
-            {node.kind === "press" && <Cell label="Work order">{L.workOrderNumber}</Cell>}
+            {node.kind === "srs" && <Cell label="Work order"><WorkOrderLink number={L.workOrder} onOpen={onOpenWorkOrder} /></Cell>}
+            {node.kind === "press" && <Cell label="Work order"><WorkOrderLink number={L.workOrderNumber} onOpen={onOpenWorkOrder} /></Cell>}
             {rec && <Cell label={isJa ? "サイクル" : "Cycle time"}>{rec.Cycle_Time != null ? `${rec.Cycle_Time}s` : ""}</Cell>}
           </dl>
 
@@ -203,7 +216,7 @@ function NodeCard({ node, isRoot, isJa, onOpenRecord }) {
 }
 
 // A row of cards. With several, the 2nd card peeks in by 1/8 of its width so the row visibly scrolls.
-function TierRow({ nodes, rootId, isJa, onOpenRecord }) {
+function TierRow({ nodes, rootId, isJa, onOpenRecord, onOpenWorkOrder }) {
   const many = nodes.length > 1;
   return (
     <div
@@ -216,7 +229,7 @@ function TierRow({ nodes, rootId, isJa, onOpenRecord }) {
           className={`flex ${many ? "snap-start" : "w-full"}`}
           style={many ? { width: "var(--card-w)", flex: "none" } : undefined}
         >
-          <NodeCard node={n} isRoot={n.id === rootId} isJa={isJa} onOpenRecord={onOpenRecord} />
+          <NodeCard node={n} isRoot={n.id === rootId} isJa={isJa} onOpenRecord={onOpenRecord} onOpenWorkOrder={onOpenWorkOrder} />
         </div>
       ))}
     </div>
@@ -245,7 +258,7 @@ function RevealButton({ children, onClick }) {
   );
 }
 
-export default function ScnaTraceChain({ trace, isJa, onOpenRecord }) {
+export default function ScnaTraceChain({ trace, isJa, onOpenRecord, onOpenWorkOrder }) {
   const [showEarlier, setShowEarlier] = useState(false);
   const [showLater, setShowLater] = useState(false);
 
@@ -286,7 +299,7 @@ export default function ScnaTraceChain({ trace, isJa, onOpenRecord }) {
       {visible.map((row, i) => (
         <div key={`${row.role}:${row.tier}`}>
           {i > 0 && <Arrow />}
-          <TierRow nodes={row.nodes} rootId={trace.rootId} isJa={isJa} onOpenRecord={onOpenRecord} />
+          <TierRow nodes={row.nodes} rootId={trace.rootId} isJa={isJa} onOpenRecord={onOpenRecord} onOpenWorkOrder={onOpenWorkOrder} />
         </div>
       ))}
       {earlierCount > 0 && !showEarlier && firstRootIdx >= 0 && (

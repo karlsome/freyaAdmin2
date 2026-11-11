@@ -111,6 +111,15 @@ export async function fetchWorkOrders({
   return parseJsonResponse(response, "Failed to fetch SCNA work orders");
 }
 
+// One work order by its number ("WO-005736"); null when there is no exact match.
+export async function fetchWorkOrderByNumber(number) {
+  const wanted = String(number || "").trim().toUpperCase();
+  if (!wanted) return null;
+  const res = await fetchWorkOrders({ filters: { search: wanted }, limit: 20 });
+  const list = Array.isArray(res?.data) ? res.data : [];
+  return list.find((w) => String(w?.Number || "").trim().toUpperCase() === wanted) || null;
+}
+
 export async function fetchWorkOrderById(workOrderId) {
   const response = await fetch(`${BASE_URL}api/workorders`, {
     method: "POST",

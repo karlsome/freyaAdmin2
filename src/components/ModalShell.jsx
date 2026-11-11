@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 
+const openModalStack = [];
+
 export default function ModalShell({
   open,
   onClose,
@@ -24,12 +26,17 @@ export default function ModalShell({
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    const token = {};
+    openModalStack.push(token);
     function handleKeyDown(e) {
-      if (e.key === "Escape") onClose?.();
+      // with modals stacked, Escape closes only the top one
+      if (e.key === "Escape" && openModalStack[openModalStack.length - 1] === token) onClose?.();
     }
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      const at = openModalStack.indexOf(token);
+      if (at >= 0) openModalStack.splice(at, 1);
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };

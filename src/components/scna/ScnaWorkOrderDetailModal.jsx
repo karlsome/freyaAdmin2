@@ -18,6 +18,7 @@ export default function ScnaWorkOrderDetailModal({
   initialWorkOrder,
   onClose,
   onEdit,
+  zIndex,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -79,6 +80,7 @@ export default function ScnaWorkOrderDetailModal({
     <ModalShell
       open={open}
       onClose={onClose}
+      zIndex={zIndex}
       eyebrow={isJa ? "SCNA ワークオーダー" : "SCNA Work Order"}
       title={
         isJa
@@ -89,16 +91,16 @@ export default function ScnaWorkOrderDetailModal({
       maxWidth="max-w-4xl"
       footer={
         <div className="flex items-center justify-end gap-2.5 w-full">
-          <button
+          {onEdit && <button
             type="button"
-            onClick={() => onEdit?.(workOrder)}
+            onClick={() => onEdit(workOrder)}
             className="inline-flex h-9 items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white shadow-xs transition hover:opacity-95"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
               edit
             </span>
             {isJa ? "ワークオーダーを編集" : "Edit Work Order"}
-          </button>
+          </button>}
           <button
             type="button"
             onClick={onClose}

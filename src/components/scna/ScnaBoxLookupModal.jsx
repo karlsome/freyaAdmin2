@@ -3,8 +3,9 @@ import ModalShell from "../ModalShell";
 import ScnaProductionDetailModal from "./ScnaProductionDetailModal";
 import RecordDetailModal from "../RecordDetailModal";
 import ScnaTraceChain from "./ScnaTraceChain";
+import ScnaWorkOrderDetailModal from "./ScnaWorkOrderDetailModal";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot, fetchScnaTrace } from "../../services/scnaApi";
+import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot, fetchScnaTrace, fetchWorkOrderByNumber } from "../../services/scnaApi";
 
 const fmtNum = (v) => {
   const n = Number(v);
@@ -48,6 +49,23 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
   const [lotResult, setLotResult] = useState(null); // { lot, boxes }
   const [copied, setCopied] = useState(false);
   const [traceRecord, setTraceRecord] = useState(null); // { rec, processName }
+  const [peekWorkOrder, setPeekWorkOrder] = useState(null); // work order document shown on top of this modal
+  const [woMsg, setWoMsg] = useState("");
+
+  async function openWorkOrder(number) {
+    setWoMsg(isJa ? `${number} を読み込み中…` : `Loading ${number}…`);
+    try {
+      const wo = await fetchWorkOrderByNumber(number);
+      if (wo) {
+        setWoMsg("");
+        setPeekWorkOrder(wo);
+      } else {
+        setWoMsg(isJa ? `ワークオーダー「${number}」は見つかりませんでした。` : `Work order "${number}" was not found.`);
+      }
+    } catch (err) {
+      setWoMsg(err.message || (isJa ? "読み込みに失敗しました。" : "Failed to load the work order."));
+    }
+  }
 
   async function searchLot() {
     const lot = input.trim();
@@ -201,6 +219,12 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
           </button>
         </form>
 
+        {woMsg && (
+          <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-hover)] p-3 text-xs text-[var(--text-secondary)]">
+            {woMsg}
+          </div>
+        )}
+
         {error && (
           <div className="rounded-[6px] border border-rose-500/30 bg-rose-500/[0.06] p-3 text-xs text-rose-700 dark:text-rose-300">
             {error}
@@ -290,6 +314,7 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
             trace={trace}
             isJa={isJa}
             onOpenRecord={(rec, processName) => setTraceRecord({ rec, processName })}
+            onOpenWorkOrder={openWorkOrder}
           />
         )}
 
@@ -393,6 +418,13 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
           </>
         )}
       </div>
+      <ScnaWorkOrderDetailModal
+        open={Boolean(peekWorkOrder)}
+        workOrderId={peekWorkOrder?._id}
+        initialWorkOrder={peekWorkOrder}
+        onClose={() => setPeekWorkOrder(null)}
+        zIndex="z-[80]"
+      />
       {traceRecord && (
         <RecordDetailModal
           record={traceRecord.rec}
