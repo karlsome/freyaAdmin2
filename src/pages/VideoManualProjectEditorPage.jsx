@@ -667,6 +667,11 @@ export default function VideoManualProjectEditorPage() {
 
       try {
         const nextProject = await fetchVideoManualProject(projectId);
+        if (nextProject?.structure === "steps") {
+          // Step-based projects are managed from the step list, not the single-timeline editor.
+          if (!cancelled) navigate(`/videoManual/project/${projectId}/steps`, { replace: true });
+          return;
+        }
         if (!cancelled) setProject(nextProject);
       } catch (error) {
         if (!cancelled) {

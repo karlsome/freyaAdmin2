@@ -137,7 +137,7 @@ export async function patchVideoManualProject(projectId, updates) {
   });
 }
 
-export async function createVideoManualProject(playlistId, { title, description = "" } = {}) {
+export async function createVideoManualProject(playlistId, { title, description = "", structure = "flat" } = {}) {
   if (!playlistId) {
     throw new Error("playlistId is required");
   }
@@ -145,8 +145,35 @@ export async function createVideoManualProject(playlistId, { title, description 
   return request(`api/video-manuals-studio/playlists/${playlistId}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, description }),
+    body: JSON.stringify({ title, description, structure }),
   });
+}
+
+// ---- Step-based projects (project.structure === "steps") ----
+const jsonRequest = (endpoint, method, payload) => request(endpoint, {
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload ?? {}),
+});
+
+export function createVideoManualStep(projectId, { title, afterStepId } = {}) {
+  return jsonRequest(`api/video-manuals-studio/projects/${projectId}/steps`, "POST", { title, afterStepId });
+}
+
+export function patchVideoManualStep(projectId, stepId, updates) {
+  return jsonRequest(`api/video-manuals-studio/projects/${projectId}/steps/${stepId}`, "PATCH", updates);
+}
+
+export function deleteVideoManualStep(projectId, stepId) {
+  return request(`api/video-manuals-studio/projects/${projectId}/steps/${stepId}`, { method: "DELETE" });
+}
+
+export function reorderVideoManualSteps(projectId, order) {
+  return jsonRequest(`api/video-manuals-studio/projects/${projectId}/steps/order`, "PUT", { order });
+}
+
+export function convertVideoManualProjectToSteps(projectId, { title } = {}) {
+  return jsonRequest(`api/video-manuals-studio/projects/${projectId}/convert-to-steps`, "POST", { title });
 }
 
 export async function deleteVideoManualProject(projectId) {

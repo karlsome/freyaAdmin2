@@ -33,6 +33,7 @@ import FinancialsPage from "./pages/FinancialsPage";
 import LoginPage from "./pages/LoginPage";
 import VideoManualPage from "./pages/VideoManualPage";
 import VideoManualProjectEditorPage from "./pages/VideoManualProjectEditorPage";
+import VideoManualStepListPage from "./pages/VideoManualStepListPage";
 import {
   clearStoredAuthUser,
   isAuthenticatedUser,
@@ -241,6 +242,7 @@ function App() {
               <Route path="/analytics/:tab/:process" element={<AnalyticsPage />} />
               <Route path="/videoManual" element={<VideoManualPage />} />
               <Route path="/videoManual/project/:projectId" element={<VideoManualProjectEditorPage />} />
+              <Route path="/videoManual/project/:projectId/steps" element={<VideoManualStepListPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}
