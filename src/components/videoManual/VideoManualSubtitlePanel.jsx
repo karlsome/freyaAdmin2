@@ -9,21 +9,23 @@ const round = (value) => Math.round(value * 1000) / 1000;
 
 function TimeField({ label, value, onChange, onSetToPlayhead, title }) {
   return (
-    <label className="flex min-w-0 flex-1 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-      {label}
-      <input
-        type="number"
-        min={0}
-        step={0.1}
-        value={Number.isFinite(value) ? value : 0}
-        onClick={(event) => event.stopPropagation()}
-        onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))}
-        className="w-full min-w-0 rounded border border-separator bg-surface px-1.5 py-1 text-xs font-semibold normal-case text-on-surface outline-none focus:border-primary/50"
-      />
-      <button type="button" title={title} onClick={(event) => { event.stopPropagation(); onSetToPlayhead(); }} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-high hover:text-primary">
-        <Icon className="text-[14px]">my_location</Icon>
-      </button>
-    </label>
+    <div className="min-w-0">
+      <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</span>
+      <div className="flex min-w-0 items-center gap-1">
+        <input
+          type="number"
+          min={0}
+          step={0.1}
+          value={Number.isFinite(value) ? value : 0}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))}
+          className="min-w-0 flex-1 rounded border border-separator bg-surface px-2 py-1 text-xs font-semibold text-on-surface outline-none focus:border-primary/50"
+        />
+        <button type="button" title={title} onClick={(event) => { event.stopPropagation(); onSetToPlayhead(); }} className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-high hover:text-primary">
+          <Icon className="text-[16px]">my_location</Icon>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -47,7 +49,7 @@ export default function VideoManualSubtitlePanel({ subtitles, playbackTime = 0, 
   };
 
   return (
-    <aside className="z-20 flex w-[280px] flex-shrink-0 flex-col border-r border-separator bg-surface">
+    <aside className="z-20 flex w-[320px] flex-shrink-0 flex-col border-r border-separator bg-surface">
       <div className="flex items-center justify-between border-b border-separator px-3 py-3">
         <span className="text-[11px] font-black uppercase tracking-[0.22em] text-on-surface-variant">{t("Subtitles")}</span>
         <span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">{subtitles.length}</span>
@@ -67,10 +69,13 @@ export default function VideoManualSubtitlePanel({ subtitles, playbackTime = 0, 
               onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) onSeek?.(cue.start); }}
               className={`space-y-1.5 rounded-lg border p-2 transition ${isActive ? "border-primary bg-primary/10 ring-1 ring-primary/40" : "border-separator bg-surface hover:border-primary/30"}`}
             >
-              <div className="flex items-center gap-1.5">
+              <div className="grid grid-cols-2 gap-2">
                 <TimeField label={t("Start")} value={cue.start} onChange={(value) => update(cue.id, { start: round(value) })} onSetToPlayhead={() => update(cue.id, { start: round(playbackTime) })} title={t("Set to playhead")} />
                 <TimeField label={t("End")} value={cue.end} onChange={(value) => update(cue.id, { end: round(value) })} onSetToPlayhead={() => update(cue.id, { end: round(playbackTime) })} title={t("Set to playhead")} />
-                <button type="button" title={t("Delete")} onClick={(event) => { event.stopPropagation(); remove(cue.id); }} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-on-surface-variant hover:bg-error-container hover:text-error">
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{t("Text")}</span>
+                <button type="button" title={t("Delete")} onClick={(event) => { event.stopPropagation(); remove(cue.id); }} className="flex h-6 w-6 items-center justify-center rounded text-on-surface-variant hover:bg-error-container hover:text-error">
                   <Icon className="text-[14px]">delete</Icon>
                 </button>
               </div>
