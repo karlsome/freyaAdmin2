@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useLanguage } from "../../contexts/LanguageContext";
-import { duplicateVideoManualProject } from "../../services/videoManualApi";
+import { bulkVideoManualProjects, duplicateVideoManualProject, moveVideoManualProject } from "../../services/videoManualApi";
 
-/** Pick a playlist and copy the project into it. */
-export default function VideoManualCopyProjectModal({ project, playlists, currentPlaylistId, onClose, onCopied }) {
+/** Pick a playlist and copy or move one project (or a whole selection) into it. */
+export default function VideoManualCopyProjectModal({ mode = "copy", ids = [], label = "", playlists, currentPlaylistId, onClose, onDone }) {
   const { t } = useLanguage();
   const [targetId, setTargetId] = useState("");
   const [query, setQuery] = useState("");
@@ -23,15 +23,24 @@ export default function VideoManualCopyProjectModal({ project, playlists, curren
     return playlists.filter((playlist) => String(playlist._id) !== String(currentPlaylistId) && (!needle || String(playlist.name || "").toLowerCase().includes(needle)));
   }, [currentPlaylistId, playlists, query]);
 
-  async function handleCopy() {
-    if (!targetId) return;
+  const isMove = mode === "move";
+  const count = ids.length;
+
+  async function handleSubmit() {
+    if (!targetId || !count) return;
     setSaving(true);
     setError("");
     try {
-      const copy = await duplicateVideoManualProject(project._id, { targetPlaylistId: targetId });
-      onCopied(copy, playlists.find((playlist) => String(playlist._id) === String(targetId)));
-    } catch (copyError) {
-      setError(copyError.message || t("Failed to copy project."));
+      let result;
+      if (count === 1) {
+        const single = isMove ? await moveVideoManualProject(ids[0], targetId) : await duplicateVideoManualProject(ids[0], { targetPlaylistId: targetId });
+        result = { ok: 1, failed: [], title: single?.title || label };
+      } else {
+        result = { ...(await bulkVideoManualProjects(isMove ? "move" : "copy", ids, targetId)), title: label };
+      }
+      onDone(result, playlists.find((playlist) => String(playlist._id) === String(targetId)));
+    } catch (submitError) {
+      setError(submitError.message || (isMove ? t("Failed to move project.") : t("Failed to copy project.")));
       setSaving(false);
     }
   }
@@ -44,8 +53,8 @@ export default function VideoManualCopyProjectModal({ project, playlists, curren
       >
         <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
           <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{project?.title}</p>
-            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{t("Copy to playlist")}</h2>
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{count > 1 ? t("{count} projects", { count }) : label}</p>
+            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{isMove ? t("Move to playlist") : t("Copy to playlist")}</h2>
           </div>
           <button
             type="button"
@@ -87,7 +96,9 @@ export default function VideoManualCopyProjectModal({ project, playlists, curren
           </div>
 
           <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
-            {t("Copies the working project and the media it uses. Revision history and the deployed video are not copied.")}
+            {isMove
+              ? t("Moves the project with its revision history and deployed video. The media it uses is shared into the target playlist.")
+              : t("Copies the working project and the media it uses. Revision history and the deployed video are not copied.")}
           </p>
 
           {error ? (
@@ -101,11 +112,11 @@ export default function VideoManualCopyProjectModal({ project, playlists, curren
           </button>
           <button
             type="button"
-            onClick={handleCopy}
+            onClick={handleSubmit}
             disabled={!targetId || saving}
             className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? t("Copying...") : t("Copy")}
+            {isMove ? (saving ? t("Moving...") : t("Move")) : (saving ? t("Copying...") : t("Copy"))}
           </button>
         </div>
       </div>

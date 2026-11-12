@@ -4,17 +4,31 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import VideoManualCopyProjectModal from "../components/videoManual/VideoManualCopyProjectModal";
 import VideoManualProjectTrashModal from "../components/videoManual/VideoManualProjectTrashModal";
+import {
+  ProjectBulkBar,
+  ProjectListToolbar,
+  ProjectPagerBar,
+  ProjectZoomSlider,
+} from "../components/videoManual/VideoManualProjectListControls";
+import {
+  PROJECT_PAGE_SIZE_OPTIONS,
+  PROJECT_ZOOM_DEFAULT,
+  PROJECT_ZOOM_MAX,
+  PROJECT_ZOOM_MIN,
+} from "../components/videoManual/videoManualListConfig";
 import { useLanguage } from "../contexts/LanguageContext";
 import VideoManualStepPlayerModal from "../components/videoManual/VideoManualStepPlayerModal";
 import { getPlayableSteps } from "../components/videoManual/videoManualPlaybackUtils";
 import { readStoredAuthUser } from "../utils/auth";
 import {
+  bulkVideoManualProjects,
   canEditVideoManualProjects,
   createVideoManualProject,
   deleteVideoManualPlaylist,
   deleteVideoManualProject,
   duplicateVideoManualProject,
-  fetchVideoManualPlaylistProjects,
+  fetchVideoManualPlaylistProjectIds,
+  fetchVideoManualPlaylistProjectsPage,
   fetchVideoManualProject,
   fetchVideoManualPlaylists,
   patchVideoManualPlaylist,
@@ -41,6 +55,38 @@ function rememberPlaylistId(playlistId) {
   }
 }
 
+const VIEW_MODE_STORAGE_KEY = "videoManual.viewMode";
+const PAGE_SIZE_STORAGE_KEY = "videoManual.pageSize";
+const ZOOM_STORAGE_KEY = "videoManual.zoom";
+const SEARCH_DEBOUNCE_MS = 400;
+
+function readStoredValue(key, fallback, isValid) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const value = typeof fallback === "number" ? Number(raw) : raw;
+    return isValid(value) ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function storeValue(key, value) {
+  try {
+    window.localStorage.setItem(key, String(value));
+  } catch {
+    // Preference just won't persist.
+  }
+}
+
+function formatDuration(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = String(total % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
+
 function formatDateTime(value, fallback = "") {
   if (!value) return fallback;
 
@@ -59,19 +105,6 @@ function filterItemsByQuery(items, query, resolver) {
   if (!normalizedQuery) return items;
 
   return items.filter((item) => resolver(item).includes(normalizedQuery));
-}
-
-function buildProjectSearchText(project) {
-  return [
-    project?.title,
-    project?.description,
-    project?.lastEditedBy,
-    project?.createdBy,
-    project?.status,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLocaleLowerCase();
 }
 
 function buildPlaylistSearchText(playlist) {
@@ -93,7 +126,7 @@ function getProjectPreviewMedia(project) {
   };
 }
 
-function InfoPopover({ anchorRef, onClose, children }) {
+function InfoPopover({ anchorRef, onClose, children, width = 260, height = 190 }) {
   const [position, setPosition] = useState(null);
   const popoverRef = useRef(null);
 
@@ -103,10 +136,9 @@ function InfoPopover({ anchorRef, onClose, children }) {
 
     const place = () => {
       const rect = anchor.getBoundingClientRect();
-      const width = 260;
       const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
       const spaceBelow = window.innerHeight - rect.bottom;
-      const top = spaceBelow < 190 ? Math.max(8, rect.top - 190) : rect.bottom + 6;
+      const top = spaceBelow < height ? Math.max(8, rect.top - height) : rect.bottom + 6;
       setPosition({ top, left, width });
     };
     const handlePointerDown = (event) => {
@@ -126,7 +158,7 @@ function InfoPopover({ anchorRef, onClose, children }) {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKey);
     };
-  }, [anchorRef, onClose]);
+  }, [anchorRef, height, onClose, width]);
 
   if (!position) return null;
   return createPortal(
@@ -141,7 +173,99 @@ function InfoPopover({ anchorRef, onClose, children }) {
   );
 }
 
-function ProjectCard({ project, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo }) {
+function StepsLabel({ count, t }) {
+  const safe = Number(count) || 0;
+  return safe === 1 ? t("1 step") : t("{count} steps", { count: safe });
+}
+
+function SelectCheckbox({ selected, onToggle, variant = "overlay", className = "" }) {
+  const { t } = useLanguage();
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      aria-label={t("Select project")}
+      onClick={(event) => { event.stopPropagation(); onToggle(); }}
+      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2 shadow-sm transition-colors ${selected ? "border-[var(--freya-blue)] bg-[var(--freya-blue)] text-white" : variant === "overlay" ? "border-white/90 bg-black/40 text-transparent hover:bg-black/60" : "border-[var(--border-strong)] bg-[var(--surface)] text-transparent hover:border-[var(--freya-blue)]"} ${className}`}
+    >
+      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>
+    </button>
+  );
+}
+
+// "More" menu with the per-project actions that don't fit on a small card: duplicate, copy, move, delete.
+function ProjectMenuButton({ project, canEdit, canDelete, onDuplicate, onCopyTo, onMoveTo, onDelete, className }) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef(null);
+  const close = useCallback(() => setOpen(false), []);
+  if (!canEdit && !canDelete) return null;
+
+  const items = [
+    canEdit ? { key: "duplicate", icon: "content_copy", label: t("Duplicate"), run: onDuplicate } : null,
+    canEdit ? { key: "copy", icon: "playlist_add", label: t("Copy to playlist"), run: onCopyTo } : null,
+    canEdit ? { key: "move", icon: "drive_file_move", label: t("Move to playlist"), run: onMoveTo } : null,
+    canDelete ? { key: "delete", icon: "delete", label: t("Delete project"), run: onDelete, danger: true } : null,
+  ].filter(Boolean);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={(event) => { event.stopPropagation(); setOpen((value) => !value); }}
+        className={className}
+        aria-label={t("More actions")}
+        title={t("More actions")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>more_vert</span>
+      </button>
+      {open ? (
+        <InfoPopover anchorRef={buttonRef} onClose={close} width={200} height={items.length * 38 + 20}>
+          <div role="menu" className="-my-1 flex flex-col">
+            {items.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                role="menuitem"
+                onClick={(event) => { event.stopPropagation(); setOpen(false); item.run(project); }}
+                className={`flex items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold transition-colors hover:bg-surface-container ${item.danger ? "text-error" : "text-on-surface"}`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </InfoPopover>
+      ) : null}
+    </>
+  );
+}
+
+function ProjectInfoPopoverContent({ project }) {
+  const { t } = useLanguage();
+  const latestRevision = Number(project?.currentRevisionNumber || 0) > 0 ? `${t("vmRevision")} ${project.currentRevisionNumber}` : t("vmNone");
+  const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `${t("vmRevision")} ${project.deployedRevisionNumber}` : t("vmNotDeployed"));
+
+  return (
+    <div className="space-y-2 text-xs text-on-surface-variant">
+      <p><span className="font-bold text-on-surface">{t("vmCreatedBy")}</span> {project?.createdBy || t("vmUnknown")}</p>
+      <p><span className="font-bold text-on-surface">{t("vmLastEdited")}</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt, t("vmNotUpdated"))}</p>
+      <p><span className="font-bold text-on-surface">{t("vmDeployedLabel")}</span> {deployedRevision}</p>
+      <p><span className="font-bold text-on-surface">{t("vmLatestLabel")}</span> {latestRevision}</p>
+    </div>
+  );
+}
+
+const overlayButtonClassName = "flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100";
+
+function ProjectCard({
+  project, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo, onMoveTo,
+  selectMode, selected, onToggleSelect,
+}) {
   const { t } = useLanguage();
   const [showInfo, setShowInfo] = useState(false);
   const [isHoveringPreview, setIsHoveringPreview] = useState(false);
@@ -149,7 +273,6 @@ function ProjectCard({ project, onOpen, onPlay, canEdit, canDelete, onEdit, onDe
   const infoButtonRef = useRef(null);
   const closeInfo = useCallback(() => setShowInfo(false), []);
   const { previewUrl, thumbnailUrl } = getProjectPreviewMedia(project);
-  const latestRevision = Number(project?.currentRevisionNumber || 0) > 0 ? `${t("vmRevision")} ${project.currentRevisionNumber}` : t("vmNone");
   const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `${t("vmRevision")} ${project.deployedRevisionNumber}` : t("vmNotDeployed"));
   const previewStatus = String(project?.previewStatus || "").trim().toLowerCase();
 
@@ -174,16 +297,21 @@ function ProjectCard({ project, onOpen, onPlay, canEdit, canDelete, onEdit, onDe
         ? t("vmNoPreview")
         : "";
 
+  function activate() {
+    if (selectMode) onToggleSelect(project);
+    else onOpen(project);
+  }
+
   return (
-    <article className="glass-card rounded-xl card-hover-lift group flex h-full flex-col overflow-hidden">
+    <article className={`glass-card rounded-xl card-hover-lift group flex h-full flex-col overflow-hidden ${selected ? "ring-2 ring-[var(--freya-blue)]" : ""}`}>
       <div
         role="button"
         tabIndex={0}
-        onClick={() => onOpen(project)}
+        onClick={activate}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            onOpen(project);
+            activate();
           }
         }}
         onMouseEnter={() => setIsHoveringPreview(true)}
@@ -210,13 +338,15 @@ function ProjectCard({ project, onOpen, onPlay, canEdit, canDelete, onEdit, onDe
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isHoveringPreview ? "opacity-100" : "opacity-0"}`}
           />
         ) : null}
 
+        {selectMode ? <SelectCheckbox selected={selected} onToggle={() => onToggleSelect(project)} className="absolute left-2 top-2" /> : null}
+
         {badge ? (
-          <div className="absolute left-2 top-2 inline-flex items-center rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white">
+          <div className={`absolute top-2 inline-flex items-center rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white ${selectMode ? "left-10" : "left-2"}`}>
             {badge}
           </div>
         ) : null}
@@ -231,93 +361,155 @@ function ProjectCard({ project, onOpen, onPlay, canEdit, canDelete, onEdit, onDe
           </div>
         ) : null}
 
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); onPlay(project); }}
-          className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white opacity-0 shadow-md transition-opacity duration-150 hover:bg-[var(--freya-blue)] focus-visible:opacity-100 group-hover:opacity-100"
-          aria-label={t("Play whole manual")}
-          title={t("Play whole manual")}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>play_arrow</span>
-        </button>
-
-        <div className="absolute right-2 top-2 flex items-center gap-1">
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={(event) => { event.stopPropagation(); onEdit(project); }}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100"
-              aria-label={t("Edit project")}
-              title={t("Edit project")}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-            </button>
-          ) : null}
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={(event) => { event.stopPropagation(); onDuplicate(project); }}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100"
-              aria-label={t("Duplicate")}
-              title={t("Duplicate")}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_copy</span>
-            </button>
-          ) : null}
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={(event) => { event.stopPropagation(); onCopyTo(project); }}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100"
-              aria-label={t("Copy to playlist")}
-              title={t("Copy to playlist")}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>drive_file_move</span>
-            </button>
-          ) : null}
-          {canDelete ? (
-            <button
-              type="button"
-              onClick={(event) => { event.stopPropagation(); onDelete(project); }}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-red-600 focus-visible:opacity-100 group-hover:opacity-100"
-              aria-label={t("Delete project")}
-              title={t("Delete project")}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-            </button>
-          ) : null}
+        {!selectMode ? (
           <button
-            ref={infoButtonRef}
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setShowInfo((value) => !value);
-            }}
-            className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 ${showInfo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-            aria-label={t("vmProjectInfo")}
+            onClick={(event) => { event.stopPropagation(); onPlay(project); }}
+            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white opacity-0 shadow-md transition-opacity duration-150 hover:bg-[var(--freya-blue)] focus-visible:opacity-100 group-hover:opacity-100"
+            aria-label={t("Play whole manual")}
+            title={t("Play whole manual")}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>play_arrow</span>
           </button>
+        ) : null}
 
-          {showInfo ? (
-            <InfoPopover anchorRef={infoButtonRef} onClose={closeInfo}>
-              <div className="space-y-2 text-xs text-on-surface-variant">
-                <p><span className="font-bold text-on-surface">{t("vmCreatedBy")}</span> {project?.createdBy || t("vmUnknown")}</p>
-                <p><span className="font-bold text-on-surface">{t("vmLastEdited")}</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt, t("vmNotUpdated"))}</p>
-                <p><span className="font-bold text-on-surface">{t("vmDeployedLabel")}</span> {deployedRevision}</p>
-                <p><span className="font-bold text-on-surface">{t("vmLatestLabel")}</span> {latestRevision}</p>
-              </div>
-            </InfoPopover>
-          ) : null}
-        </div>
+        {!selectMode ? (
+          <div className="absolute right-2 top-2 flex items-center gap-1">
+            {canEdit ? (
+              <button type="button" onClick={(event) => { event.stopPropagation(); onEdit(project); }} className={overlayButtonClassName} aria-label={t("Edit project")} title={t("Edit project")}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+              </button>
+            ) : null}
+            <button
+              ref={infoButtonRef}
+              type="button"
+              onClick={(event) => { event.stopPropagation(); setShowInfo((value) => !value); }}
+              className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 ${showInfo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+              aria-label={t("vmProjectInfo")}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
+            </button>
+            <ProjectMenuButton
+              project={project}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onDuplicate={onDuplicate}
+              onCopyTo={onCopyTo}
+              onMoveTo={onMoveTo}
+              onDelete={onDelete}
+              className={overlayButtonClassName}
+            />
+
+            {showInfo ? (
+              <InfoPopover anchorRef={infoButtonRef} onClose={closeInfo}>
+                <ProjectInfoPopoverContent project={project} />
+              </InfoPopover>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="min-w-0 px-3 py-2">
-        <h3 className="truncate text-[13px] font-bold text-on-surface">{project?.title || t("vmUntitledProject")}</h3>
+        <h3 className="truncate text-[13px] font-bold text-on-surface" title={project?.title || ""}>{project?.title || t("vmUntitledProject")}</h3>
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant">
+          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>format_list_numbered</span>
+          <StepsLabel count={project?.stepCount} t={t} />
+          {Number(project?.durationSeconds) > 0 ? <span className="text-outline">· {formatDuration(project.durationSeconds)}</span> : null}
+        </p>
         <p className="mt-0.5 line-clamp-1 text-[11px] text-on-surface-variant">
           {project?.description || t("vmNoDescription")}
         </p>
       </div>
+    </article>
+  );
+}
+
+function ProjectRow({
+  project, thumbWidth, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo, onMoveTo,
+  selectMode, selected, onToggleSelect,
+}) {
+  const { t } = useLanguage();
+  const { thumbnailUrl } = getProjectPreviewMedia(project);
+  const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `${t("vmRevision")} ${project.deployedRevisionNumber}` : t("vmNotDeployed"));
+  const rowButtonClassName = "flex h-8 w-8 items-center justify-center rounded-lg text-outline transition-colors hover:bg-surface-container hover:text-primary";
+
+  function activate() {
+    if (selectMode) onToggleSelect(project);
+    else onOpen(project);
+  }
+
+  return (
+    <article className={`glass-card group flex items-center gap-3 rounded-xl px-3 py-2 ${selected ? "ring-2 ring-[var(--freya-blue)]" : ""}`}>
+      {selectMode ? <SelectCheckbox selected={selected} onToggle={() => onToggleSelect(project)} variant="plain" /> : null}
+
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={activate}
+        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); activate(); } }}
+        className="relative aspect-video flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-surface-container-low outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        style={{ width: thumbWidth }}
+      >
+        {thumbnailUrl ? (
+          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-outline">
+            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>movie</span>
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1 cursor-pointer" onClick={activate}>
+        <h3 className="truncate text-sm font-bold text-on-surface" title={project?.title || ""}>{project?.title || t("vmUntitledProject")}</h3>
+        <p className="mt-0.5 line-clamp-1 text-xs text-on-surface-variant">{project?.description || t("vmNoDescription")}</p>
+        <p className="mt-0.5 text-[11px] font-semibold text-on-surface-variant md:hidden">
+          <StepsLabel count={project?.stepCount} t={t} />
+          {Number(project?.durationSeconds) > 0 ? ` · ${formatDuration(project.durationSeconds)}` : ""}
+        </p>
+      </div>
+
+      <div className="hidden w-24 flex-shrink-0 items-center gap-1 text-xs font-semibold text-on-surface-variant md:flex">
+        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>format_list_numbered</span>
+        <StepsLabel count={project?.stepCount} t={t} />
+      </div>
+      <div className="hidden w-16 flex-shrink-0 text-xs font-semibold text-on-surface-variant md:block">
+        {Number(project?.durationSeconds) > 0 ? formatDuration(project.durationSeconds) : "—"}
+      </div>
+      <div className="hidden w-44 flex-shrink-0 text-[11px] text-on-surface-variant lg:block">
+        <p className="truncate">{formatDateTime(project?.lastEditedAt || project?.updatedAt, t("vmNotUpdated"))}</p>
+        <p className="truncate text-outline">{project?.lastEditedBy || project?.createdBy || ""}</p>
+      </div>
+      <div className="hidden w-24 flex-shrink-0 xl:block">
+        {project?.deployedRevisionId ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white" title={`${t("vmDeployedLabel")} ${deployedRevision}`}>
+            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check_circle</span>
+            {t("Deployed")}
+          </span>
+        ) : null}
+      </div>
+
+      {!selectMode ? (
+        <div className="flex flex-shrink-0 items-center gap-0.5">
+          <button type="button" onClick={() => onPlay(project)} className={rowButtonClassName} aria-label={t("Play whole manual")} title={t("Play whole manual")}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>play_arrow</span>
+          </button>
+          {canEdit ? (
+            <button type="button" onClick={() => onEdit(project)} className={rowButtonClassName} aria-label={t("Edit project")} title={t("Edit project")}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+            </button>
+          ) : null}
+          <ProjectMenuButton
+            project={project}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            onDuplicate={onDuplicate}
+            onCopyTo={onCopyTo}
+            onMoveTo={onMoveTo}
+            onDelete={onDelete}
+            className={rowButtonClassName}
+          />
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -525,6 +717,18 @@ export default function VideoManualPage() {
   const navigate = useNavigate();
   const [playlists, setPlaylists] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() => readStoredValue(PAGE_SIZE_STORAGE_KEY, PROJECT_PAGE_SIZE_OPTIONS[0], (value) => PROJECT_PAGE_SIZE_OPTIONS.includes(value)));
+  const [sort, setSort] = useState("newest");
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [viewMode, setViewMode] = useState(() => readStoredValue(VIEW_MODE_STORAGE_KEY, "thumbnail", (value) => value === "thumbnail" || value === "list"));
+  const [zoom, setZoom] = useState(() => readStoredValue(ZOOM_STORAGE_KEY, PROJECT_ZOOM_DEFAULT, (value) => Number.isFinite(value) && value >= PROJECT_ZOOM_MIN && value <= PROJECT_ZOOM_MAX));
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const freshRef = useRef(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(readRememberedPlaylistId);
   const [playlistQuery, setPlaylistQuery] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
@@ -536,7 +740,7 @@ export default function VideoManualPage() {
   const [editingProject, setEditingProject] = useState(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [copyingProject, setCopyingProject] = useState(null);
+  const [transfer, setTransfer] = useState(null); // { mode: "copy" | "move", ids: [...], label }
   const [trashOpen, setTrashOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState(null);
   const [notice, setNotice] = useState("");
@@ -544,6 +748,107 @@ export default function VideoManualPage() {
   const authRole = String(readStoredAuthUser()?.role || "");
   const canEditProjects = canEditVideoManualProjects(authRole);
   const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
+
+  // Re-fetch the current page from the server (skipping the 1-minute server cache) and refresh the playlist counts.
+  function reloadProjects() {
+    freshRef.current = true;
+    setRefreshNonce((value) => value + 1);
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function handleSelectPlaylist(playlistId) {
+    setSelectedPlaylistId(playlistId);
+    setPage(1);
+    setSelectMode(false);
+    clearSelection();
+  }
+
+  function handleToggleSelect(project) {
+    const id = String(project?._id);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function handleToggleSelectMode() {
+    setSelectMode((value) => !value);
+    clearSelection();
+  }
+
+  const pageIds = projects.map((project) => String(project._id));
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+  function handleSelectPage() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allOnPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  async function handleSelectAllMatching() {
+    setBulkBusy(true);
+    setActionError("");
+    try {
+      const ids = await fetchVideoManualPlaylistProjectIds(selectedPlaylistId, { q: searchQuery, sort });
+      setSelectedIds(new Set(ids.map(String)));
+    } catch (error) {
+      setActionError(error.message || t("Failed to load projects."));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(t("Move {count} project(s) to the recycle bin? You can restore them from there.", { count: ids.length }))) return;
+    setBulkBusy(true);
+    setActionError("");
+    try {
+      const result = await bulkVideoManualProjects("delete", ids);
+      setNotice(t("Moved {count} project(s) to the recycle bin.", { count: result?.ok ?? 0 }));
+      if (result?.failed?.length) setActionError(t("{count} project(s) could not be deleted: {reason}", { count: result.failed.length, reason: result.failed[0]?.error || "" }));
+      clearSelection();
+      reloadProjects();
+    } catch (error) {
+      setActionError(error.message || t("Failed to delete project."));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  function openTransfer(mode, projectsToTransfer) {
+    const list = Array.isArray(projectsToTransfer) ? projectsToTransfer : [projectsToTransfer];
+    if (!list.length) return;
+    const single = list.length === 1 ? (list[0]?.title || projects.find((item) => String(item._id) === String(list[0]._id))?.title || "") : "";
+    setTransfer({ mode, ids: list.map((item) => String(item._id)), label: single });
+  }
+
+  function handleTransferDone(result, targetPlaylist) {
+    const mode = transfer?.mode;
+    setTransfer(null);
+    const failedCount = result?.failed?.length || 0;
+    const okCount = result?.ok ?? 0;
+    if (okCount === 1 && !failedCount) {
+      setNotice(mode === "move"
+        ? t("Moved \"{title}\" to {playlist}.", { title: result?.title || "", playlist: targetPlaylist?.name || "" })
+        : t("Copied \"{title}\" to {playlist}.", { title: result?.title || "", playlist: targetPlaylist?.name || "" }));
+    } else {
+      setNotice(mode === "move"
+        ? t("Moved {count} project(s) to {playlist}.", { count: okCount, playlist: targetPlaylist?.name || "" })
+        : t("Copied {count} project(s) to {playlist}.", { count: okCount, playlist: targetPlaylist?.name || "" }));
+    }
+    if (failedCount) setActionError(t("{count} project(s) failed: {reason}", { count: failedCount, reason: result.failed[0]?.error || "" }));
+    if (mode === "move") clearSelection();
+    reloadProjects();
+  }
 
   async function handleDeletePlaylist(target) {
     const selectedPlaylist = target;
@@ -583,7 +888,8 @@ export default function VideoManualPage() {
     setActionError("");
     try {
       await deleteVideoManualProject(project._id);
-      setProjects((current) => current.filter((item) => String(item._id) !== String(project._id)));
+      setSelectedIds((current) => { const next = new Set(current); next.delete(String(project._id)); return next; });
+      reloadProjects();
     } catch (error) {
       setActionError(error.message || t("Failed to delete project."));
     }
@@ -606,8 +912,8 @@ export default function VideoManualPage() {
     setActionError("");
     try {
       const copy = await duplicateVideoManualProject(project._id);
-      setProjects((current) => [...current, { ...copy, _id: copy?._id || copy?.insertedId }]);
       setNotice(t("Duplicated as \"{title}\".", { title: copy?.title || "" }));
+      reloadProjects();
     } catch (error) {
       setActionError(error.message || t("Failed to duplicate project."));
     }
@@ -624,7 +930,6 @@ export default function VideoManualPage() {
   }, [selectedPlaylistId]);
 
   const deferredPlaylistQuery = useDeferredValue(playlistQuery);
-  const deferredProjectQuery = useDeferredValue(projectQuery);
 
 
   useEffect(() => {
@@ -660,27 +965,53 @@ export default function VideoManualPage() {
     };
   }, [refreshNonce]);
 
+  // Debounce the search box; the server does the searching, so a new query goes back to page 1.
+  const lastSearchRef = useRef("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = projectQuery.trim();
+      if (next === lastSearchRef.current) return;
+      lastSearchRef.current = next;
+      setSearchQuery(next);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [projectQuery]);
+
+  useEffect(() => { storeValue(PAGE_SIZE_STORAGE_KEY, pageSize); }, [pageSize]);
+  useEffect(() => { storeValue(VIEW_MODE_STORAGE_KEY, viewMode); }, [viewMode]);
+  useEffect(() => { storeValue(ZOOM_STORAGE_KEY, zoom); }, [zoom]);
+
   useEffect(() => {
     if (!selectedPlaylistId) {
       setProjects([]);
+      setTotal(0);
+      setTotalPages(1);
       setProjectsLoading(false);
       setProjectsError("");
       return undefined;
     }
 
     let cancelled = false;
+    const nocache = freshRef.current;
+    freshRef.current = false;
 
     async function loadProjects() {
       setProjectsLoading(true);
       setProjectsError("");
 
       try {
-        const nextProjects = await fetchVideoManualPlaylistProjects(selectedPlaylistId);
+        const result = await fetchVideoManualPlaylistProjectsPage(selectedPlaylistId, { page, limit: pageSize, sort, q: searchQuery, nocache });
         if (cancelled) return;
-        setProjects(nextProjects);
+        setProjects(result.projects);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+        if (result.page !== page) setPage(result.page); // the server clamps pages past the end (e.g. after deleting the last page)
       } catch (error) {
         if (cancelled) return;
         setProjects([]);
+        setTotal(0);
+        setTotalPages(1);
         setProjectsError(error.message || "Failed to load projects.");
       } finally {
         if (!cancelled) setProjectsLoading(false);
@@ -691,7 +1022,7 @@ export default function VideoManualPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedPlaylistId]);
+  }, [selectedPlaylistId, page, pageSize, sort, searchQuery, refreshNonce]);
 
   useEffect(() => {
     if (!selectedPlaylistId || projectsLoading || projectsError) return undefined;
@@ -702,9 +1033,11 @@ export default function VideoManualPage() {
     let cancelled = false;
     const timerId = window.setInterval(async () => {
       try {
-        const nextProjects = await fetchVideoManualPlaylistProjects(selectedPlaylistId);
+        const result = await fetchVideoManualPlaylistProjectsPage(selectedPlaylistId, { page, limit: pageSize, sort, q: searchQuery, nocache: true });
         if (cancelled) return;
-        setProjects(nextProjects);
+        setProjects(result.projects);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
       } catch {
         // Keep silent polling to avoid disruptive errors during background refresh.
       }
@@ -714,15 +1047,11 @@ export default function VideoManualPage() {
       cancelled = true;
       window.clearInterval(timerId);
     };
-  }, [projects, projectsError, projectsLoading, selectedPlaylistId]);
+  }, [page, pageSize, projects, projectsError, projectsLoading, searchQuery, selectedPlaylistId, sort]);
 
   const filteredPlaylists = useMemo(() => (
     filterItemsByQuery(playlists, deferredPlaylistQuery, buildPlaylistSearchText)
   ), [deferredPlaylistQuery, playlists]);
-
-  const filteredProjects = useMemo(() => (
-    filterItemsByQuery(projects, deferredProjectQuery, buildProjectSearchText)
-  ), [deferredProjectQuery, projects]);
 
   const selectedPlaylist = useMemo(() => (
     playlists.find((playlist) => String(playlist?._id) === String(selectedPlaylistId)) || null
@@ -736,7 +1065,7 @@ export default function VideoManualPage() {
         actions={(
           <button
             type="button"
-            onClick={() => setRefreshNonce((value) => value + 1)}
+            onClick={reloadProjects}
             className="inline-flex items-center gap-2 rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
@@ -786,7 +1115,7 @@ export default function VideoManualPage() {
                   <div key={playlist?._id} className="group relative">
                     <button
                       type="button"
-                      onClick={() => setSelectedPlaylistId(String(playlist?._id || ""))}
+                      onClick={() => handleSelectPlaylist(String(playlist?._id || ""))}
                       className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-150 ${isActive
                         ? "border-primary/25 bg-primary/10 shadow-[inset_3px_0_0_rgb(var(--c-primary))]"
                         : "border-transparent hover:bg-surface-container"
@@ -846,7 +1175,7 @@ export default function VideoManualPage() {
                 {selectedPlaylist?.name || t("vmProjectsHeading")}
               </h2>
               <p className="text-xs text-outline">
-                {selectedPlaylist ? formatProjectCount(filteredProjects.length, t) : t("vmNoPlaylistSelected")}
+                {selectedPlaylist ? formatProjectCount(total, t) : t("vmNoPlaylistSelected")}
               </p>
             </div>
 
@@ -896,6 +1225,39 @@ export default function VideoManualPage() {
             </div>
           ) : null}
 
+          {selectedPlaylist ? (
+            <ProjectListToolbar
+              sort={sort}
+              onSortChange={(value) => { setSort(value); setPage(1); }}
+              pageSize={pageSize}
+              onPageSizeChange={(value) => { setPageSize(value); setPage(1); }}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              selectMode={selectMode}
+              onToggleSelectMode={handleToggleSelectMode}
+              canSelect={canEditProjects}
+            />
+          ) : null}
+
+          {selectMode && selectedPlaylist ? (
+            <ProjectBulkBar
+              selectedCount={selectedIds.size}
+              pageCount={projects.length}
+              allOnPageSelected={allOnPageSelected}
+              total={total}
+              allMatchingSelected={selectedIds.size >= total && total > 0}
+              busy={bulkBusy}
+              canEdit={canEditProjects}
+              canDelete={canDeleteProjects}
+              onSelectPage={handleSelectPage}
+              onSelectAllMatching={handleSelectAllMatching}
+              onClear={clearSelection}
+              onMove={() => openTransfer("move", [...selectedIds].map((id) => ({ _id: id })))}
+              onCopy={() => openTransfer("copy", [...selectedIds].map((id) => ({ _id: id })))}
+              onDelete={handleBulkDelete}
+            />
+          ) : null}
+
           {!selectedPlaylist && !playlistsLoading ? (
             <EmptyState
               icon="video_library"
@@ -903,35 +1265,81 @@ export default function VideoManualPage() {
               description={t("vmChoosePlaylistDesc")}
             />
           ) : projectsLoading ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="h-[150px] rounded-xl bg-surface-container/70 animate-pulse" />
+            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoom}px, 1fr))` }}>
+              {Array.from({ length: Math.min(pageSize, 8) }).map((_, index) => (
+                <div key={index} className="rounded-xl bg-surface-container/70 animate-pulse" style={{ height: zoom * 0.5625 + 64 }} />
               ))}
             </div>
-          ) : filteredProjects.length ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
-              {filteredProjects.map((project) => (
-                <ProjectCard
-                  key={project?._id}
-                  project={project}
-                  onPlay={handlePlayProject}
-                  onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`)}
-                  canEdit={canEditProjects}
-                  canDelete={canDeleteProjects}
-                  onEdit={setEditingProject}
-                  onDelete={handleDeleteProject}
-                  onDuplicate={handleDuplicateProject}
-                  onCopyTo={setCopyingProject}
-                />
-              ))}
-            </div>
+          ) : projects.length ? (
+            <>
+              {viewMode === "list" ? (
+                <div className="flex flex-col gap-2">
+                  {projects.map((project) => (
+                    <ProjectRow
+                      key={project?._id}
+                      project={project}
+                      thumbWidth={Math.round(zoom * 0.55)}
+                      onPlay={handlePlayProject}
+                      onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`)}
+                      canEdit={canEditProjects}
+                      canDelete={canDeleteProjects}
+                      onEdit={setEditingProject}
+                      onDelete={handleDeleteProject}
+                      onDuplicate={handleDuplicateProject}
+                      onCopyTo={(item) => openTransfer("copy", item)}
+                      onMoveTo={(item) => openTransfer("move", item)}
+                      selectMode={selectMode}
+                      selected={selectedIds.has(String(project?._id))}
+                      onToggleSelect={handleToggleSelect}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoom}px, 1fr))` }}>
+                  {projects.map((project) => (
+                    <ProjectCard
+                      key={project?._id}
+                      project={project}
+                      onPlay={handlePlayProject}
+                      onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`)}
+                      canEdit={canEditProjects}
+                      canDelete={canDeleteProjects}
+                      onEdit={setEditingProject}
+                      onDelete={handleDeleteProject}
+                      onDuplicate={handleDuplicateProject}
+                      onCopyTo={(item) => openTransfer("copy", item)}
+                      onMoveTo={(item) => openTransfer("move", item)}
+                      selectMode={selectMode}
+                      selected={selectedIds.has(String(project?._id))}
+                      onToggleSelect={handleToggleSelect}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <ProjectPagerBar
+                total={total}
+                page={page}
+                pageSize={pageSize}
+                totalPages={totalPages}
+                onPageChange={(nextPage) => {
+                  if (nextPage < 1 || nextPage > totalPages) return;
+                  setPage(nextPage);
+                }}
+                disabled={projectsLoading}
+              />
+            </>
           ) : (
             <EmptyState
               icon="movie_edit"
-              title={projectQuery ? t("vmNoMatchingProjects") : t("vmNoProjects")}
-              description={projectQuery ? t("vmTryDifferentSearch") : t("vmNoProjectsDesc")}
+              title={searchQuery ? t("vmNoMatchingProjects") : t("vmNoProjects")}
+              description={searchQuery ? t("vmTryDifferentSearch") : t("vmNoProjectsDesc")}
             />
           )}
+
+          {selectedPlaylist && (projects.length > 0 || projectsLoading) ? (
+            <ProjectZoomSlider value={zoom} onChange={setZoom} />
+          ) : null}
         </section>
       </div>
 
@@ -955,7 +1363,7 @@ export default function VideoManualPage() {
           onClose={() => setTrashOpen(false)}
           onRestored={(restored) => {
             setNotice(t("Restored \"{title}\".", { title: restored?.title || "" }));
-            fetchVideoManualPlaylistProjects(selectedPlaylistId).then(setProjects).catch(() => {});
+            reloadProjects();
           }}
         />
       ) : null}
@@ -972,17 +1380,15 @@ export default function VideoManualPage() {
         />
       ) : null}
 
-      {copyingProject ? (
+      {transfer ? (
         <VideoManualCopyProjectModal
-          project={copyingProject}
+          mode={transfer.mode}
+          ids={transfer.ids}
+          label={transfer.label}
           playlists={playlists}
           currentPlaylistId={selectedPlaylistId}
-          onClose={() => setCopyingProject(null)}
-          onCopied={(copy, targetPlaylist) => {
-            setCopyingProject(null);
-            setNotice(t("Copied \"{title}\" to {playlist}.", { title: copy?.title || "", playlist: targetPlaylist?.name || "" }));
-            setRefreshNonce((value) => value + 1);
-          }}
+          onClose={() => setTransfer(null)}
+          onDone={handleTransferDone}
         />
       ) : null}
 

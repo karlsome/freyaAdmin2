@@ -117,6 +117,53 @@ export async function fetchVideoManualPlaylistProjects(playlistId) {
   return Array.isArray(data) ? data : [];
 }
 
+/** One page of a playlist's projects (server-side pagination / sort / search, cached 1 min on the server). */
+export async function fetchVideoManualPlaylistProjectsPage(playlistId, { page = 1, limit = 15, sort = "newest", q = "", nocache = false } = {}) {
+  if (!playlistId) return { projects: [], total: 0, page: 1, pageSize: limit, totalPages: 1 };
+
+  const params = new URLSearchParams({ page: String(page), limit: String(limit), sort });
+  if (q) params.set("q", q);
+  if (nocache) params.set("nocache", "1");
+  const data = await request(`api/video-manuals-studio/playlists/${playlistId}/projects?${params.toString()}`);
+  return {
+    projects: Array.isArray(data?.projects) ? data.projects : [],
+    total: Number(data?.total) || 0,
+    page: Number(data?.page) || page,
+    pageSize: Number(data?.pageSize) || limit,
+    totalPages: Math.max(1, Number(data?.totalPages) || 1),
+  };
+}
+
+/** Ids of every project matching the search (all pages) - for "select all matching". */
+export async function fetchVideoManualPlaylistProjectIds(playlistId, { q = "", sort = "newest" } = {}) {
+  if (!playlistId) return [];
+
+  const params = new URLSearchParams({ idsOnly: "1", sort });
+  if (q) params.set("q", q);
+  const data = await request(`api/video-manuals-studio/playlists/${playlistId}/projects?${params.toString()}`);
+  return Array.isArray(data?.ids) ? data.ids : [];
+}
+
+export async function moveVideoManualProject(projectId, targetPlaylistId) {
+  if (!projectId) throw new Error("projectId is required");
+  if (!targetPlaylistId) throw new Error("targetPlaylistId is required");
+
+  return request(`api/video-manuals-studio/projects/${projectId}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetPlaylistId }),
+  });
+}
+
+/** Bulk action on many projects: action = "delete" | "move" | "copy" (move / copy need targetPlaylistId). */
+export async function bulkVideoManualProjects(action, ids, targetPlaylistId = "") {
+  return request("api/video-manuals-studio/projects/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ids, targetPlaylistId: targetPlaylistId || undefined }),
+  });
+}
+
 export async function fetchVideoManualProject(projectId) {
   if (!projectId) {
     throw new Error("projectId is required");
