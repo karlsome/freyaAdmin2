@@ -12,6 +12,7 @@ import {
 } from "../components/videoManual/VideoManualProjectListControls";
 import {
   PROJECT_PAGE_SIZE_OPTIONS,
+  PROJECT_SORT_OPTIONS,
   PROJECT_ZOOM_DEFAULT,
   PROJECT_ZOOM_MAX,
   PROJECT_ZOOM_MIN,
@@ -57,6 +58,7 @@ function rememberPlaylistId(playlistId) {
 
 const VIEW_MODE_STORAGE_KEY = "videoManual.viewMode";
 const PAGE_SIZE_STORAGE_KEY = "videoManual.pageSize";
+const SORT_STORAGE_KEY = "videoManual.sort";
 const ZOOM_STORAGE_KEY = "videoManual.zoom";
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -719,7 +721,7 @@ export default function VideoManualPage() {
   const [projects, setProjects] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => readStoredValue(PAGE_SIZE_STORAGE_KEY, PROJECT_PAGE_SIZE_OPTIONS[0], (value) => PROJECT_PAGE_SIZE_OPTIONS.includes(value)));
-  const [sort, setSort] = useState("newest");
+  const [sort, setSort] = useState(() => readStoredValue(SORT_STORAGE_KEY, "newest", (value) => PROJECT_SORT_OPTIONS.some((option) => option.value === value)));
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState(() => readStoredValue(VIEW_MODE_STORAGE_KEY, "thumbnail", (value) => value === "thumbnail" || value === "list"));
@@ -979,6 +981,7 @@ export default function VideoManualPage() {
   }, [projectQuery]);
 
   useEffect(() => { storeValue(PAGE_SIZE_STORAGE_KEY, pageSize); }, [pageSize]);
+  useEffect(() => { storeValue(SORT_STORAGE_KEY, sort); }, [sort]);
   useEffect(() => { storeValue(VIEW_MODE_STORAGE_KEY, viewMode); }, [viewMode]);
   useEffect(() => { storeValue(ZOOM_STORAGE_KEY, zoom); }, [zoom]);
 
