@@ -164,6 +164,32 @@ export async function bulkVideoManualProjects(action, ids, targetPlaylistId = ""
   });
 }
 
+// Tags (工場 / 設備): a DCP tablet opened with ?filter=<工場>&machine=<設備> lists deployed projects tagged for them.
+export async function fetchVideoManualTagOptions() {
+  return request("api/video-manuals-studio/tag-options");
+}
+
+export async function fetchVideoManualPlaylistProjectTags(playlistId) {
+  return request(`api/video-manuals-studio/playlists/${playlistId}/project-tags`);
+}
+
+export async function setVideoManualProjectTags(projectId, tags) {
+  return request(`api/video-manuals-studio/projects/${projectId}/tags`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(tags),
+  });
+}
+
+// change = { add: { factories, machines }, remove: { factories, machines } } applied to every project in ids
+export async function tagVideoManualProjects(ids, change) {
+  return request("api/video-manuals-studio/projects/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "tags", ids, ...change }),
+  });
+}
+
 export async function fetchVideoManualProject(projectId) {
   if (!projectId) {
     throw new Error("projectId is required");

@@ -106,7 +106,7 @@ export function ProjectPagerBar({ total, page, pageSize, totalPages, onPageChang
 /** Appears while selecting: count, select page / all matching, clear, and the bulk actions. */
 export function ProjectBulkBar({
   selectedCount, pageCount, allOnPageSelected, total, allMatchingSelected, busy,
-  canEdit, canDelete, onSelectPage, onSelectAllMatching, onClear, onMove, onCopy, onDelete,
+  canEdit, canDelete, onSelectPage, onSelectAllMatching, onClear, onMove, onCopy, onTag, onDelete,
 }) {
   const { t } = useLanguage();
   const actionClassName = "inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50";
@@ -130,6 +130,12 @@ export function ProjectBulkBar({
       ) : null}
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
+        {canEdit ? (
+          <button type="button" onClick={onTag} disabled={busy || !selectedCount} className={actionClassName}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sell</span>
+            {t("Tags")}
+          </button>
+        ) : null}
         {canEdit ? (
           <button type="button" onClick={onMove} disabled={busy || !selectedCount} className={actionClassName}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>drive_file_move</span>

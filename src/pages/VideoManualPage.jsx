@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import VideoManualCopyProjectModal from "../components/videoManual/VideoManualCopyProjectModal";
+import VideoManualTagsModal from "../components/videoManual/VideoManualTagsModal";
 import VideoManualProjectTrashModal from "../components/videoManual/VideoManualProjectTrashModal";
 import {
   ProjectBulkBar,
@@ -180,6 +181,26 @@ function StepsLabel({ count, t }) {
   return safe === 1 ? t("1 step") : t("{count} steps", { count: safe });
 }
 
+// 工場 / 設備 tags of a project (a DCP tablet with that filter/machine lists the project).
+function ProjectTagChips({ tags, max = 4 }) {
+  const items = [
+    ...(tags?.factories || []).map((name) => ({ key: `f-${name}`, name, icon: "factory" })),
+    ...(tags?.machines || []).map((name) => ({ key: `m-${name}`, name, icon: "precision_manufacturing" })),
+  ];
+  if (!items.length) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {items.slice(0, max).map((item) => (
+        <span key={item.key} className="inline-flex max-w-full items-center gap-0.5 rounded-full bg-[var(--freya-blue)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--freya-blue)]" title={item.name}>
+          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>{item.icon}</span>
+          <span className="truncate">{item.name}</span>
+        </span>
+      ))}
+      {items.length > max ? <span className="rounded-full bg-surface-container px-1.5 py-0.5 text-[10px] font-semibold text-on-surface-variant" title={items.slice(max).map((item) => item.name).join(", ")}>+{items.length - max}</span> : null}
+    </div>
+  );
+}
+
 function SelectCheckbox({ selected, onToggle, variant = "overlay", className = "" }) {
   const { t } = useLanguage();
   return (
@@ -197,7 +218,7 @@ function SelectCheckbox({ selected, onToggle, variant = "overlay", className = "
 }
 
 // "More" menu with the per-project actions that don't fit on a small card: duplicate, copy, move, delete.
-function ProjectMenuButton({ project, canEdit, canDelete, onDuplicate, onCopyTo, onMoveTo, onDelete, className }) {
+function ProjectMenuButton({ project, canEdit, canDelete, onDuplicate, onCopyTo, onMoveTo, onTags, onDelete, className }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef(null);
@@ -206,6 +227,7 @@ function ProjectMenuButton({ project, canEdit, canDelete, onDuplicate, onCopyTo,
 
   const items = [
     canEdit ? { key: "duplicate", icon: "content_copy", label: t("Duplicate"), run: onDuplicate } : null,
+    canEdit ? { key: "tags", icon: "sell", label: t("Edit tags"), run: onTags } : null,
     canEdit ? { key: "copy", icon: "playlist_add", label: t("Copy to playlist"), run: onCopyTo } : null,
     canEdit ? { key: "move", icon: "drive_file_move", label: t("Move to playlist"), run: onMoveTo } : null,
     canDelete ? { key: "delete", icon: "delete", label: t("Delete project"), run: onDelete, danger: true } : null,
@@ -265,7 +287,7 @@ function ProjectInfoPopoverContent({ project }) {
 const overlayButtonClassName = "flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100";
 
 function ProjectCard({
-  project, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo, onMoveTo,
+  project, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo, onMoveTo, onTags,
   selectMode, selected, onToggleSelect,
 }) {
   const { t } = useLanguage();
@@ -398,6 +420,7 @@ function ProjectCard({
               onDuplicate={onDuplicate}
               onCopyTo={onCopyTo}
               onMoveTo={onMoveTo}
+              onTags={onTags}
               onDelete={onDelete}
               className={overlayButtonClassName}
             />
@@ -421,13 +444,14 @@ function ProjectCard({
         <p className="mt-0.5 line-clamp-1 text-[11px] text-on-surface-variant">
           {project?.description || t("vmNoDescription")}
         </p>
+        <ProjectTagChips tags={project?.tags} />
       </div>
     </article>
   );
 }
 
 function ProjectRow({
-  project, thumbWidth, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo, onMoveTo,
+  project, thumbWidth, onOpen, onPlay, canEdit, canDelete, onEdit, onDelete, onDuplicate, onCopyTo, onMoveTo, onTags,
   selectMode, selected, onToggleSelect,
 }) {
   const { t } = useLanguage();
@@ -464,6 +488,7 @@ function ProjectRow({
       <div className="min-w-0 flex-1 cursor-pointer" onClick={activate}>
         <h3 className="truncate text-sm font-bold text-on-surface" title={project?.title || ""}>{project?.title || t("vmUntitledProject")}</h3>
         <p className="mt-0.5 line-clamp-1 text-xs text-on-surface-variant">{project?.description || t("vmNoDescription")}</p>
+        <ProjectTagChips tags={project?.tags} max={6} />
         <p className="mt-0.5 text-[11px] font-semibold text-on-surface-variant md:hidden">
           <StepsLabel count={project?.stepCount} t={t} />
           {Number(project?.durationSeconds) > 0 ? ` · ${formatDuration(project.durationSeconds)}` : ""}
@@ -507,6 +532,7 @@ function ProjectRow({
             onDuplicate={onDuplicate}
             onCopyTo={onCopyTo}
             onMoveTo={onMoveTo}
+            onTags={onTags}
             onDelete={onDelete}
             className={rowButtonClassName}
           />
@@ -750,6 +776,7 @@ export default function VideoManualPage() {
   const [editingProject, setEditingProject] = useState(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [tagging, setTagging] = useState(null); // { ids: [...], label, project }
   const [transfer, setTransfer] = useState(null); // { mode: "copy" | "move", ids: [...], label }
   const [trashOpen, setTrashOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState(null);
@@ -856,6 +883,20 @@ export default function VideoManualPage() {
     if (!list.length) return;
     const single = list.length === 1 ? (list[0]?.title || projects.find((item) => String(item._id) === String(list[0]._id))?.title || "") : "";
     setTransfer({ mode, ids: list.map((item) => String(item._id)), label: single });
+  }
+
+  function openTagging(list) {
+    if (!list.length) return;
+    const first = list.length === 1 ? (projects.find((item) => String(item._id) === String(list[0]._id)) || list[0]) : null;
+    setTagging({ ids: list.map((item) => String(item._id)), label: first?.title || "", project: first });
+  }
+
+  function handleTaggingDone(result) {
+    setTagging(null);
+    const failedCount = result?.failed?.length || 0;
+    setNotice(t("Updated tags on {count} project(s).", { count: result?.ok ?? 0 }));
+    if (failedCount) setActionError(t("{count} project(s) failed: {reason}", { count: failedCount, reason: result.failed[0]?.error || "" }));
+    reloadProjects();
   }
 
   function handleTransferDone(result, targetPlaylist) {
@@ -1280,6 +1321,7 @@ export default function VideoManualPage() {
               onClear={clearSelection}
               onMove={() => openTransfer("move", [...selectedIds].map((id) => ({ _id: id })))}
               onCopy={() => openTransfer("copy", [...selectedIds].map((id) => ({ _id: id })))}
+              onTag={() => openTagging([...selectedIds].map((id) => ({ _id: id })))}
               onDelete={handleBulkDelete}
             />
           ) : null}
@@ -1314,6 +1356,7 @@ export default function VideoManualPage() {
                       onDuplicate={handleDuplicateProject}
                       onCopyTo={(item) => openTransfer("copy", item)}
                       onMoveTo={(item) => openTransfer("move", item)}
+                      onTags={(item) => openTagging([item])}
                       selectMode={selectMode}
                       selected={selectedIds.has(String(project?._id))}
                       onToggleSelect={handleToggleSelect}
@@ -1335,6 +1378,7 @@ export default function VideoManualPage() {
                       onDuplicate={handleDuplicateProject}
                       onCopyTo={(item) => openTransfer("copy", item)}
                       onMoveTo={(item) => openTransfer("move", item)}
+                      onTags={(item) => openTagging([item])}
                       selectMode={selectMode}
                       selected={selectedIds.has(String(project?._id))}
                       onToggleSelect={handleToggleSelect}
@@ -1403,6 +1447,17 @@ export default function VideoManualPage() {
             setPlaylists((current) => current.map((item) => (String(item._id) === String(updated._id) ? { ...item, ...updated } : item)));
             setNotice(t("Playlist updated."));
           }}
+        />
+      ) : null}
+
+      {tagging ? (
+        <VideoManualTagsModal
+          ids={tagging.ids}
+          label={tagging.label}
+          project={tagging.project}
+          playlistId={selectedPlaylistId}
+          onClose={() => setTagging(null)}
+          onDone={handleTaggingDone}
         />
       ) : null}
 
