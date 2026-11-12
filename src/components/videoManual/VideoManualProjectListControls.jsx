@@ -15,13 +15,14 @@ const iconButtonClassName = "flex h-9 w-9 items-center justify-center rounded-[6
 
 /** Sort + rows + view toggle + multi-select toggle. */
 export function ProjectListToolbar({
-  sort, onSortChange, pageSize, onPageSizeChange, viewMode, onViewModeChange,
+  sort, onSortChange, viewMode, onViewModeChange,
   selectMode, onToggleSelectMode, canSelect, disabled,
 }) {
   const { t } = useLanguage();
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       {canSelect ? (
         <button
           type="button"
@@ -45,13 +46,6 @@ export function ProjectListToolbar({
         </select>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className={labelClassName}>{t("Rows")}</span>
-        <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))} className={selectClassName} disabled={disabled}>
-          {PROJECT_PAGE_SIZE_OPTIONS.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
       </div>
 
       <div className="flex items-center gap-1" role="group" aria-label={t("View")}>
@@ -79,7 +73,7 @@ export function ProjectListToolbar({
 }
 
 /** "N projects, showing a-b" on the left, page buttons on the right (like the Master DB table footer). */
-export function ProjectPagerBar({ total, page, pageSize, totalPages, onPageChange, disabled }) {
+export function ProjectPagerBar({ total, page, pageSize, totalPages, onPageChange, onPageSizeChange, disabled }) {
   const { t } = useLanguage();
   if (!total) return null;
 
@@ -88,9 +82,19 @@ export function ProjectPagerBar({ total, page, pageSize, totalPages, onPageChang
 
   return (
     <div className="mt-5 flex flex-col gap-4 border-t border-[var(--border)] px-1 pt-4 md:flex-row md:items-center md:justify-between">
-      <span className="text-sm text-on-surface-variant">
-        {t("{total} projects, showing {start}-{end}", { total, start, end })}
-      </span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="text-sm text-on-surface-variant">
+          {t("{total} projects, showing {start}-{end}", { total, start, end })}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className={labelClassName}>{t("Rows")}</span>
+          <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))} className={selectClassName} disabled={disabled}>
+            {PROJECT_PAGE_SIZE_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       <PaginationControls
         page={page}
         totalPages={totalPages}

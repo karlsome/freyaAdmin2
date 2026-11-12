@@ -1296,8 +1296,6 @@ export default function VideoManualPage() {
             <ProjectListToolbar
               sort={sort}
               onSortChange={(value) => updateRoute({ sort: value, page: 1 })}
-              pageSize={pageSize}
-              onPageSizeChange={(value) => updateRoute({ size: value, page: 1 })}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               selectMode={selectMode}
@@ -1392,6 +1390,7 @@ export default function VideoManualPage() {
                 page={page}
                 pageSize={pageSize}
                 totalPages={totalPages}
+                onPageSizeChange={(value) => updateRoute({ size: value, page: 1 })}
                 onPageChange={(nextPage) => {
                   if (nextPage < 1 || nextPage > totalPages) return;
                   updateRoute({ page: nextPage });
