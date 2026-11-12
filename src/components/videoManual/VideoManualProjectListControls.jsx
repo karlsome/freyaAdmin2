@@ -111,12 +111,15 @@ export function ProjectBulkBar({
   const { t } = useLanguage();
   const actionClassName = "inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50";
 
+  const primaryActionClassName = "inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--freya-blue)] bg-[var(--freya-blue)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50";
+  const dangerActionClassName = "inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-red-600 bg-red-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50";
+
   return (
     <div className="sticky top-16 z-30 mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--freya-blue)]/30 bg-[var(--surface)] px-3 py-2 shadow-sm">
       <span className="text-sm font-bold text-on-surface">{t("{count} selected", { count: selectedCount })}</span>
 
-      <button type="button" onClick={onSelectPage} disabled={busy || !pageCount} className="text-xs font-semibold text-primary hover:underline disabled:opacity-50">
-        {allOnPageSelected ? t("Unselect this page") : t("Select this page ({count})", { count: pageCount })}
+      <button type="button" onClick={onSelectPage} disabled={busy || !pageCount} className="text-xs font-semibold text-primary hover:underline disabled:opacity-50" title={t("Select this page ({count})", { count: pageCount })}>
+        {allOnPageSelected ? t("Unselect All") : t("Select All")}
       </button>
       {total > pageCount && !allMatchingSelected ? (
         <button type="button" onClick={onSelectAllMatching} disabled={busy} className="text-xs font-semibold text-primary hover:underline disabled:opacity-50">
@@ -124,14 +127,15 @@ export function ProjectBulkBar({
         </button>
       ) : null}
       {selectedCount ? (
-        <button type="button" onClick={onClear} disabled={busy} className="text-xs font-semibold text-on-surface-variant hover:underline disabled:opacity-50">
+        <button type="button" onClick={onClear} disabled={busy} className={actionClassName}>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           {t("Clear selection")}
         </button>
       ) : null}
 
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {canEdit ? (
-          <button type="button" onClick={onTag} disabled={busy || !selectedCount} className={actionClassName}>
+          <button type="button" onClick={onTag} disabled={busy || !selectedCount} className={primaryActionClassName}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sell</span>
             {t("Tags")}
           </button>
@@ -149,7 +153,7 @@ export function ProjectBulkBar({
           </button>
         ) : null}
         {canDelete ? (
-          <button type="button" onClick={onDelete} disabled={busy || !selectedCount} className={`${actionClassName} hover:!bg-red-600 hover:!text-white`}>
+          <button type="button" onClick={onDelete} disabled={busy || !selectedCount} className={dangerActionClassName}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             {t("Delete")}
           </button>
