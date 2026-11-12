@@ -241,6 +241,7 @@ function App() {
               <Route path="/analytics/:tab" element={<AnalyticsPage />} />
               <Route path="/analytics/:tab/:process" element={<AnalyticsPage />} />
               <Route path="/videoManual" element={<VideoManualPage />} />
+              <Route path="/videoManual/playlist/:playlistId" element={<VideoManualPage />} />
               <Route path="/videoManual/project/:projectId" element={<VideoManualProjectEditorPage />} />
               <Route path="/videoManual/project/:projectId/steps" element={<VideoManualStepListPage />} />
               <Route path="/videoManual/project/:projectId/step/:stepId" element={<VideoManualProjectEditorPage />} />

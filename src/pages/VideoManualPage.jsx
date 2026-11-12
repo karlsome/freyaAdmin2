@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import VideoManualCopyProjectModal from "../components/videoManual/VideoManualCopyProjectModal";
 import VideoManualProjectTrashModal from "../components/videoManual/VideoManualProjectTrashModal";
@@ -719,21 +719,29 @@ export default function VideoManualPage() {
   const navigate = useNavigate();
   const [playlists, setPlaylists] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => readStoredValue(PAGE_SIZE_STORAGE_KEY, PROJECT_PAGE_SIZE_OPTIONS[0], (value) => PROJECT_PAGE_SIZE_OPTIONS.includes(value)));
-  const [sort, setSort] = useState(() => readStoredValue(SORT_STORAGE_KEY, "newest", (value) => PROJECT_SORT_OPTIONS.some((option) => option.value === value)));
+  // Routing: /videoManual/playlist/:playlistId?page=&size=&sort=&q= — the URL is the source of truth so refresh, back/forward and shared links work.
+  const location = useLocation();
+  const { playlistId: routePlaylistId } = useParams();
+  const [searchParams] = useSearchParams();
+  const isValidSize = (value) => PROJECT_PAGE_SIZE_OPTIONS.includes(value);
+  const isValidSort = (value) => PROJECT_SORT_OPTIONS.some((option) => option.value === value);
+  const urlPage = Number.parseInt(searchParams.get("page") || "", 10);
+  const urlSize = Number.parseInt(searchParams.get("size") || "", 10);
+  const page = Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1;
+  const pageSize = isValidSize(urlSize) ? urlSize : readStoredValue(PAGE_SIZE_STORAGE_KEY, PROJECT_PAGE_SIZE_OPTIONS[0], isValidSize);
+  const sort = isValidSort(searchParams.get("sort")) ? searchParams.get("sort") : readStoredValue(SORT_STORAGE_KEY, "newest", isValidSort);
+  const searchQuery = searchParams.get("q") || "";
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState(() => readStoredValue(VIEW_MODE_STORAGE_KEY, "thumbnail", (value) => value === "thumbnail" || value === "list"));
   const [zoom, setZoom] = useState(() => readStoredValue(ZOOM_STORAGE_KEY, PROJECT_ZOOM_DEFAULT, (value) => Number.isFinite(value) && value >= PROJECT_ZOOM_MIN && value <= PROJECT_ZOOM_MAX));
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const freshRef = useRef(false);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState(readRememberedPlaylistId);
+  const selectedPlaylistId = routePlaylistId || readRememberedPlaylistId();
   const [playlistQuery, setPlaylistQuery] = useState("");
-  const [projectQuery, setProjectQuery] = useState("");
+  const [projectQuery, setProjectQuery] = useState(searchQuery);
   const [playlistsLoading, setPlaylistsLoading] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [playlistsError, setPlaylistsError] = useState("");
@@ -751,6 +759,24 @@ export default function VideoManualPage() {
   const canEditProjects = canEditVideoManualProjects(authRole);
   const canDeleteProjects = authRole === "admin"; // backend: only admin may delete projects
 
+  // Write playlist/page/sort/size/search into the URL (the explorer state lives there).
+  function updateRoute(changes, { replace = false } = {}) {
+    const next = { playlistId: selectedPlaylistId, page, sort, size: pageSize, q: searchQuery, ...changes };
+    const params = new URLSearchParams();
+    if (next.page > 1) params.set("page", String(next.page));
+    if (next.q) params.set("q", next.q);
+    params.set("sort", next.sort);
+    params.set("size", String(next.size));
+    if (changes.sort) storeValue(SORT_STORAGE_KEY, changes.sort);
+    if (changes.size) storeValue(PAGE_SIZE_STORAGE_KEY, changes.size);
+    navigate({
+      pathname: next.playlistId ? `/videoManual/playlist/${next.playlistId}` : "/videoManual",
+      search: `?${params.toString()}`,
+    }, { replace });
+  }
+  const routeRef = useRef(updateRoute);
+  routeRef.current = updateRoute;
+
   // Re-fetch the current page from the server (skipping the 1-minute server cache) and refresh the playlist counts.
   function reloadProjects() {
     freshRef.current = true;
@@ -762,8 +788,7 @@ export default function VideoManualPage() {
   }
 
   function handleSelectPlaylist(playlistId) {
-    setSelectedPlaylistId(playlistId);
-    setPage(1);
+    updateRoute({ playlistId, page: 1 });
     setSelectMode(false);
     clearSelection();
   }
@@ -874,7 +899,7 @@ export default function VideoManualPage() {
       const result = await deleteVideoManualPlaylist(selectedPlaylist._id);
       const remaining = playlists.filter((item) => String(item._id) !== String(selectedPlaylist._id));
       setPlaylists(remaining);
-      if (String(selectedPlaylistId) === String(selectedPlaylist._id)) setSelectedPlaylistId(String(remaining[0]?._id || ""));
+      if (String(selectedPlaylistId) === String(selectedPlaylist._id)) updateRoute({ playlistId: String(remaining[0]?._id || ""), page: 1 }, { replace: true });
       setNotice(t("Deleted playlist \"{name}\" ({files} file(s) removed, {kept} kept).", {
         name: selectedPlaylist.name || "",
         files: result?.filesDeleted ?? 0,
@@ -927,6 +952,8 @@ export default function VideoManualPage() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  const currentPlaylistRef = useRef(selectedPlaylistId);
+  currentPlaylistRef.current = selectedPlaylistId;
   useEffect(() => {
     rememberPlaylistId(selectedPlaylistId);
   }, [selectedPlaylistId]);
@@ -946,15 +973,14 @@ export default function VideoManualPage() {
         if (cancelled) return;
 
         setPlaylists(nextPlaylists);
-        setSelectedPlaylistId((currentId) => {
-          const hasCurrent = nextPlaylists.some((playlist) => String(playlist?._id) === String(currentId));
-          if (hasCurrent) return currentId;
-          return String(nextPlaylists[0]?._id || "");
-        });
+        // Bare /videoManual or an unknown/deleted playlist id -> go to the remembered (or first) playlist.
+        const currentId = currentPlaylistRef.current;
+        if (!nextPlaylists.some((playlist) => String(playlist?._id) === String(currentId))) {
+          routeRef.current({ playlistId: String(nextPlaylists[0]?._id || ""), page: 1 }, { replace: true });
+        }
       } catch (error) {
         if (cancelled) return;
         setPlaylists([]);
-        setSelectedPlaylistId("");
         setPlaylistsError(error.message || "Failed to load playlists.");
       } finally {
         if (!cancelled) setPlaylistsLoading(false);
@@ -968,20 +994,17 @@ export default function VideoManualPage() {
   }, [refreshNonce]);
 
   // Debounce the search box; the server does the searching, so a new query goes back to page 1.
-  const lastSearchRef = useRef("");
+  const lastSearchRef = useRef(searchQuery);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const next = projectQuery.trim();
       if (next === lastSearchRef.current) return;
       lastSearchRef.current = next;
-      setSearchQuery(next);
-      setPage(1);
+      routeRef.current({ q: next, page: 1 }, { replace: true });
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [projectQuery]);
 
-  useEffect(() => { storeValue(PAGE_SIZE_STORAGE_KEY, pageSize); }, [pageSize]);
-  useEffect(() => { storeValue(SORT_STORAGE_KEY, sort); }, [sort]);
   useEffect(() => { storeValue(VIEW_MODE_STORAGE_KEY, viewMode); }, [viewMode]);
   useEffect(() => { storeValue(ZOOM_STORAGE_KEY, zoom); }, [zoom]);
 
@@ -1009,7 +1032,7 @@ export default function VideoManualPage() {
         setProjects(result.projects);
         setTotal(result.total);
         setTotalPages(result.totalPages);
-        if (result.page !== page) setPage(result.page); // the server clamps pages past the end (e.g. after deleting the last page)
+        if (result.page !== page) routeRef.current({ page: result.page }, { replace: true }); // the server clamps pages past the end (e.g. after deleting the last page)
       } catch (error) {
         if (cancelled) return;
         setProjects([]);
@@ -1231,9 +1254,9 @@ export default function VideoManualPage() {
           {selectedPlaylist ? (
             <ProjectListToolbar
               sort={sort}
-              onSortChange={(value) => { setSort(value); setPage(1); }}
+              onSortChange={(value) => updateRoute({ sort: value, page: 1 })}
               pageSize={pageSize}
-              onPageSizeChange={(value) => { setPageSize(value); setPage(1); }}
+              onPageSizeChange={(value) => updateRoute({ size: value, page: 1 })}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               selectMode={selectMode}
@@ -1283,7 +1306,7 @@ export default function VideoManualPage() {
                       project={project}
                       thumbWidth={Math.round(zoom * 0.55)}
                       onPlay={handlePlayProject}
-                      onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`)}
+                      onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`, { state: { from: `${location.pathname}${location.search}` } })}
                       canEdit={canEditProjects}
                       canDelete={canDeleteProjects}
                       onEdit={setEditingProject}
@@ -1304,7 +1327,7 @@ export default function VideoManualPage() {
                       key={project?._id}
                       project={project}
                       onPlay={handlePlayProject}
-                      onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`)}
+                      onOpen={(nextProject) => navigate(`/videoManual/project/${nextProject._id}/steps`, { state: { from: `${location.pathname}${location.search}` } })}
                       canEdit={canEditProjects}
                       canDelete={canDeleteProjects}
                       onEdit={setEditingProject}
@@ -1327,7 +1350,7 @@ export default function VideoManualPage() {
                 totalPages={totalPages}
                 onPageChange={(nextPage) => {
                   if (nextPage < 1 || nextPage > totalPages) return;
-                  setPage(nextPage);
+                  updateRoute({ page: nextPage });
                 }}
                 disabled={projectsLoading}
               />

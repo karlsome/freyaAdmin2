@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import VideoManualStepPlayerModal from "../components/videoManual/VideoManualStepPlayerModal";
@@ -88,6 +88,7 @@ export default function VideoManualStepListPage() {
   const { t } = useLanguage();
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const authUser = useMemo(() => readStoredAuthUser(), []);
   const canEdit = canEditVideoManualProjects(authUser?.role);
   const canDeploy = canDeployVideoManualProjects(authUser?.role);
@@ -332,7 +333,7 @@ export default function VideoManualStepListPage() {
   return (
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <div className="mx-auto max-w-4xl">
-        <button type="button" onClick={() => navigate("/videoManual")} className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        <button type="button" onClick={() => navigate(location.state?.from || (project?.playlistId ? `/videoManual/playlist/${project.playlistId}` : "/videoManual"))} className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]">
           <Icon>arrow_back</Icon>{t("Back to manuals")}
         </button>
 
