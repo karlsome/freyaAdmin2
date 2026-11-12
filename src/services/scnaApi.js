@@ -437,6 +437,20 @@ export async function fetchScnaTrace(id) {
   return parseJsonResponse(response, "Failed to fetch trace");
 }
 
+// Void a Kensa label (nothing was inspected / print test): the label becomes "voided" and the pieces it took go back to the source box.
+// The server refuses when the label is already part of a submitted Kensa record.
+export async function voidKensaBox(kensaId, { reason, username, name }) {
+  const response = await fetch(
+    `${BASE_URL}api/kensa-boxes/${encodeURIComponent(kensaId)}/void`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason || "admin void", leader: { username, name: name || username } }),
+    }
+  );
+  return parseJsonResponse(response, "Failed to void the label");
+}
+
 export async function fetchScnaBoxesByLot(lotNumber) {
   const response = await fetch(
     `${BASE_URL}api/scna-boxes?lotNumber=${encodeURIComponent(lotNumber)}`,

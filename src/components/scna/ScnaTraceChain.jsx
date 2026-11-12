@@ -67,7 +67,70 @@ function WorkOrderLink({ number, onOpen }) {
   );
 }
 
-function NodeCard({ node, isRoot, isJa, onOpenRecord, onOpenWorkOrder }) {
+// "Void label" for a Kensa label that was only a print test: asks for a reason, then voids it (pieces go back to the source box).
+function VoidLabel({ node, isJa, onVoid }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  async function run() {
+    setBusy(true);
+    setErr("");
+    try {
+      await onVoid(node.id, reason.trim() || "print test");
+    } catch (e) {
+      setErr(e.message || (isJa ? "無効化に失敗しました。" : "Void failed."));
+      setBusy(false);
+    }
+  }
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="h-7 rounded-[6px] border border-red-500/60 px-3 text-[11px] font-semibold text-red-500 transition hover:bg-red-500/10"
+      >
+        {isJa ? "ラベルを無効化" : "Void label"}
+      </button>
+    );
+  }
+  return (
+    <div className="w-full space-y-2 rounded-[6px] border border-red-500/50 bg-red-500/5 p-3 text-xs">
+      <p className="font-semibold text-[var(--text-primary)]">
+        {isJa
+          ? `${node.id} を無効にします。使用した個数は元の箱に戻ります。印刷済みのラベルは廃棄してください。`
+          : `Void ${node.id}? The pieces it used go back to the source box. The printed label must be thrown away.`}
+      </p>
+      <input
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder={isJa ? "理由（例: 印刷テスト）" : "Reason (e.g. print test)"}
+        className="h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs"
+      />
+      {err && <p className="font-semibold text-red-500">{err}</p>}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={run}
+          className="h-7 rounded-[6px] bg-red-600 px-3 text-[11px] font-semibold text-white disabled:opacity-50"
+        >
+          {busy ? (isJa ? "処理中…" : "Voiding…") : isJa ? "無効にする" : "Void it"}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => { setOpen(false); setErr(""); }}
+          className="h-7 rounded-[6px] border border-[var(--border)] px-3 text-[11px] font-semibold"
+        >
+          {isJa ? "キャンセル" : "Cancel"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NodeCard({ node, isRoot, isJa, onOpenRecord, onOpenWorkOrder, onVoidLabel }) {
   const meta = KIND_META[node.kind];
   const L = node.label || {};
   const lots = lotsOf(node);
@@ -181,6 +244,12 @@ function NodeCard({ node, isRoot, isJa, onOpenRecord, onOpenWorkOrder }) {
             </div>
           )}
 
+          {node.kind === "kensa" && onVoidLabel && (L.status === "complete" || L.status === "draft") && !L.kensaRecordId && (node.records || []).length === 0 && (
+            <div className="mt-4">
+              <VoidLabel node={node} isJa={isJa} onVoid={onVoidLabel} />
+            </div>
+          )}
+
           <div className="mt-4 space-y-2 border-t border-[var(--border)] pt-3">
             {(node.records || []).length === 0 ? (
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -216,7 +285,7 @@ function NodeCard({ node, isRoot, isJa, onOpenRecord, onOpenWorkOrder }) {
 }
 
 // A row of cards. With several, the 2nd card peeks in by 1/8 of its width so the row visibly scrolls.
-function TierRow({ nodes, rootId, isJa, onOpenRecord, onOpenWorkOrder }) {
+function TierRow({ nodes, rootId, isJa, onOpenRecord, onOpenWorkOrder, onVoidLabel }) {
   const many = nodes.length > 1;
   return (
     <div
@@ -229,7 +298,7 @@ function TierRow({ nodes, rootId, isJa, onOpenRecord, onOpenWorkOrder }) {
           className={`flex ${many ? "snap-start" : "w-full"}`}
           style={many ? { width: "var(--card-w)", flex: "none" } : undefined}
         >
-          <NodeCard node={n} isRoot={n.id === rootId} isJa={isJa} onOpenRecord={onOpenRecord} onOpenWorkOrder={onOpenWorkOrder} />
+          <NodeCard node={n} isRoot={n.id === rootId} isJa={isJa} onOpenRecord={onOpenRecord} onOpenWorkOrder={onOpenWorkOrder} onVoidLabel={onVoidLabel} />
         </div>
       ))}
     </div>
@@ -258,7 +327,7 @@ function RevealButton({ children, onClick }) {
   );
 }
 
-export default function ScnaTraceChain({ trace, isJa, onOpenRecord, onOpenWorkOrder }) {
+export default function ScnaTraceChain({ trace, isJa, onOpenRecord, onOpenWorkOrder, onVoidLabel }) {
   const [showEarlier, setShowEarlier] = useState(false);
   const [showLater, setShowLater] = useState(false);
 
@@ -299,7 +368,7 @@ export default function ScnaTraceChain({ trace, isJa, onOpenRecord, onOpenWorkOr
       {visible.map((row, i) => (
         <div key={`${row.role}:${row.tier}`}>
           {i > 0 && <Arrow />}
-          <TierRow nodes={row.nodes} rootId={trace.rootId} isJa={isJa} onOpenRecord={onOpenRecord} onOpenWorkOrder={onOpenWorkOrder} />
+          <TierRow nodes={row.nodes} rootId={trace.rootId} isJa={isJa} onOpenRecord={onOpenRecord} onOpenWorkOrder={onOpenWorkOrder} onVoidLabel={onVoidLabel} />
         </div>
       ))}
       {earlierCount > 0 && !showEarlier && firstRootIdx >= 0 && (

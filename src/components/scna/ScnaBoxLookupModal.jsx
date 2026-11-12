@@ -5,7 +5,8 @@ import RecordDetailModal from "../RecordDetailModal";
 import ScnaTraceChain from "./ScnaTraceChain";
 import ScnaWorkOrderDetailModal from "./ScnaWorkOrderDetailModal";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot, fetchScnaTrace, fetchWorkOrderByNumber } from "../../services/scnaApi";
+import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot, fetchScnaTrace, fetchWorkOrderByNumber, voidKensaBox } from "../../services/scnaApi";
+import { readStoredAuthUser } from "../../utils/auth";
 
 const fmtNum = (v) => {
   const n = Number(v);
@@ -65,6 +66,13 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
     } catch (err) {
       setWoMsg(err.message || (isJa ? "読み込みに失敗しました。" : "Failed to load the work order."));
     }
+  }
+
+  // Void a Kensa label from the chain, then reload the chain so the card shows "voided". Throws the server's message on refusal.
+  async function voidLabel(kensaId, reason) {
+    const me = readStoredAuthUser();
+    await voidKensaBox(kensaId, { reason, username: me?.username || "admin", name: me?.name || me?.username || "admin" });
+    if (result?.boxId) await searchBoxId(result.boxId);
   }
 
   async function searchLot() {
@@ -315,6 +323,7 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
             isJa={isJa}
             onOpenRecord={(rec, processName) => setTraceRecord({ rec, processName })}
             onOpenWorkOrder={openWorkOrder}
+            onVoidLabel={voidLabel}
           />
         )}
 
