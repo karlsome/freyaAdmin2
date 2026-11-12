@@ -154,7 +154,13 @@ function NodeCard({ node, isRoot, isJa, onOpenRecord, onOpenWorkOrder, onVoidLab
           </span>
         )}
         {status && (
-          <span className="rounded-[4px] bg-[var(--surface-hover)] px-1.5 py-0.5 text-[10px] font-medium">{status}</span>
+          <span
+            className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-medium ${
+              status === "voided" ? "bg-red-600 font-semibold text-white" : "bg-[var(--surface-hover)]"
+            }`}
+          >
+            {status}
+          </span>
         )}
       </div>
 
