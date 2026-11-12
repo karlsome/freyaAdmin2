@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchVideoManualTagOptions } from "../../services/videoManualApi";
@@ -21,64 +21,112 @@ function Chip({ children, onRemove, tone = "blue" }) {
   );
 }
 
-/** Chips + a text box that suggests the known values; typing a value that is not listed is allowed. */
-function TagPicker({ label, icon, options, value, onChange }) {
+/** Multi-select dropdown: pick values from the list (chips show what is selected). Only listed values can be chosen. */
+function TagSelect({ label, icon, options, value, onChange }) {
   const { t } = useLanguage();
-  const [text, setText] = useState("");
-  const [focused, setFocused] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef(null);
 
-  const suggestions = useMemo(() => {
-    const needle = text.trim().toLowerCase();
-    return options
-      .filter((option) => !value.some((tag) => sameTag(tag, option.name)) && (!needle || option.name.toLowerCase().includes(needle) || String(option.hint || "").toLowerCase().includes(needle)))
-      .slice(0, 8);
-  }, [options, text, value]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleDown = (event) => { if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false); };
+    document.addEventListener("mousedown", handleDown);
+    return () => document.removeEventListener("mousedown", handleDown);
+  }, [open]);
 
-  function add(raw) {
-    const next = String(raw || "").trim();
-    if (!next) return;
-    if (!value.some((tag) => sameTag(tag, next))) onChange([...value, options.find((option) => sameTag(option.name, next))?.name || next]);
-    setText("");
-  }
+  // listed options plus any already-selected value that is no longer in the list (so it can still be removed)
+  const allOptions = useMemo(() => {
+    const known = new Set(options.map((option) => option.name.toLowerCase()));
+    return [...options, ...value.filter((tag) => !known.has(tag.toLowerCase())).map((name) => ({ name }))];
+  }, [options, value]);
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return allOptions.filter((option) => !needle || option.name.toLowerCase().includes(needle) || String(option.hint || "").toLowerCase().includes(needle));
+  }, [allOptions, query]);
+
+  const grouped = visible.some((option) => option.hint);
+  const groups = useMemo(() => {
+    if (!grouped) return [{ title: "", items: visible }];
+    const map = new Map();
+    visible.forEach((option) => {
+      const key = option.hint || "—";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(option);
+    });
+    return [...map.entries()].map(([title, items]) => ({ title, items }));
+  }, [grouped, visible]);
+
+  const isSelected = (name) => value.some((tag) => sameTag(tag, name));
+  const toggle = (name) => onChange(isSelected(name) ? value.filter((tag) => !sameTag(tag, name)) : [...value, name]);
 
   return (
-    <div>
+    <div ref={rootRef} className="relative">
       <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
         <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{icon}</span>
         {label}
       </p>
-      <div className="relative">
-        <div className="flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-1.5 focus-within:border-[var(--freya-blue)]">
-          {value.map((tag) => <Chip key={tag} onRemove={() => onChange(value.filter((item) => item !== tag))}>{tag}</Chip>)}
-          <input
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => window.setTimeout(() => setFocused(false), 120)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === ",") { event.preventDefault(); add(text); }
-              if (event.key === "Backspace" && !text && value.length) onChange(value.slice(0, -1));
-            }}
-            placeholder={value.length ? "" : t("Type or pick a value")}
-            className="min-w-[120px] flex-1 bg-transparent px-1 py-1 text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
-          />
+      <div
+        role="button"
+        tabIndex={0}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setOpen((current) => !current); }
+          if (event.key === "Escape" && open) { event.stopPropagation(); setOpen(false); }
+        }}
+        className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[6px] border bg-[var(--surface-subtle)] px-2 py-1.5 outline-none transition-colors ${open ? "border-[var(--freya-blue)] ring-1 ring-[var(--freya-blue)]" : "border-[var(--border)] hover:border-[var(--border-strong)]"}`}
+      >
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          {value.length ? value.map((tag) => (
+            <Chip key={tag} onRemove={(event) => { event.stopPropagation(); onChange(value.filter((item) => item !== tag)); }}>{tag}</Chip>
+          )) : <span className="px-1 text-sm font-semibold text-[var(--text-muted)]">{t("Select...")}</span>}
         </div>
-        {focused && suggestions.length ? (
-          <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-xl">
-            {suggestions.map((option) => (
-              <button
-                key={option.name}
-                type="button"
-                onMouseDown={(event) => { event.preventDefault(); add(option.name); }}
-                className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-              >
-                <span className="truncate">{option.name}</span>
-                {option.hint ? <span className="flex-shrink-0 text-[11px] font-normal text-[var(--text-muted)]">{option.hint}</span> : null}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <span className="material-symbols-outlined flex-shrink-0 text-[var(--text-muted)]" style={{ fontSize: 20 }}>{open ? "expand_less" : "expand_more"}</span>
       </div>
+
+      {open ? (
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-xl">
+          {allOptions.length > 8 ? (
+            <div className="border-b border-[var(--border)] p-2">
+              <input
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("Search")}
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
+              />
+            </div>
+          ) : null}
+          <div role="listbox" aria-multiselectable="true" className="max-h-60 overflow-y-auto py-1">
+            {visible.length ? groups.map((group) => (
+              <div key={group.title || "all"}>
+                {group.title ? <p className="px-3 pb-0.5 pt-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">{group.title}</p> : null}
+                {group.items.map((option) => {
+                  const selected = isSelected(option.name);
+                  return (
+                    <button
+                      key={option.name}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => toggle(option.name)}
+                      className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <span className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${selected ? "border-[var(--freya-blue)] bg-[var(--freya-blue)] text-white" : "border-[var(--border-strong)] text-transparent"}`}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check</span>
+                      </span>
+                      <span className="truncate">{option.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )) : <p className="px-3 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">{t("No matches.")}</p>}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -99,8 +147,8 @@ export default function VideoManualTagFields({ factories, machines, onFactoriesC
 
   return (
     <div className="space-y-4">
-      <TagPicker label={t("Factory tags")} icon="factory" options={factoryOptions} value={factories} onChange={onFactoriesChange} />
-      <TagPicker label={t("Machine tags")} icon="precision_manufacturing" options={machineOptions} value={machines} onChange={onMachinesChange} />
+      <TagSelect label={t("Factory tags")} icon="factory" options={factoryOptions} value={factories} onChange={onFactoriesChange} />
+      <TagSelect label={t("Machine tags")} icon="precision_manufacturing" options={machineOptions} value={machines} onChange={onMachinesChange} />
     </div>
   );
 }
