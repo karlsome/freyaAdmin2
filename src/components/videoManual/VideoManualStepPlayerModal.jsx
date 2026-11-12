@@ -41,26 +41,36 @@ export default function VideoManualStepPlayerModal({ steps, projectId = "", star
   const [playing, setPlaying] = useState(false);
   const [lang, setLang] = useState(() => (projectId ? readPlayerLang() : ""));
   const [translations, setTranslations] = useState({}); // lang -> { steps, incomplete }
-  const [translating, setTranslating] = useState(false);
-  const [translateError, setTranslateError] = useState("");
-
-  // Load (or reuse) the stored translation for the chosen language; the server only calls MyMemory for text it has never translated.
+  const [translateErrors, setTranslateErrors] = useState({}); // lang -> message
+  const requestsRef = useRef({}); // lang -> in-flight request (never cancelled: the server keeps translating and stores the result anyway)
+  const mountedRef = useRef(true);
   useEffect(() => {
-    if (!lang || !projectId || translations[lang]) return undefined;
-    let cancelled = false;
-    setTranslating(true);
-    setTranslateError("");
-    fetchVideoManualProjectTranslation(projectId, lang)
-      .then((result) => { if (!cancelled) setTranslations((current) => ({ ...current, [lang]: result })); })
-      .catch((error) => { if (!cancelled) setTranslateError(error.message || "Translation failed."); })
-      .finally(() => { if (!cancelled) setTranslating(false); });
-    return () => { cancelled = true; };
-  }, [lang, projectId, translations]);
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Load the stored translation for the chosen language (also on open, for the remembered language). The server only
+  // calls MyMemory for text it has never translated; a result that arrives after you switched language is still kept,
+  // so switching back is instant.
+  useEffect(() => {
+    if (!lang || !projectId || translations[lang] || translateErrors[lang] || requestsRef.current[lang]) return;
+    const requestLang = lang;
+    requestsRef.current[requestLang] = fetchVideoManualProjectTranslation(projectId, requestLang)
+      .then((result) => { if (mountedRef.current) setTranslations((current) => ({ ...current, [requestLang]: result })); })
+      .catch((error) => { if (mountedRef.current) setTranslateErrors((current) => ({ ...current, [requestLang]: error.message || "Translation failed." })); })
+      .finally(() => { delete requestsRef.current[requestLang]; });
+  }, [lang, projectId, translations, translateErrors]);
+
+  const translating = Boolean(lang && projectId && !translations[lang] && !translateErrors[lang]);
+  const translateError = lang ? translateErrors[lang] || "" : "";
 
   function handleLangChange(next) {
     setLang(next);
-    setTranslateError("");
     try { window.localStorage.setItem(PLAYER_LANG_STORAGE_KEY, next); } catch { /* preference just won't persist */ }
+  }
+
+  function retryTranslation() {
+    setTranslateErrors((current) => ({ ...current, [lang]: "" }));
   }
 
   const translation = lang ? translations[lang] : null;
@@ -185,6 +195,7 @@ export default function VideoManualStepPlayerModal({ steps, projectId = "", star
           {projectId ? (
             <div className="flex flex-shrink-0 items-center gap-2">
               {translating ? <span className="text-[11px] text-[var(--text-muted)]">{t("Translating…")}</span> : null}
+              {translateError ? <button type="button" onClick={retryTranslation} className="text-[11px] font-semibold text-[var(--freya-blue)] hover:underline">{t("Retry")}</button> : null}
               <label className="flex items-center gap-1 text-[var(--text-muted)]" title={t("Language")}>
                 <Icon className="text-[18px]">translate</Icon>
                 <select
@@ -221,6 +232,12 @@ export default function VideoManualStepPlayerModal({ steps, projectId = "", star
                   className="h-full w-full object-contain"
                 />
               )}
+              {translating ? (
+                <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-[11px] font-medium text-white">
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  {t("Translating subtitles… the first time can take a minute. Showing the original meanwhile.")}
+                </div>
+              ) : null}
               {activeCueText ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-[5%] flex justify-center px-6">
                   <span className="max-w-[90%] whitespace-pre-line rounded bg-black/75 px-3 py-1 text-center text-base font-medium leading-snug text-yellow-300">{activeCueText}</span>

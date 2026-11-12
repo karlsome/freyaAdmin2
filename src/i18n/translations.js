@@ -1289,6 +1289,8 @@ const translations = {
     "Copy to playlist": "プレイリストにコピー",
     "Original": "原文",
     "Language": "言語",
+    "Retry": "再試行",
+    "Translating subtitles… the first time can take a minute. Showing the original meanwhile.": "字幕を翻訳中です…初回は1分ほどかかる場合があります。それまで原文を表示します。",
     "Translating…": "翻訳中…",
     "Translation unavailable right now. Showing the original.": "現在翻訳できません。原文を表示しています。",
     "Some text could not be translated right now and is shown in the original.": "一部のテキストは現在翻訳できないため、原文で表示しています。",
