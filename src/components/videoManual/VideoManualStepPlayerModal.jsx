@@ -1,7 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { fetchVideoManualProjectTranslation } from "../../services/videoManualApi";
 import { getStepClips } from "./videoManualPlaybackUtils";
+
+// Video-manual only (separate from the app's own language setting). Labels are shown in their own language.
+const PLAYER_LANGUAGES = [
+  { value: "", label: "Original" },
+  { value: "ja", label: "日本語" },
+  { value: "en", label: "English" },
+  { value: "pt", label: "Português" },
+];
+const PLAYER_LANG_STORAGE_KEY = "videoManual.playerLang";
+
+function readPlayerLang() {
+  try {
+    const value = window.localStorage.getItem(PLAYER_LANG_STORAGE_KEY) || "";
+    return PLAYER_LANGUAGES.some((item) => item.value === value) ? value : "";
+  } catch {
+    return "";
+  }
+}
 
 function Icon({ children, className = "text-[22px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
@@ -14,12 +33,38 @@ function formatTime(seconds) {
 
 // Plays steps back to back as ONE continuous video (same order and timing as the export), with timed subtitles as CC.
 // Overlays (text/shapes) are not drawn here; the step editor shows the full composition.
-export default function VideoManualStepPlayerModal({ steps, startStepId = "", onClose }) {
+export default function VideoManualStepPlayerModal({ steps, projectId = "", startStepId = "", onClose }) {
   const { t } = useLanguage();
   const videoRef = useRef(null);
   const clipIndexRef = useRef(-1);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [lang, setLang] = useState(() => (projectId ? readPlayerLang() : ""));
+  const [translations, setTranslations] = useState({}); // lang -> { steps, incomplete }
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState("");
+
+  // Load (or reuse) the stored translation for the chosen language; the server only calls MyMemory for text it has never translated.
+  useEffect(() => {
+    if (!lang || !projectId || translations[lang]) return undefined;
+    let cancelled = false;
+    setTranslating(true);
+    setTranslateError("");
+    fetchVideoManualProjectTranslation(projectId, lang)
+      .then((result) => { if (!cancelled) setTranslations((current) => ({ ...current, [lang]: result })); })
+      .catch((error) => { if (!cancelled) setTranslateError(error.message || "Translation failed."); })
+      .finally(() => { if (!cancelled) setTranslating(false); });
+    return () => { cancelled = true; };
+  }, [lang, projectId, translations]);
+
+  function handleLangChange(next) {
+    setLang(next);
+    setTranslateError("");
+    try { window.localStorage.setItem(PLAYER_LANG_STORAGE_KEY, next); } catch { /* preference just won't persist */ }
+  }
+
+  const translation = lang ? translations[lang] : null;
+  const stepText = (stepId) => translation?.steps?.[stepId] || null;
 
   // Global timeline: every step shifted by the length of the steps before it (mirrors the server's composer).
   const model = useMemo(() => {
@@ -32,7 +77,7 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
       if (!stepClips.length) continue;
       const length = stepClips[stepClips.length - 1].end;
       stepClips.forEach((clip) => clips.push({ ...clip, start: clip.start + offset, end: clip.end + offset }));
-      (step.subtitles || []).forEach((cue) => cues.push({ ...cue, start: cue.start + offset, end: cue.end + offset }));
+      (step.subtitles || []).forEach((cue, index) => cues.push({ ...cue, stepId: step.id, key: String(cue.id ?? index), start: cue.start + offset, end: cue.end + offset }));
       ranges.push({ id: step.id, title: step.title, start: offset, end: offset + length });
       offset += length;
     }
@@ -44,6 +89,8 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
   const currentRange = time >= duration && ranges.length ? ranges[ranges.length - 1] : ranges[currentRangeIndex];
   const activeStepRef = useRef(null);
   const activeCue = cues.filter((cue) => time >= cue.start && time < cue.end).pop();
+  const activeCueText = (activeCue && stepText(activeCue.stepId)?.subtitles?.[activeCue.key]) || activeCue?.text || "";
+  const rangeTitle = (range) => stepText(range?.id)?.title || range?.title || "";
 
   const activeRangeId = currentRange?.id || "";
   useEffect(() => {
@@ -129,10 +176,30 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-              {ranges.length > 1 && currentRange ? `${t("Step")} ${ranges.indexOf(currentRange) + 1}/${ranges.length} · ` : ""}{currentRange?.title || ""}
+              {ranges.length > 1 && currentRange ? `${t("Step")} ${ranges.indexOf(currentRange) + 1}/${ranges.length} · ` : ""}{rangeTitle(currentRange)}
             </p>
             <p className="text-[11px] text-[var(--text-muted)]">{t("Preview only: overlays are shown in the step editor.")}</p>
+            {translateError ? <p className="text-[11px] text-red-500">{t("Translation unavailable right now. Showing the original.")}</p> : null}
+            {!translateError && translation?.incomplete ? <p className="text-[11px] text-amber-600">{t("Some text could not be translated right now and is shown in the original.")}</p> : null}
           </div>
+          {projectId ? (
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {translating ? <span className="text-[11px] text-[var(--text-muted)]">{t("Translating…")}</span> : null}
+              <label className="flex items-center gap-1 text-[var(--text-muted)]" title={t("Language")}>
+                <Icon className="text-[18px]">translate</Icon>
+                <select
+                  value={lang}
+                  onChange={(event) => handleLangChange(event.target.value)}
+                  aria-label={t("Language")}
+                  className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
+                >
+                  {PLAYER_LANGUAGES.map((item) => (
+                    <option key={item.value} value={item.value}>{item.value ? item.label : t(item.label)}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
           <button type="button" onClick={onClose} className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)]" title={t("Close")}>
             <Icon className="text-[18px]">close</Icon>
           </button>
@@ -154,9 +221,9 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
                   className="h-full w-full object-contain"
                 />
               )}
-              {activeCue?.text ? (
+              {activeCueText ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-[5%] flex justify-center px-6">
-                  <span className="max-w-[90%] whitespace-pre-line rounded bg-black/75 px-3 py-1 text-center text-base font-medium leading-snug text-yellow-300">{activeCue.text}</span>
+                  <span className="max-w-[90%] whitespace-pre-line rounded bg-black/75 px-3 py-1 text-center text-base font-medium leading-snug text-yellow-300">{activeCueText}</span>
                 </div>
               ) : null}
             </div>
@@ -179,7 +246,7 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
                 />
                 {/* step boundaries */}
                 {ranges.slice(1).map((range) => (
-                  <span key={range.id} title={range.title} className="pointer-events-none absolute top-1/2 h-3 w-px -translate-y-1/2 bg-[var(--text-muted)]/60" style={{ left: `${(range.start / (duration || 1)) * 100}%` }} />
+                  <span key={range.id} title={rangeTitle(range)} className="pointer-events-none absolute top-1/2 h-3 w-px -translate-y-1/2 bg-[var(--text-muted)]/60" style={{ left: `${(range.start / (duration || 1)) * 100}%` }} />
                 ))}
               </div>
             </div>
@@ -204,7 +271,7 @@ export default function VideoManualStepPlayerModal({ steps, startStepId = "", on
                           {isDone ? <Icon className="text-[14px]">check</Icon> : index + 1}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className={`block text-[13px] leading-snug ${isActive ? "font-semibold text-[var(--text-primary)]" : "font-medium text-[var(--text-primary)]"}`}>{range.title}</span>
+                          <span className={`block text-[13px] leading-snug ${isActive ? "font-semibold text-[var(--text-primary)]" : "font-medium text-[var(--text-primary)]"}`}>{rangeTitle(range)}</span>
                           <span className="block text-[11px] tabular-nums text-[var(--text-muted)]">{formatTime(range.start)} · {formatTime(range.end - range.start)}</span>
                         </span>
                         <span className="absolute inset-x-0 bottom-0 h-[3px] bg-transparent">

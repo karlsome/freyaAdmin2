@@ -929,7 +929,7 @@ export default function VideoManualPage() {
       const full = await fetchVideoManualProject(project._id);
       const steps = getPlayableSteps(full);
       if (!steps.length) { setActionError(t("Nothing to play yet.")); return; }
-      setPlayback({ steps });
+      setPlayback({ steps, projectId: String(project._id) });
     } catch (error) {
       setActionError(error.message || t("Failed to load project."));
     }
@@ -1418,7 +1418,7 @@ export default function VideoManualPage() {
         />
       ) : null}
 
-      {playback ? <VideoManualStepPlayerModal steps={playback.steps} onClose={() => setPlayback(null)} /> : null}
+      {playback ? <VideoManualStepPlayerModal steps={playback.steps} projectId={playback.projectId} onClose={() => setPlayback(null)} /> : null}
 
       {creatingProject && selectedPlaylistId ? (
         <EditProjectModal

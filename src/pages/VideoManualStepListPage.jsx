@@ -446,7 +446,7 @@ export default function VideoManualStepListPage() {
       </div>
 
       {playStepId ? (
-        <VideoManualStepPlayerModal steps={steps} startStepId={playStepId === "__all__" ? "" : playStepId} onClose={() => setPlayStepId("")} />
+        <VideoManualStepPlayerModal steps={steps} projectId={projectId} startStepId={playStepId === "__all__" ? "" : playStepId} onClose={() => setPlayStepId("")} />
       ) : null}
 
       <VideoManualExportStatusModal

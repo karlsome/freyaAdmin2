@@ -172,6 +172,13 @@ export async function fetchVideoManualProject(projectId) {
   return request(`api/video-manuals-studio/projects/${projectId}`);
 }
 
+// Translated subtitles / step titles / step descriptions of a project. The server stores every translation in
+// MongoDB, so MyMemory is only called for text that has never been translated before.
+export async function fetchVideoManualProjectTranslation(projectId, lang) {
+  if (!projectId) throw new Error("projectId is required");
+  return request(`api/video-manuals-studio/projects/${projectId}/translations?lang=${encodeURIComponent(lang)}`);
+}
+
 export async function patchVideoManualProject(projectId, updates) {
   if (!projectId) {
     throw new Error("projectId is required");
