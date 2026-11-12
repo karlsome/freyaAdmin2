@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchVideoManualTagOptions } from "../../services/videoManualApi";
@@ -27,10 +28,36 @@ function TagSelect({ label, icon, options, value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef(null);
+  const fieldRef = useRef(null);
+  const panelRef = useRef(null);
+  const [position, setPosition] = useState(null);
+
+  // The list is rendered in a portal on <body> (not inside the dialog), so the dialog never clips it. It opens below the
+  // field, or above it when there is more room there, and follows the field while the dialog scrolls.
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      const rect = fieldRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const gap = 6;
+      const below = window.innerHeight - rect.bottom - gap - 12;
+      const above = rect.top - gap - 12;
+      const openUp = below < 220 && above > below;
+      const maxHeight = Math.max(160, Math.min(openUp ? above : below, 420));
+      setPosition({ left: rect.left, width: rect.width, maxHeight, ...(openUp ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }) });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [open, value.length]);
 
   useEffect(() => {
     if (!open) return undefined;
-    const handleDown = (event) => { if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false); };
+    const handleDown = (event) => {
+      if (rootRef.current?.contains(event.target) || panelRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", handleDown);
     return () => document.removeEventListener("mousedown", handleDown);
   }, [open]);
@@ -68,6 +95,7 @@ function TagSelect({ label, icon, options, value, onChange }) {
         {label}
       </p>
       <div
+        ref={fieldRef}
         role="button"
         tabIndex={0}
         aria-haspopup="listbox"
@@ -87,8 +115,12 @@ function TagSelect({ label, icon, options, value, onChange }) {
         <span className="material-symbols-outlined flex-shrink-0 text-[var(--text-muted)]" style={{ fontSize: 20 }}>{open ? "expand_less" : "expand_more"}</span>
       </div>
 
-      {open ? (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-xl">
+      {open && position ? createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[500] flex flex-col overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
+          style={{ left: position.left, width: position.width, top: position.top, bottom: position.bottom, maxHeight: position.maxHeight }}
+        >
           {allOptions.length > 8 ? (
             <div className="border-b border-[var(--border)] p-2">
               <input
@@ -100,7 +132,7 @@ function TagSelect({ label, icon, options, value, onChange }) {
               />
             </div>
           ) : null}
-          <div role="listbox" aria-multiselectable="true" className="max-h-60 overflow-y-auto py-1">
+          <div role="listbox" aria-multiselectable="true" className="min-h-0 flex-1 overflow-y-auto py-1">
             {visible.length ? groups.map((group) => (
               <div key={group.title || "all"}>
                 {group.title ? <p className="px-3 pb-0.5 pt-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">{group.title}</p> : null}
@@ -125,7 +157,8 @@ function TagSelect({ label, icon, options, value, onChange }) {
               </div>
             )) : <p className="px-3 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">{t("No matches.")}</p>}
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );
