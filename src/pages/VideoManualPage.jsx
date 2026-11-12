@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import VideoManualCopyProjectModal from "../components/videoManual/VideoManualCopyProjectModal";
+import VideoManualTagFields from "../components/videoManual/VideoManualTagFields";
 import VideoManualTagsModal from "../components/videoManual/VideoManualTagsModal";
 import VideoManualProjectTrashModal from "../components/videoManual/VideoManualProjectTrashModal";
 import {
@@ -36,6 +37,7 @@ import {
   patchVideoManualPlaylist,
   previewVideoManualPlaylistDelete,
   patchVideoManualProject,
+  setVideoManualProjectTags,
 } from "../services/videoManualApi";
 
 const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
@@ -547,6 +549,8 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
   const isCreate = !project;
   const [title, setTitle] = useState(project?.title || "");
   const [description, setDescription] = useState(project?.description || "");
+  const [factoryTags, setFactoryTags] = useState(project?.tags?.factories || []);
+  const [machineTags, setMachineTags] = useState(project?.tags?.machines || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -563,12 +567,18 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
     setSaving(true);
     setError("");
     try {
+      const sameList = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+      const tagsChanged = !sameList(factoryTags, project?.tags?.factories || []) || !sameList(machineTags, project?.tags?.machines || []);
+      const tags = { factories: factoryTags, machines: machineTags };
       if (isCreate) {
         const created = await createVideoManualProject(playlistId, { title: nextTitle, description: description.trim() });
-        onSaved({ ...created, _id: created?._id || created?.insertedId });
+        const createdId = created?._id || created?.insertedId;
+        if (createdId && (factoryTags.length || machineTags.length)) await setVideoManualProjectTags(createdId, tags);
+        onSaved({ ...created, _id: createdId });
       } else {
         await patchVideoManualProject(project._id, { title: nextTitle, description: description.trim() });
-        onSaved({ ...project, title: nextTitle, description: description.trim() });
+        if (tagsChanged) await setVideoManualProjectTags(project._id, tags);
+        onSaved({ ...project, title: nextTitle, description: description.trim(), tags });
       }
     } catch (saveError) {
       setError(saveError.message || t("Failed to save project."));
@@ -623,6 +633,17 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
               onChange={(event) => setDescription(event.target.value)}
               className={`${inputClass} resize-y font-normal leading-relaxed`}
             />
+          </div>
+
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+            <div className="mb-3 flex items-center gap-1.5 text-[var(--text-muted)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>sell</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">{t("Tags")}</span>
+            </div>
+            <VideoManualTagFields factories={factoryTags} machines={machineTags} onFactoriesChange={setFactoryTags} onMachinesChange={setMachineTags} />
+            <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+              {t("A DCP tablet opened with ?filter=<factory>&machine=<machine> lists the deployed projects tagged for its factory or machine, in addition to the projects of the scanned model.")}
+            </p>
           </div>
 
           {error ? (
