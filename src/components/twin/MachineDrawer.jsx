@@ -68,8 +68,29 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
   const baseActiveRun = together
     ? [machine.activeRun, partner.activeRun].filter(Boolean).sort((a, b) => (Number(b.pieces) || 0) - (Number(a.pieces) || 0))[0]
     : machine.activeRun;
-  const timeline = machine.timeline || [];
-  const summary = machine.timelineSummary;
+  const rawTimeline = machine.timeline || [];
+  const rawSummary = machine.timelineSummary;
+  // The server fills the rest of the shift with idle. Time that has not happened yet is "Upcoming", not idle.
+  const nowParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const nowMin = Number(nowParts.find((p) => p.type === "hour")?.value) * 60 + Number(nowParts.find((p) => p.type === "minute")?.value);
+  const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  let futureIdleMin = 0;
+  const timeline = rawTimeline.flatMap((seg) => {
+    const fillable = seg.type === "idle" || seg.type === "setup" || seg.type === "off";
+    if (!fillable || !Number.isFinite(seg.startMin) || !Number.isFinite(seg.endMin) || seg.endMin <= nowMin) return [seg];
+    const futureStart = Math.max(seg.startMin, nowMin);
+    if (seg.type !== "off") futureIdleMin += seg.endMin - futureStart;
+    const future = { ...seg, type: "upcoming", startMin: futureStart, start: hhmm(futureStart), durationMin: seg.endMin - futureStart };
+    if (seg.startMin >= nowMin) return [future];
+    return [{ ...seg, endMin: nowMin, end: hhmm(nowMin), durationMin: nowMin - seg.startMin }, future];
+  });
+  const summary = rawSummary && futureIdleMin > 0
+    ? (() => {
+        const idleMin = Math.max(0, (rawSummary.idleMin || 0) - futureIdleMin);
+        const operating = (rawSummary.runningMin || 0) + idleMin + (rawSummary.setupMin || 0) + (rawSummary.stopCallMin || 0) + (rawSummary.maintenanceMin || 0);
+        return { ...rawSummary, idleMin, uptimePercent: operating > 0 ? Math.round(((rawSummary.runningMin || 0) / operating) * 100) : 0 };
+      })()
+    : rawSummary;
   const totalShiftMin = summary?.totalShiftMin || 660;
 
   // ── Today's goal progress (same rules as Factory Status → Production Status) ──
@@ -205,6 +226,7 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
                 <div
                   key={`${seg.type}-${idx}`}
                   className="twin-timeline-seg"
+                  data-upcoming={seg.type === "upcoming" ? "true" : undefined}
                   style={{
                     width: `${widthPct}%`,
                     backgroundColor: segTheme.color,

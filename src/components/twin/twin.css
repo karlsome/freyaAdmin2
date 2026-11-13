@@ -2333,3 +2333,9 @@ html:not(.dark) .twin-edit-toast {
 
 /* Whole drawer scrolls; sections keep their natural height instead of being squeezed */
 .twin-drawer > * { flex-shrink: 0; }
+
+/* Shift time that has not happened yet */
+.twin-timeline-seg[data-upcoming="true"] {
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.55) 0 4px, transparent 4px 8px);
+  opacity: 0.75;
+}

@@ -23,6 +23,7 @@ export const TIMELINE_THEME = {
   stopCall:    { color: "#ef4444", ja: "停止呼出", en: "Stop call",   icon: "campaign" },
   maintenance: { color: "#a855f7", ja: "メンテ",   en: "Maintenance", icon: "build" },
   off:         { color: "#64748b", ja: "未稼働",   en: "Off",         icon: "power_settings_new" },
+  upcoming:    { color: "#cbd5e1", ja: "未到来",   en: "Upcoming",    icon: "schedule" },
 };
 
 export function statusLabel(status, isJa) {
