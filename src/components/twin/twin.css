@@ -2339,3 +2339,11 @@ html:not(.dark) .twin-edit-toast {
   background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.55) 0 4px, transparent 4px 8px);
   opacity: 0.75;
 }
+
+.twin-run-card--clickable { cursor: pointer; }
+.twin-run-card--clickable:hover,
+.twin-run-card--clickable:focus-visible {
+  border-color: var(--freya-blue, #2563eb);
+  outline: none;
+}
+.twin-runs-notice { font-size: 11px; color: var(--status-danger, #ef4444); }

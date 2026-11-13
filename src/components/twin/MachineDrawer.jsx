@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { fetchPlannerPlans } from "../../services/plannerApi";
 import { fetchLiveProductionMachines } from "../../services/digitalTwinApi";
+import { fetchRecordByKey } from "../../services/api";
+import RecordDetailModal from "../RecordDetailModal";
 import { STATUS_THEME, TIMELINE_THEME, effectiveStatus, formatAgo, formatNumber, statusLabel, timelineLabel } from "./twinTheme";
 
 function InfoRow({ icon, label, value }) {
@@ -26,6 +28,15 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
   const [hoveredSeg, setHoveredSeg] = useState(null);
   const [planned, setPlanned] = useState([]); // today's production plan products (same source as Factory Status)
   const [live, setLive] = useState([]); // live (unsubmitted) pieces per machine
+  const [recordModal, setRecordModal] = useState(null); // submitted pressDB record of a clicked run
+  const [notice, setNotice] = useState("");
+
+  async function openSubmittedRun(run) {
+    setNotice("");
+    const record = await fetchRecordByKey("Press", { 工場: factory, Date: productionDate, Time_start: run.start, 品番: run.hinban });
+    if (record) setRecordModal(record);
+    else setNotice(isJa ? `${run.sebanggo} の提出記録が見つかりません` : `Could not find the submitted record for ${run.sebanggo}`);
+  }
 
   const machineId = machine?.id;
   const partnerId = machine?.pair?.together && partner ? partner.id : null;
@@ -124,6 +135,7 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
   const inProgressPct = goal > 0 ? Math.min(100 - submittedPct, (inProgressGood / goal) * 100) : 0;
 
   return (
+    <>
     <aside className="twin-drawer" style={{ "--status": theme.color }} aria-label={title}>
       {/* Header */}
       <div className="twin-drawer__header">
@@ -285,6 +297,7 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
           </span>
         </div>
 
+        {notice ? <div className="twin-runs-notice">{notice}</div> : null}
         <div className="twin-runs-list">
           {/* Ongoing In-Progress Run if any */}
           {activeRun && (
@@ -328,7 +341,15 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
           {/* Completed Runs */}
           {/* Newest first (just below In Progress); oldest (#1) at the very bottom */}
           {completedRuns.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => (
-            <div key={`${r.sebanggo}-${r.start}-${idx}`} className="twin-run-card">
+            <div
+              key={`${r.sebanggo}-${r.start}-${idx}`}
+              className="twin-run-card twin-run-card--clickable"
+              role="button"
+              tabIndex={0}
+              title={isJa ? "提出記録を表示" : "View submitted record"}
+              onClick={() => openSubmittedRun(r)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSubmittedRun(r); } }}
+            >
               <div className="twin-run-card__header">
                 <div className="twin-run-card__badge-row">
                   <span className="twin-run-card__sebanggo">{r.sebanggo || "—"}</span>
@@ -396,6 +417,8 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
         </button>
       </div>
     </aside>
+    {recordModal ? <RecordDetailModal record={recordModal} processName="Press" onClose={() => setRecordModal(null)} /> : null}
+    </>
   );
 }
 
