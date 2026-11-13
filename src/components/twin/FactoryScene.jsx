@@ -116,6 +116,7 @@ function CameraRig({
       maxPolarAngle={Math.PI / 2.35}
       smoothTime={0.45}
       dollySpeed={0.6}
+      dollyToCursor
       // Onshape-style mouse: right-drag rotate, middle-drag pan, wheel zoom, left = select only
       mouseButtons={{
         left: CameraControlsImpl.ACTION.NONE,
