@@ -1,7 +1,7 @@
 import { memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Edges, Grid } from "@react-three/drei";
+import { CameraControls, CameraControlsImpl, Edges, Grid } from "@react-three/drei";
 import { Html } from "./HtmlOverlay";
 import NcCutter from "./NcCutter";
 import ManasMachine from "./ManasMachine";
@@ -116,6 +116,13 @@ function CameraRig({
       maxPolarAngle={Math.PI / 2.35}
       smoothTime={0.45}
       dollySpeed={0.6}
+      // Onshape-style mouse: right-drag rotate, middle-drag pan, wheel zoom, left = select only
+      mouseButtons={{
+        left: CameraControlsImpl.ACTION.NONE,
+        middle: CameraControlsImpl.ACTION.TRUCK,
+        right: CameraControlsImpl.ACTION.ROTATE,
+        wheel: CameraControlsImpl.ACTION.DOLLY,
+      }}
     />
   );
 }
