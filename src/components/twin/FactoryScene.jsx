@@ -62,7 +62,7 @@ function CameraRig({
   controlsEnabled = true,
 }) {
   const controlsRef = useRef();
-  const { size } = useThree();
+  const { size, gl } = useThree();
 
   const viewDir = useMemo(() => normalizeVec3(cameraView?.dir, VIEW_DIR), [cameraView?.dir]);
   const focusDir = useMemo(() => normalizeVec3(cameraView?.focusDir, FOCUS_DIR), [cameraView?.focusDir]);
@@ -104,6 +104,31 @@ function CameraRig({
       c.setLookAt(...overview.pos, ...overview.target, animate);
     }
   }, [selectedPos, drawerOpen, overview, focusDir, cameraView, viewKey]);
+
+  // Double middle-click = reset to the default overview
+  const overviewRef = useRef(overview);
+  overviewRef.current = overview;
+  useEffect(() => {
+    const el = gl.domElement;
+    let lastTime = 0;
+    const onDown = (e) => {
+      if (e.button !== 1) return;
+      const now = performance.now();
+      if (now - lastTime < 400) {
+        lastTime = 0;
+        const c = controlsRef.current;
+        if (c) {
+          const o = overviewRef.current;
+          c.setFocalOffset(0, 0, 0, true);
+          c.setLookAt(...o.pos, ...o.target, true);
+        }
+      } else {
+        lastTime = now;
+      }
+    };
+    el.addEventListener("pointerdown", onDown);
+    return () => el.removeEventListener("pointerdown", onDown);
+  }, [gl]);
 
   return (
     <CameraControls
