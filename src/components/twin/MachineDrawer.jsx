@@ -85,15 +85,18 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
     : (baseActiveRun ? Number(baseActiveRun.pieces) || 0 : 0);
   const liveNg = liveMs.length ? Math.max(0, ...liveMs.map((m) => Number(m.ng) || 0)) : 0;
   const inProgressGood = Math.max(0, inProgressGross - liveNg);
-  // The In Progress card uses the same live numbers as Factory Status, so a paired machine never shows its own empty counter
-  const liveCycles = liveMs.reduce((sum, m) => sum + (Number(m.cycles) || 0), 0);
-  const activeRun = liveMs.length && (baseActiveRun || inProgressGross > 0)
+  // The In Progress card is per machine (the one clicked); Today's Goal above stays the summed pair total
+  const ownLive = live.find((m) => String(m.machine).toUpperCase() === String(machine.id).toUpperCase());
+  const ownRun = machine.activeRun || (together ? partner.activeRun : null);
+  const ownPieces = ownLive ? Math.max(0, (Number(ownLive.pieces) || 0) - (Number(ownLive.ng) || 0)) : (machine.activeRun ? Number(machine.activeRun.pieces) || 0 : 0);
+  const ownCycles = ownLive ? Number(ownLive.cycles) || 0 : (machine.activeRun ? Number(machine.activeRun.shots) || 0 : 0);
+  const activeRun = ownRun || ownLive
     ? {
-        ...(baseActiveRun || { sebanggo: liveMs[0].背番号 || "", hinban: machine.hinban || partner?.hinban || "", worker, start: "", end: "" }),
-        pieces: inProgressGood,
-        shots: liveCycles,
+        ...(ownRun || { sebanggo: ownLive?.背番号 || "", hinban: machine.hinban || partner?.hinban || "", worker, start: "", end: "" }),
+        pieces: ownPieces,
+        shots: ownCycles,
       }
-    : baseActiveRun;
+    : null;
   const doneTotal = submittedGood + inProgressGood;
   const donePct = goal > 0 ? Math.round((doneTotal / goal) * 100) : 0;
   const submittedPct = goal > 0 ? Math.min(100, (submittedGood / goal) * 100) : 0;
@@ -267,6 +270,7 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
               <div className="twin-run-card__header">
                 <div className="twin-run-card__badge-row">
                   <span className="twin-run-card__sebanggo">{activeRun.sebanggo || "—"}</span>
+                  {together && <span className="twin-run-card__order">{machine.id}</span>}
                   <span className="twin-run-card__live-chip">
                     <span className="twin-run-card__pulse-dot" />
                     {isJa ? "生産中" : "In Progress"}
