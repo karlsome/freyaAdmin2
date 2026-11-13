@@ -10,6 +10,7 @@ import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMaterialLotAnalytics } from "../services/api";
+import PaginationControls from "../components/PaginationControls";
 import ProductionAnalyticsView from "../components/analytics/ProductionAnalyticsView";
 import QualityAnalyticsView from "../components/analytics/QualityAnalyticsView";
 import MachinePerformanceView from "../components/analytics/MachinePerformanceView";
@@ -681,6 +682,7 @@ export default function AnalyticsPage() {
     },
     lots: [],
     runs: [],
+    pagination: { page: 1, pageSize: 10, totalLots: 0, totalPages: 1 },
     filterOptions: {
       materialSeibans: [],
       materialHinbans: [],
@@ -800,9 +802,11 @@ export default function AnalyticsPage() {
     }
   }, [historyModalLot, photoPreview, modalRecord]);
 
-  // Sorting state for table
+  // Sorting + server-side pagination state for table
   const [sortField, setSortField] = useState("latestDate");
   const [sortDir, setSortDir] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Compute Active Date Range from Preset
   const dateRange = useMemo(() => {
@@ -831,9 +835,14 @@ export default function AnalyticsPage() {
         machine: machine || undefined,
         materialSeiban: materialSeiban || undefined,
         search: search.trim() || undefined,
+        page,
+        pageSize,
+        sortField,
+        sortDir,
       });
       if (res && res.success) {
         setData(res);
+        if (res.pagination && res.pagination.page !== page) setPage(res.pagination.page);
       }
     } catch (err) {
       console.error("Failed to load material lots analytics:", err);
@@ -846,11 +855,17 @@ export default function AnalyticsPage() {
     if (activeTab === "material") {
       loadData();
     }
-  }, [dateRange.from, dateRange.to, factory, machine, materialSeiban, activeTab]);
+  }, [dateRange.from, dateRange.to, factory, machine, materialSeiban, activeTab, page, pageSize, sortField, sortDir]);
+
+  // Any filter change returns to page 1
+  useEffect(() => {
+    setPage(1);
+  }, [dateRange.from, dateRange.to, factory, machine, materialSeiban]);
 
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
-    loadData();
+    if (page !== 1) setPage(1);
+    else loadData();
   };
 
   const handleResetFilters = () => {
@@ -861,6 +876,7 @@ export default function AnalyticsPage() {
     setMachine("");
     setMaterialSeiban("");
     setSearch("");
+    setPage(1);
     setPartNumbers([]);
     setSerialNumbers([]);
     setAdvancedRows([createNewFilterRow()]);
@@ -884,6 +900,7 @@ export default function AnalyticsPage() {
 
   // Sort Column Handler
   const handleSort = (field) => {
+    setPage(1);
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -892,85 +909,24 @@ export default function AnalyticsPage() {
     }
   };
 
-  // ── Filtered & Sorted Lots ────────────────────────────────────────────────
-  const filteredLots = useMemo(() => {
-    let list = data.lots || [];
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter((lot) => {
-        return (
-          (lot.displayTitle && lot.displayTitle.toLowerCase().includes(q)) ||
-          lot.lotNumber.toLowerCase().includes(q) ||
-          (lot.materialSeiban && lot.materialSeiban.toLowerCase().includes(q)) ||
-          (lot.materialHinban && lot.materialHinban.toLowerCase().includes(q)) ||
-          (lot.materialName && lot.materialName.toLowerCase().includes(q)) ||
-          lot.machines.some((m) => m.toLowerCase().includes(q)) ||
-          (lot.products || []).some(
-            (p) =>
-              p.seiban?.toLowerCase().includes(q) ||
-              p.hinban?.toLowerCase().includes(q) ||
-              p.productName?.toLowerCase().includes(q)
-          ) ||
-          lot.workers.some((w) => w.toLowerCase().includes(q)) ||
-          lot.factories.some((f) => f.toLowerCase().includes(q))
-        );
-      });
-    }
+  // ── Lots are filtered, sorted and paginated on the server ─────────────────
+  const filteredLots = data.lots || [];
+  const pagination = data.pagination || { page: 1, pageSize, totalLots: filteredLots.length, totalPages: 1 };
 
-    return [...list].sort((a, b) => {
-      let cmp = 0;
-      if (sortField === "latestDate") {
-        cmp = (b.latestDate || "").localeCompare(a.latestDate || "");
-        if (cmp === 0) cmp = (b.totalMeters || 0) - (a.totalMeters || 0);
-      } else if (sortField === "meters") {
-        cmp = (b.totalMeters || 0) - (a.totalMeters || 0);
-      } else if (sortField === "pieces") {
-        cmp = (b.totalPieces || 0) - (a.totalPieces || 0);
-      } else if (sortField === "runs") {
-        cmp = (b.runsCount || 0) - (a.runsCount || 0);
-      } else if (sortField === "lot") {
-        cmp = (a.lotNumber || "").localeCompare(b.lotNumber || "");
-      } else if (sortField === "material") {
-        cmp = (a.materialSeiban || "").localeCompare(b.materialSeiban || "");
-      }
-      return sortDir === "asc" ? -cmp : cmp;
-    });
-  }, [data.lots, search, sortField, sortDir]);
-
-  // Aggregate Totals of current filtered lots
+  // Aggregate totals across the WHOLE filtered result set (computed server-side)
   const filteredSummary = useMemo(() => {
-    let meters = 0;
-    let pieces = 0;
-    let shots = 0;
-    let runs = 0;
-    const machines = new Set();
-    const products = new Set();
-    let defects = 0;
-
-    filteredLots.forEach((l) => {
-      meters += l.totalMeters || 0;
-      pieces += l.totalPieces || 0;
-      shots += l.totalShots || 0;
-      runs += l.runsCount || 0;
-      (l.machines || []).forEach((m) => machines.add(m));
-      (l.products || []).forEach((p) => {
-        if (p.hinban) products.add(p.hinban);
-        else if (p.seiban) products.add(p.seiban);
-      });
-      defects += (l.defectImages || []).length;
-    });
-
+    const s = data.summary || {};
     return {
-      lotsCount: filteredLots.length,
-      meters: Number(meters.toFixed(1)),
-      pieces,
-      shots,
-      runs,
-      machinesCount: machines.size,
-      productsCount: products.size,
-      defectsCount: defects,
+      lotsCount: s.totalDistinctLots || 0,
+      meters: Number((s.totalMeters || 0).toFixed(1)),
+      pieces: s.totalPieces || 0,
+      shots: s.totalShots || 0,
+      runs: s.totalRuns || 0,
+      machinesCount: s.totalMachines || 0,
+      productsCount: s.totalProducts || 0,
+      defectsCount: s.totalDefectImagesCount || 0,
     };
-  }, [filteredLots]);
+  }, [data.summary]);
 
   // Export to CSV
   const exportToCSV = () => {
@@ -1067,7 +1023,7 @@ export default function AnalyticsPage() {
             key: "material",
             label: t("materialAnalytics"),
             icon: "inventory_2",
-            badge: filteredLots.length > 0 ? filteredLots.length : undefined,
+            badge: filteredSummary.lotsCount > 0 ? filteredSummary.lotsCount : undefined,
             ready: true,
           },
           {
@@ -1552,7 +1508,7 @@ export default function AnalyticsPage() {
                       onChange={(e) => setSearch(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
                       placeholder={isJa ? "ロット番号・品番・QRコード..." : "Lot #, Code, Hinban, QR..."}
-                      className="freya-input h-10 w-full pl-8 pr-7 text-sm font-normal text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                      className="freya-input h-10 w-full !pl-9 !pr-8 text-sm font-normal text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                     />
                     {search && (
                       <button
@@ -2088,6 +2044,38 @@ export default function AnalyticsPage() {
                   />
                 );
               })}
+            </div>
+          )}
+
+          {/* ── 4. Server-side Pagination (same UI as Master DB) ─────────────── */}
+          {!loading && pagination.totalLots > 0 && (
+            <div className="freya-card flex flex-col gap-4 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
+                <span>
+                  {isJa
+                    ? `${pagination.totalLots}件中 ${(pagination.page - 1) * pagination.pageSize + 1}-${Math.min(pagination.page * pagination.pageSize, pagination.totalLots)}件を表示`
+                    : `${pagination.totalLots} records, showing ${(pagination.page - 1) * pagination.pageSize + 1}-${Math.min(pagination.page * pagination.pageSize, pagination.totalLots)}`}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "表示件数" : "Rows"}</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}
+                    className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
+                  >
+                    {[10, 50, 100].map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <PaginationControls
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={(n) => { if (n >= 1 && n <= pagination.totalPages) setPage(n); }}
+                previousLabel={isJa ? "前へ" : "Previous"}
+                nextLabel={isJa ? "次へ" : "Next"}
+              />
             </div>
           )}
         </div>
