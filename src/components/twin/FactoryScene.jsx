@@ -704,7 +704,7 @@ const MachineBadge = memo(function MachineBadge({
   const button = (
       <button
         type="button"
-        onClick={() => onSelect && onSelect(machineId)}
+        onClick={(e) => { e.stopPropagation(); onSelect && onSelect(machineId); }}
         className={`twin-badge ${selected ? "twin-badge--selected" : ""} ${dim && !call ? "twin-badge--dim" : ""} ${(theme.pulse || call) ? "twin-badge--alert" : ""} ${call ? `twin-badge--calling twin-badge--calling-${call.primaryCall}` : ""}`}
         style={{ "--status": badgeColor }}
       >

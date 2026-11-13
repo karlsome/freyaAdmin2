@@ -18,7 +18,7 @@ const KensaBadge = memo(function KensaBadge({ machineId, position, height = 2.1,
     <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
       <button
         type="button"
-        onClick={() => onSelect && onSelect(machineId)}
+        onClick={(e) => { e.stopPropagation(); onSelect && onSelect(machineId); }}
         className={`twin-badge ${selected ? "twin-badge--selected" : ""} ${status === "off" && !call ? "twin-badge--dim" : ""} ${theme.pulse ? "twin-badge--alert" : ""}`}
         style={{ "--status": theme.color }}
       >
