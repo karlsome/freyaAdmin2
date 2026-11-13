@@ -28,6 +28,7 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
   const [hoveredSeg, setHoveredSeg] = useState(null);
   const [planned, setPlanned] = useState([]); // today's production plan products (same source as Factory Status)
   const [live, setLive] = useState([]); // live (unsubmitted) pieces per machine
+  const [liveReadyFor, setLiveReadyFor] = useState(null); // machine id the live pieces were last loaded for
   const [recordModal, setRecordModal] = useState(null); // submitted pressDB record of a clicked run
   const [notice, setNotice] = useState("");
 
@@ -41,16 +42,18 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
   const machineId = machine?.id;
   const partnerId = machine?.pair?.together && partner ? partner.id : null;
   useEffect(() => {
-    if (!machineId || !factory || !productionDate) { setPlanned([]); setLive([]); return undefined; }
+    if (!machineId || !factory || !productionDate) { setPlanned([]); setLive([]); setLiveReadyFor(null); return undefined; }
     let cancelled = false;
-    Promise.all([
-      fetchLiveProductionMachines(factory, productionDate),
-      fetchPlannerPlans({ factory, date: productionDate }).catch(() => []),
-    ]).then(([nextLive, plans]) => {
+    // Independent requests: the live pieces (slow) must not wait for the plan, and vice versa.
+    fetchLiveProductionMachines(factory, productionDate).then((nextLive) => {
       if (cancelled) return;
       setLive(nextLive);
+      setLiveReadyFor(machineId);
+    }).catch(() => { if (!cancelled) setLiveReadyFor(machineId); });
+    fetchPlannerPlans({ factory, date: productionDate }).catch(() => []).then((plans) => {
+      if (cancelled) return;
       setPlanned(Array.isArray(plans?.[0]?.products) ? plans[0].products : []);
-    }).catch(() => {});
+    });
     return () => { cancelled = true; };
   }, [machineId, partnerId, factory, productionDate, refreshKey]);
 
@@ -129,6 +132,8 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
         shots: ownCycles,
       }
     : null;
+  // Live pieces are still being calculated: show a loading card instead of rough snapshot numbers
+  const liveLoading = liveReadyFor !== machineId && Boolean(ownRun || status === "running");
   const doneTotal = submittedGood + inProgressGood;
   const donePct = goal > 0 ? Math.round((doneTotal / goal) * 100) : 0;
   const submittedPct = goal > 0 ? Math.min(100, (submittedGood / goal) * 100) : 0;
@@ -293,14 +298,31 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
             {isJa ? "生産内訳・ロット実績" : "Production Breakdown"}
           </span>
           <span className="twin-drawer__badge">
-            {completedRuns.length + (activeRun ? 1 : 0)} {isJa ? "件" : "runs"}
+            {completedRuns.length + (activeRun || liveLoading ? 1 : 0)} {isJa ? "件" : "runs"}
           </span>
         </div>
 
         {notice ? <div className="twin-runs-notice">{notice}</div> : null}
         <div className="twin-runs-list">
           {/* Ongoing In-Progress Run if any */}
-          {activeRun && (
+          {liveLoading && (
+            <div className="twin-run-card twin-run-card--active twin-run-card--loading" role="status" aria-live="polite">
+              <div className="twin-run-card__header">
+                <div className="twin-run-card__badge-row">
+                  <span className="twin-run-card__sebanggo">{ownRun?.sebanggo || sebanggo || "—"}</span>
+                  <span className="twin-run-card__live-chip">
+                    <span className="twin-run-card__pulse-dot" />
+                    {isJa ? "生産中" : "In Progress"}
+                  </span>
+                </div>
+              </div>
+              <div className="twin-run-card__loading-body">
+                <span className="twin-run-card__spinner" aria-hidden="true" />
+                <span>{isJa ? "ライブ数量を計算中…" : "Calculating live count…"}</span>
+              </div>
+            </div>
+          )}
+          {!liveLoading && activeRun && (
             <div className="twin-run-card twin-run-card--active">
               <div className="twin-run-card__header">
                 <div className="twin-run-card__badge-row">
@@ -382,7 +404,7 @@ export default function MachineDrawer({ machine, partner, isJa, factory, product
             </div>
           ))}
 
-          {!activeRun && completedRuns.length === 0 && (
+          {!activeRun && !liveLoading && completedRuns.length === 0 && (
             <div className="twin-runs-empty">
               <span className="material-symbols-outlined">inventory_2</span>
               <span>{isJa ? "本日の完了ロットはまだありません" : "No completed runs yet today"}</span>

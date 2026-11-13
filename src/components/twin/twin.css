@@ -2347,3 +2347,9 @@ html:not(.dark) .twin-edit-toast {
   outline: none;
 }
 .twin-runs-notice { font-size: 11px; color: var(--status-danger, #ef4444); }
+
+/* In Progress card while the live count is still being calculated */
+.twin-run-card__loading-body { display: flex; align-items: center; gap: 10px; padding: 14px 4px 6px; font-size: 13px; color: var(--text-muted, #64748b); }
+.twin-run-card__spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; opacity: .7; animation: twin-run-spin .8s linear infinite; }
+@keyframes twin-run-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .twin-run-card__spinner { animation-duration: 2.4s; } }
