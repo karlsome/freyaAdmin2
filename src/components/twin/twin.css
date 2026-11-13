@@ -443,7 +443,7 @@ html:not(.dark) .twin-legend { background: rgba(255, 255, 255, 0.88); color: #33
   border-radius: 6px;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.3);
-  color: var(--text-primary, #f8fafc);
+  color: #f8fafc;
   animation: dash-slot-in 0.15s ease;
 }
 .twin-timeline-hover__dot {
@@ -483,9 +483,6 @@ html:not(.dark) .twin-legend { background: rgba(255, 255, 255, 0.88); color: #33
   display: flex;
   flex-direction: column;
   gap: 5px;
-  max-height: 140px;
-  overflow-y: auto;
-  padding-right: 2px;
 }
 .twin-run-card {
   padding: 6px 8px;
@@ -2312,3 +2309,27 @@ html:not(.dark) .twin-edit-toast {
 .twin-kensa__tag--cur { background: var(--status); color: #fff; }
 .twin-kensa__chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .twin-kensa__chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(239, 68, 68, 0.14); color: #ef4444; }
+
+/* ── Today's goal progress (drawer) ── */
+.twin-goal-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.25);
+}
+.twin-goal-bar__seg { height: 100%; transition: width 0.4s ease; }
+.twin-goal-bar__seg--submitted { background: #10b981; }
+.twin-goal-bar__seg--progress { background: #f59e0b; }
+.twin-goal-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+}
+.twin-goal-stats b { color: var(--text-primary, #0f172a); font-family: ui-monospace, monospace; margin-left: 2px; }
+.twin-goal-stats__dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
+
+/* Whole drawer scrolls; sections keep their natural height instead of being squeezed */
+.twin-drawer > * { flex-shrink: 0; }

@@ -410,6 +410,9 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
             machine={isKensaSelected ? null : selected}
             partner={selectedPartner}
             isJa={isJa}
+            factory={factory}
+            productionDate={data?.productionDate}
+            refreshKey={lastRefresh ? +new Date(lastRefresh) : 0}
             onClose={() => setSelectedId(null)}
             onCamera={() => openCamera()}
             onDetails={() => navigate("/factoryStatus")}

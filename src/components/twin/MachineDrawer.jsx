@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchPlannerPlans } from "../../services/plannerApi";
+import { fetchLiveProductionMachines } from "../../services/digitalTwinApi";
 import { STATUS_THEME, TIMELINE_THEME, effectiveStatus, formatAgo, formatNumber, statusLabel, timelineLabel } from "./twinTheme";
 
 function InfoRow({ icon, label, value }) {
@@ -20,8 +22,26 @@ function InfoRow({ icon, label, value }) {
  * - Production Breakdown: completed runs with accurate pieces + live active run
  * - Specification facts and quick actions
  */
-export default function MachineDrawer({ machine, partner, isJa, onClose, onCamera, onDetails }) {
+export default function MachineDrawer({ machine, partner, isJa, factory, productionDate, refreshKey, onClose, onCamera, onDetails }) {
   const [hoveredSeg, setHoveredSeg] = useState(null);
+  const [planned, setPlanned] = useState([]); // today's production plan products (same source as Factory Status)
+  const [live, setLive] = useState([]); // live (unsubmitted) pieces per machine
+
+  const machineId = machine?.id;
+  const partnerId = machine?.pair?.together && partner ? partner.id : null;
+  useEffect(() => {
+    if (!machineId || !factory || !productionDate) { setPlanned([]); setLive([]); return undefined; }
+    let cancelled = false;
+    Promise.all([
+      fetchLiveProductionMachines(factory, productionDate),
+      fetchPlannerPlans({ factory, date: productionDate }).catch(() => []),
+    ]).then(([nextLive, plans]) => {
+      if (cancelled) return;
+      setLive(nextLive);
+      setPlanned(Array.isArray(plans?.[0]?.products) ? plans[0].products : []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [machineId, partnerId, factory, productionDate, refreshKey]);
 
   if (!machine) return null;
   const together = Boolean(machine.pair?.together && partner);
@@ -44,10 +64,40 @@ export default function MachineDrawer({ machine, partner, isJa, onClose, onCamer
   const completedRuns = (together && machine.pair?.completedRuns?.length)
     ? machine.pair.completedRuns
     : (machine.completedRuns || []);
-  const activeRun = machine.activeRun;
+  // Pair: the cycle counter sits on one machine, so show the active run of whichever has the pieces (not always the clicked one)
+  const baseActiveRun = together
+    ? [machine.activeRun, partner.activeRun].filter(Boolean).sort((a, b) => (Number(b.pieces) || 0) - (Number(a.pieces) || 0))[0]
+    : machine.activeRun;
   const timeline = machine.timeline || [];
   const summary = machine.timelineSummary;
   const totalShiftMin = summary?.totalShiftMin || 660;
+
+  // ── Today's goal progress (same rules as Factory Status → Production Status) ──
+  const unitIds = [machine.id, together ? partner.id : null].filter(Boolean).map((id) => String(id).toUpperCase());
+  const goal = planned
+    .filter((item) => String(item.equipment || "").split(",").map((x) => x.trim().toUpperCase()).some((id) => unitIds.includes(id)))
+    .reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const submittedGood = completedRuns.reduce(
+    (sum, run) => sum + (run.good != null ? Number(run.good) || 0 : Math.max(0, (Number(run.pieces) || 0) - (Number(run.ng) || 0))), 0);
+  const liveMs = live.filter((m) => unitIds.includes(String(m.machine).toUpperCase()));
+  const inProgressGross = liveMs.length
+    ? liveMs.reduce((sum, m) => sum + (Number(m.pieces) || 0), 0)
+    : (baseActiveRun ? Number(baseActiveRun.pieces) || 0 : 0);
+  const liveNg = liveMs.length ? Math.max(0, ...liveMs.map((m) => Number(m.ng) || 0)) : 0;
+  const inProgressGood = Math.max(0, inProgressGross - liveNg);
+  // The In Progress card uses the same live numbers as Factory Status, so a paired machine never shows its own empty counter
+  const liveCycles = liveMs.reduce((sum, m) => sum + (Number(m.cycles) || 0), 0);
+  const activeRun = liveMs.length && (baseActiveRun || inProgressGross > 0)
+    ? {
+        ...(baseActiveRun || { sebanggo: liveMs[0].背番号 || "", hinban: machine.hinban || partner?.hinban || "", worker, start: "", end: "" }),
+        pieces: inProgressGood,
+        shots: liveCycles,
+      }
+    : baseActiveRun;
+  const doneTotal = submittedGood + inProgressGood;
+  const donePct = goal > 0 ? Math.round((doneTotal / goal) * 100) : 0;
+  const submittedPct = goal > 0 ? Math.min(100, (submittedGood / goal) * 100) : 0;
+  const inProgressPct = goal > 0 ? Math.min(100 - submittedPct, (inProgressGood / goal) * 100) : 0;
 
   return (
     <aside className="twin-drawer" style={{ "--status": theme.color }} aria-label={title}>
@@ -103,6 +153,28 @@ export default function MachineDrawer({ machine, partner, isJa, onClose, onCamer
         </div>
       </div>
 
+      {/* ── Today's Goal Progress ── */}
+      {goal > 0 && (
+        <section className="twin-drawer__section" aria-label={isJa ? "本日の進捗" : "Today's Progress"}>
+          <div className="twin-drawer__section-header">
+            <span className="twin-drawer__section-title">
+              <span className="material-symbols-outlined">flag</span>
+              {isJa ? "本日の目標達成率" : "Today's Goal"}
+            </span>
+            <span className="twin-drawer__uptime-badge">{donePct}%</span>
+          </div>
+          <div className="twin-goal-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(donePct, 100)}>
+            <div className="twin-goal-bar__seg twin-goal-bar__seg--submitted" style={{ width: `${submittedPct}%` }} />
+            <div className="twin-goal-bar__seg twin-goal-bar__seg--progress" style={{ width: `${inProgressPct}%` }} />
+          </div>
+          <div className="twin-goal-stats">
+            <div><span className="twin-goal-stats__dot" style={{ background: "var(--freya-blue, #2563eb)" }} />{isJa ? "目標" : "Goal"} <b>{formatNumber(goal)}</b></div>
+            <div><span className="twin-goal-stats__dot" style={{ background: "#10b981" }} />{isJa ? "提出済み" : "Submitted"} <b>{formatNumber(submittedGood)}</b></div>
+            <div><span className="twin-goal-stats__dot" style={{ background: "#f59e0b" }} />{isJa ? "生産中" : "In progress"} <b>{formatNumber(inProgressGood)}</b></div>
+          </div>
+        </section>
+      )}
+
       {/* ── Interactive Shift Timeline ── */}
       {timeline.length > 0 && (
         <section className="twin-drawer__section" aria-label={isJa ? "稼働タイムライン" : "Shift Timeline"}>
@@ -125,7 +197,6 @@ export default function MachineDrawer({ machine, partner, isJa, onClose, onCamer
               if (dur <= 0) return null;
               const widthPct = (dur / totalShiftMin) * 100;
               const segTheme = TIMELINE_THEME[seg.type] || TIMELINE_THEME.off;
-              const tooltip = `${timelineLabel(seg.type, isJa)}: ${seg.start}〜${seg.end} (${dur}${isJa ? "分" : "m"})${seg.sebanggo ? ` · 背番号: ${seg.sebanggo}` : ""}${seg.pieces ? ` · ${formatNumber(seg.pieces)}${isJa ? "個" : "pcs"}` : ""}`;
 
               return (
                 <div
@@ -135,7 +206,6 @@ export default function MachineDrawer({ machine, partner, isJa, onClose, onCamer
                     width: `${widthPct}%`,
                     backgroundColor: segTheme.color,
                   }}
-                  title={tooltip}
                   onMouseEnter={() => setHoveredSeg({ ...seg, widthPct, label: timelineLabel(seg.type, isJa) })}
                   onMouseLeave={() => setHoveredSeg(null)}
                 />
@@ -230,7 +300,8 @@ export default function MachineDrawer({ machine, partner, isJa, onClose, onCamer
           )}
 
           {/* Completed Runs */}
-          {completedRuns.map((r, idx) => (
+          {/* Newest first (just below In Progress); oldest (#1) at the very bottom */}
+          {completedRuns.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => (
             <div key={`${r.sebanggo}-${r.start}-${idx}`} className="twin-run-card">
               <div className="twin-run-card__header">
                 <div className="twin-run-card__badge-row">
