@@ -1,7 +1,8 @@
 // NC programs of one masterDB item (non-SCNA AOL cutters: OZNC.., NCC01).
 // One card per machine type (heads + table length). Each card holds the item's PCE for that type and,
-// optionally, versions for one machine (tolerances). The tablet sends: machine version > type program >
-// old Xiao send. Files live in Google Drive "freyaAdmin pce 2"; the points (JSON) in Mongo.
+// optionally, versions for one machine (tolerances). Machine-type PCEs are uploaded only in the PCE Files tab;
+// this section shows them (preview, download, history/restore) and handles machine-specific versions.
+// The tablet sends: machine version > type program. Files live in Google Drive "freyaAdmin pce 2"; the points (JSON) in Mongo.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -337,8 +338,8 @@ export default function MasterNcProgramsSection({ record }) {
       </div>
       <p className="mb-3 text-xs text-outline">
         {isJa
-          ? "機種ごとにPCEを1つアップロードします。特定の機械だけ違うPCEが必要な場合は「この機械専用」を追加してください。未登録の機種は従来の送信（Xiao）を使います。"
-          : "Upload one PCE per machine type. If one machine needs a different PCE (tolerances), add a machine-specific version. Types without a program keep the old (Xiao) send."}
+          ? "機種ごとのPCEは「PCE Files」タブからアップロードします。特定の機械だけ違うPCEが必要な場合は、ここで「この機械専用」を追加できます。"
+          : "PCEs for each machine type are uploaded in the PCE Files tab. If one machine needs a different PCE (tolerances), add a machine-specific version here."}
       </p>
 
       <input ref={fileInput} type="file" accept=".pce" className="hidden" onChange={(e) => onFileChosen(e.target.files?.[0])} />
@@ -387,20 +388,15 @@ export default function MasterNcProgramsSection({ record }) {
 
               <div className="mt-3 rounded-lg border border-outline-variant/25 bg-surface p-3">
                 {typeProg ? (
-                  <ProgramRow program={typeProg} isJa={isJa} onPreview={openPreview}>
-                    <button type="button" className={btn} onClick={() => pickFile(t.machineType, null, label, true)}>
-                      <Icon name="upload" /> {isJa ? "差し替え" : "Replace"}
-                    </button>
-                  </ProgramRow>
+                  <ProgramRow program={typeProg} isJa={isJa} onPreview={openPreview} />
                 ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
-                      <Icon name="warning" size={16} />
-                      {isJa ? "プログラム未登録：従来の送信（Xiao）を使います" : "No program yet: the old (Xiao) send is used"}
+                  <div className="flex items-start gap-1.5 text-xs font-semibold text-amber-700">
+                    <Icon name="warning" size={16} />
+                    <span>
+                      {isJa
+                        ? "プログラム未登録：この機種には送信できません。「PCE Files」タブからアップロードしてください。"
+                        : "No program yet: this item cannot be sent to these machines. Upload it in the PCE Files tab."}
                     </span>
-                    <button type="button" className={btnPrimary} onClick={() => pickFile(t.machineType, null, label, false)}>
-                      <Icon name="upload" /> {isJa ? "PCEをアップロード" : "Upload PCE"}
-                    </button>
                   </div>
                 )}
               </div>
