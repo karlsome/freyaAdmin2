@@ -13,7 +13,7 @@ import MasterProductDetailModal from "./MasterProductDetailModal";
 import { uploadNcProgramsBulk } from "../services/ncApi";
 import { parsePce } from "../utils/pceParser";
 import { readStoredAuthUser } from "../utils/auth";
-import ScnaNcProgramPreview from "./scna/ScnaNcProgramPreview";
+import ScnaNcPreviewModal from "./scna/ScnaNcPreviewModal";
 import {
   MASTER_PAGE_SIZE_OPTIONS,
   buildMasterAdvancedQuery,
@@ -74,6 +74,7 @@ export default function PceFilesWorkspace({ onFlash }) {
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState(null);
   const fileInputRef = useRef(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // ── Step 2: 背番号 selection (same filtering/table data flow as 内装品 DB) ──
   const [masterRecords, setMasterRecords] = useState([]);
@@ -363,6 +364,10 @@ export default function PceFilesWorkspace({ onFlash }) {
   const validPreviewEntries = useMemo(() => previewEntries.filter((entry) => entry.fileName), [previewEntries]);
   const invalidPreviewEntries = useMemo(() => previewEntries.filter((entry) => !entry.fileName), [previewEntries]);
   const previewFiles = validPreviewEntries.map((entry) => entry.fileName);
+  const selectedTypeLabels = useMemo(
+    () => equipmentOptionsForFactory.filter((g) => selectedGroupKeys.has(g.key)).map((g) => g.heading || g.key),
+    [equipmentOptionsForFactory, selectedGroupKeys]
+  );
 
   const tableColumns = useMemo(() => {
     const selectColumn = {
@@ -529,6 +534,7 @@ export default function PceFilesWorkspace({ onFlash }) {
     setFile(null);
     setParsed(null);
     setUploadResults(null);
+    setShowPreview(false);
   }
 
   const step1Done = !!file;
@@ -569,7 +575,18 @@ export default function PceFilesWorkspace({ onFlash }) {
               {file ? (
                 <>
                   <p className="text-xs font-bold text-[var(--text-primary)] break-all leading-tight">{file.name}</p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">{(file.size / 1024).toFixed(1)} KB · <span className="text-[var(--freya-blue)] font-semibold">{isJa ? "変更" : "replace"}</span></p>
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    {(file.size / 1024).toFixed(1)} KB · <span className="text-[var(--freya-blue)] font-semibold">{isJa ? "変更" : "replace"}</span>
+                    {parsed && (
+                      <>
+                        {" · "}
+                        <button type="button" className="text-[var(--freya-blue)] font-semibold hover:underline"
+                          onClick={(e) => { e.stopPropagation(); setShowPreview(true); }}>
+                          {isJa ? "プレビュー" : "Preview"}
+                        </button>
+                      </>
+                    )}
+                  </p>
                 </>
               ) : (
                 <p className="text-xs text-[var(--text-muted)]">{isJa ? ".pce ファイルのみ" : ".pce files only"}</p>
@@ -578,27 +595,35 @@ export default function PceFilesWorkspace({ onFlash }) {
             <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
             {file && parsed && (
-              <>
-                <div className="overflow-hidden rounded-[6px] border border-[var(--border)]">
-                  <ScnaNcProgramPreview points={parsed.points} height="180px" />
-                </div>
-                <p className="text-[11px] text-[var(--text-secondary)]">
-                  {parsed.pointCount.toLocaleString()} {isJa ? "ポイント（JSONに変換済み）" : "points (converted to JSON)"}
+              <div className="flex flex-col gap-1 text-[11px] leading-snug text-[var(--text-secondary)]">
+                <p>{parsed.pointCount.toLocaleString()} {isJa ? "ポイント（JSONに変換済み）" : "points (converted to JSON)"}</p>
+                <p>
+                  {isJa ? "各品番に個別に保存: " : "Each item gets its own copy: "}
+                  <span className="font-mono">{isJa ? "<背番号>_<機種>.pce" : "<背番号>_<type>.pce"}</span>
                 </p>
-                <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-                  <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-                    {isJa ? "ファイル名は 背番号_機種.pce に置換されます" : "Saved as 背番号_type.pce"}
-                  </p>
-                </div>
-              </>
+                <p>
+                  {isJa ? "元のファイル名も保存: " : "Original name kept: "}
+                  <span className="font-mono break-all">{file.name}</span>
+                </p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Filtering — same filter block as 内装品 DB, scoped to the 背番号 list below */}
-        <div className="flex-1 min-w-0">
+        {/* Step 2 — machine types (AOL equipment grouped by heads x table length) */}
+        <div className="freya-card flex-1 min-w-0 overflow-visible rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col">
+          <PanelHeader
+            step={2}
+            active={step1Done && !selectedGroupKeys.size}
+            done={selectedGroupKeys.size > 0}
+            title={isJa ? "機種（ヘッド数・テーブル長）" : "Machine types"}
+            sub={selectedGroupKeys.size
+              ? (isJa ? `${selectedGroupKeys.size} 機種を選択中: ${selectedTypeLabels.join("、")}` : `${selectedGroupKeys.size} selected: ${selectedTypeLabels.join(", ")}`)
+              : (isJa ? "このPCEを使う機種にチェックしてください" : "Tick the machine types that use this PCE")}
+          />
+          <div className="px-4 py-4">
           <MasterFilterPanel
+            bare
             simpleFilters={topSimpleFilters}
             filterOptions={filterOptions}
             onSimpleFilterChange={handleTopSimpleFilterChange}
@@ -615,6 +640,7 @@ export default function PceFilesWorkspace({ onFlash }) {
             selectedGroups={Array.from(selectedGroupKeys)}
             onToggleGroup={handleToggleGroup}
           />
+          </div>
         </div>
 
       </div>
@@ -622,7 +648,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       {/* Step 2 — 背番号 results: same table information as 内装品 DB */}
       <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col">
         <PanelHeader
-          step={2}
+          step={3}
           active={step1Done && !step2Done}
           done={step2Done}
           title="背番号"
@@ -687,13 +713,13 @@ export default function PceFilesWorkspace({ onFlash }) {
         </div>
       </div>
 
-      {/* Step 3 — Preview */}
+      {/* Step 4 — check and save */}
       <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col">
         <PanelHeader
-          step={3}
+          step={4}
           active={step2Done && !uploadResults}
           done={!!uploadResults}
-          title={isJa ? "プレビュー" : "Preview"}
+          title={isJa ? "確認して保存" : "Check & save"}
           sub={uploadResults ? (isJa ? "アップロード完了" : "Upload complete") : fileCount ? (isJa ? `作成対象: ${fileCount} 件` : `${fileCount} file${fileCount === 1 ? "" : "s"} to create`) : (isJa ? "選択を待機中" : "Waiting for selections")}
         />
         <div className="px-4 py-4 flex flex-col gap-2">
@@ -748,6 +774,21 @@ export default function PceFilesWorkspace({ onFlash }) {
                   </p>
                 </div>
               )}
+              {fileCount > 0 && (
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[6px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/5 px-3 py-2 text-xs text-[var(--text-primary)]">
+                  <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>summarize</span>
+                  <span className="font-semibold break-all">{file?.name || (isJa ? "（ファイル未選択）" : "(no file)")}</span>
+                  <span>→</span>
+                  <span>{isJa ? `${selectedGroupKeys.size} 機種` : `${selectedGroupKeys.size} machine type${selectedGroupKeys.size === 1 ? "" : "s"}`}</span>
+                  <span>×</span>
+                  <span>{isJa ? `${selectedRows.size} 品番` : `${selectedRows.size} item${selectedRows.size === 1 ? "" : "s"}`}</span>
+                  <span>=</span>
+                  <span className="font-bold">{isJa ? `${fileCount} 件のNCプログラム` : `${fileCount} NC program${fileCount === 1 ? "" : "s"}`}</span>
+                  <span className="text-[var(--text-secondary)]">
+                    {isJa ? "（既にある場合は上書きするか確認します）" : "(you'll be asked before replacing any that already exist)"}
+                  </span>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => handleUpload()}
@@ -762,7 +803,7 @@ export default function PceFilesWorkspace({ onFlash }) {
             </>
           ) : (
             <p className="text-xs text-[var(--text-secondary)] text-center leading-relaxed py-4">
-              {isJa ? "ステップ1と2を完了するとプレビューが表示されます" : "Complete steps 1–2 to see a preview"}
+              {isJa ? "ステップ1〜3を完了すると保存内容が表示されます" : "Complete steps 1–3 to see what will be saved"}
             </p>
           )}
         </div>
@@ -777,6 +818,15 @@ export default function PceFilesWorkspace({ onFlash }) {
           onClose={() => setDetailRecord(null)}
           onSave={handleSaveDetail}
           onUploadImage={handleUploadDetailImage}
+        />
+      )}
+      {showPreview && file && parsed && (
+        <ScnaNcPreviewModal
+          title={file.name}
+          subtitle={isJa ? `${parsed.pointCount.toLocaleString()} ポイント（まだ保存されていません）` : `${parsed.pointCount.toLocaleString()} points (not saved yet)`}
+          points={parsed.points}
+          loading={false}
+          onClose={() => setShowPreview(false)}
         />
       )}
       <PceFilesConflictModal

@@ -43,6 +43,7 @@ export default function MasterFilterPanel({
   onSelectAllGroups,
   onClearGroups,
   requireFactoryForEquipment = true,
+  bare = false, // no card frame (when the parent already draws one)
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -61,7 +62,7 @@ export default function MasterFilterPanel({
     : "xl:col-span-1";
 
   return (
-    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 mb-6 relative z-20 shadow-sm">
+    <div className={bare ? "relative z-20" : "freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 mb-6 relative z-20 shadow-sm"}>
       <div className="grid items-start gap-3 lg:grid-cols-2 xl:grid-cols-6">
         <FormField label={isJa ? "工場" : "Factory / 工場"} className="xl:col-span-1">
           <select
