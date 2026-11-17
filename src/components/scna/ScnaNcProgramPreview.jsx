@@ -89,8 +89,8 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
   const dragRef = useRef(null);
   const [size, setSize] = useState({ w: 600, h: 380 });
   const [view, setView] = useState(null); // { cx, cy, scale } scale = mm per pixel; null = fit
-  const [showNumbers, setShowNumbers] = useState(false);
-  const [showArrows, setShowArrows] = useState(false);
+  const [showNumbers, setShowNumbers] = useState(true);
+  const [showArrows, setShowArrows] = useState(true);
   const [showPenUp, setShowPenUp] = useState(true);
   const [measuring, setMeasuring] = useState(false);
   const [measurements, setMeasurements] = useState([]); // [{ a, b }] in mm, real (un-flipped) Y
