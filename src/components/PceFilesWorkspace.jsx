@@ -6,8 +6,11 @@ import {
   fetchMasterPage,
   fetchMasterSchema,
   fetchSetsubiDBRecords,
-  uploadPceFiles,
 } from "../services/api";
+import { uploadNcProgramsBulk } from "../services/ncApi";
+import { parsePce } from "../utils/pceParser";
+import { readStoredAuthUser } from "../utils/auth";
+import ScnaNcProgramPreview from "./scna/ScnaNcProgramPreview";
 import {
   MASTER_PAGE_SIZE_OPTIONS,
   buildMasterAdvancedQuery,
@@ -21,6 +24,12 @@ import {
 import DataTable from "./DataTable";
 import MasterFilterPanel from "./MasterFilterPanel";
 import PceFilesConflictModal from "./PceFilesConflictModal";
+
+// PCE Files tab: one .pce for many 背番号 x AOL machine types (OZNC.., NCC01). The browser converts the PCE to
+// points (JSON) and the server saves each item x type as an NC program (Drive "freyaAdmin pce 2" + Mongo),
+// the same as uploading it on the item's NC programs cards.
+const AOL_MACHINE_RE = /^(OZNC\d+|NCC01)$/i;
+const NOT_SCNA = { 工場: { $ne: "SCNA" } };
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -55,6 +64,7 @@ export default function PceFilesWorkspace({ onFlash }) {
   const isJa = language === "ja";
   // ── Step 1: file upload ─────────────────────────────────────────────────────
   const [file, setFile] = useState(null);
+  const [parsed, setParsed] = useState(null);   // { points, pointCount, layers, bounds } from parsePce
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState(null);
@@ -137,7 +147,8 @@ export default function PceFilesWorkspace({ onFlash }) {
           limit: pageSize,
           sort,
           simpleFilters,
-          advancedFilters: advancedQuery,
+          // SCNA items have their own NC programs page
+          advancedFilters: advancedQuery && Object.keys(advancedQuery).length ? { $and: [advancedQuery, NOT_SCNA] } : NOT_SCNA,
           searchTags,
           searchLogicMode,
           searchFields: ["品番", "モデル", "背番号", "品名", "工場", "型番"],
@@ -277,7 +288,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       .filter((record) => !factory || String(record?.工場 || "").trim() === factory)
       .forEach((record) => {
         const name = String(record?.name || "").trim();
-        if (!name) return;
+        if (!name || !AOL_MACHINE_RE.test(name)) return;
         const heads = String(record?.noOfHead ?? "").trim();
         const length = String(record?.tableLength ?? "").trim();
         if (heads && length) {
@@ -388,20 +399,27 @@ export default function PceFilesWorkspace({ onFlash }) {
     return [selectColumn, ...dataColumns];
   }, [masterRecords, schemaFields, selectedRows]);
 
-  function handleFileAccept(f) {
+  async function handleFileAccept(f) {
     if (!f.name.toLowerCase().endsWith(".pce")) {
       onFlash?.({ type: "error", message: isJa ? ".pce ファイルのみ受け付け可能です。" : "Only .pce files are accepted." });
       return;
     }
-    setFile(f);
-    setUploadResults(null);
+    try {
+      const result = parsePce(await f.arrayBuffer());
+      setFile(f);
+      setParsed(result);
+      setUploadResults(null);
+    } catch (err) {
+      console.error(`[PCE Files] Could not read ${f.name}`, err);
+      onFlash?.({ type: "error", message: `${f.name}: ${err.message}` });
+    }
   }
 
   async function handleUpload(resolutions = null) {
-    if (!file || !validPreviewEntries.length) return;
+    if (!file || !parsed || !validPreviewEntries.length) return;
     setUploading(true);
     
-    let overwriteFiles = false;
+    let overwriteFiles = [];
     let base64 = null;
     
     if (resolutions) {
@@ -415,17 +433,25 @@ export default function PceFilesWorkspace({ onFlash }) {
     }
 
     try {
-      const result = await uploadPceFiles({
-        fileBase64: base64,
-        entries: validPreviewEntries,
+      const result = await uploadNcProgramsBulk({
+        entries: validPreviewEntries.map(({ code, suffix }) => ({ code, suffix })),
+        fileName: file.name,
+        pceBase64: base64,
+        points: parsed.points,
+        layers: parsed.layers,
+        uploadedBy: readStoredAuthUser()?.username || "admin",
         overwrite: overwriteFiles,
+        skipConflicts: !!resolutions,
       });
-      setUploadResults(result.files);
+      const results = result.results || [];
+      setUploadResults(results);
+      const saved = results.filter((r) => r.status === "created" || r.status === "replaced").length;
+      const failed = results.filter((r) => r.status === "error").length;
       onFlash?.({
-        type: "success",
+        type: failed ? "error" : "success",
         message: isJa
-          ? `${result.files.length} 件のファイルを正常に作成し、Google Drive > freyaAdmin pce に保存しました。`
-          : `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce`,
+          ? `${saved} 件のNCプログラムを保存しました（Google Drive > freyaAdmin pce 2）${failed ? `・${failed} 件失敗` : ""}`
+          : `${saved} NC program${saved === 1 ? "" : "s"} saved (Google Drive > freyaAdmin pce 2)${failed ? ` · ${failed} failed` : ""}`,
       });
     } catch (err) {
       if (err.isConflict) {
@@ -439,7 +465,7 @@ export default function PceFilesWorkspace({ onFlash }) {
   }
 
   function handleResolveConflict(resolutions) {
-    if (!resolutions) {
+    if (!resolutions || resolutions === "cancel" || typeof resolutions !== "object") {
       setConflictState(null);
       return;
     }
@@ -450,13 +476,14 @@ export default function PceFilesWorkspace({ onFlash }) {
     setSelectedRows(new Set());
     setSelectedGroupKeys(new Set());
     setFile(null);
+    setParsed(null);
     setUploadResults(null);
   }
 
   const step1Done = !!file;
   const step2Done = selectedRows.size > 0;
   const fileCount = previewFiles.length;
-  const canUpload = step1Done && selectedRows.size > 0 && selectedGroupKeys.size > 0 && validPreviewEntries.length > 0 && !uploading;
+  const canUpload = step1Done && !!parsed && selectedRows.size > 0 && selectedGroupKeys.size > 0 && validPreviewEntries.length > 0 && !uploading;
 
   return (
     <div className="flex flex-col gap-4">
@@ -499,13 +526,21 @@ export default function PceFilesWorkspace({ onFlash }) {
             </div>
             <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
-            {file && (
-              <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-                <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
-                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-                  {isJa ? "ファイル名は置換されます" : "Filename will be replaced"}
+            {file && parsed && (
+              <>
+                <div className="overflow-hidden rounded-[6px] border border-[var(--border)]">
+                  <ScnaNcProgramPreview points={parsed.points} height="180px" />
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)]">
+                  {parsed.pointCount.toLocaleString()} {isJa ? "ポイント（JSONに変換済み）" : "points (converted to JSON)"}
                 </p>
-              </div>
+                <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+                  <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                    {isJa ? "ファイル名は 背番号_機種.pce に置換されます" : "Saved as 背番号_type.pce"}
+                  </p>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -613,12 +648,27 @@ export default function PceFilesWorkspace({ onFlash }) {
           {uploadResults ? (
             <>
               <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1">
-                {uploadResults.map((f) => (
-                  <li key={f.id} className="flex items-center gap-2 rounded-[6px] border border-[var(--status-success)]/30 bg-[var(--status-success)]/10 px-3 py-2 min-w-0">
-                    <span className="material-symbols-outlined text-[var(--status-success)] flex-shrink-0" style={{ fontSize: 16 }}>check_circle</span>
-                    <span className="font-mono text-xs font-semibold text-[var(--text-primary)] truncate">{f.name}</span>
-                  </li>
-                ))}
+                {uploadResults.map((f) => {
+                  const ok = f.status === "created" || f.status === "replaced";
+                  const tone = ok ? "var(--status-success)" : f.status === "skipped" ? "var(--text-muted)" : "var(--status-error, #d92d20)";
+                  const label = {
+                    created: isJa ? "作成" : "created",
+                    replaced: isJa ? "差し替え（旧→履歴）" : "replaced (old → history)",
+                    skipped: isJa ? "スキップ" : "skipped",
+                    error: f.error || (isJa ? "失敗" : "failed"),
+                  }[f.status] || f.status;
+                  return (
+                    <li key={f.name} title={label} className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] px-3 py-2 min-w-0">
+                      <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 16, color: tone }}>
+                        {ok ? "check_circle" : f.status === "skipped" ? "remove_circle" : "error"}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-mono text-xs font-semibold text-[var(--text-primary)] truncate">{f.name}</span>
+                        <span className="block text-[10px] truncate" style={{ color: tone }}>{label}</span>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
               <button type="button" onClick={handleReset}
                 className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs">
@@ -655,7 +705,7 @@ export default function PceFilesWorkspace({ onFlash }) {
                 {uploading
                   ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   : <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cloud_upload</span>}
-                {uploading ? (isJa ? "作成中…" : "Creating…") : (isJa ? `${fileCount} 件のファイルを作成` : `Create ${fileCount} file${fileCount === 1 ? "" : "s"}`)}
+                {uploading ? (isJa ? "保存中…" : "Saving…") : (isJa ? `${fileCount} 件のNCプログラムを保存` : `Save ${fileCount} NC program${fileCount === 1 ? "" : "s"}`)}
               </button>
             </>
           ) : (

@@ -31,11 +31,11 @@ export default function PceFilesConflictModal({ open, conflicts, onResolve, onCa
     <ModalShell
       open={open}
       onClose={onCancel}
-      title={isJa ? "同名ファイルが既に存在します" : "Files Already Exist"}
+      title={isJa ? "既にNCプログラムがあります" : "Programs Already Exist"}
       subtitle={
         isJa
-          ? "以下のファイルは既にGoogle Driveに存在します。各ファイルの処理を選択してください。"
-          : "The following files already exist in Google Drive. Choose an action for each."
+          ? "以下の背番号・機種には既にプログラムがあります。「上書き」を選ぶと現在のファイルは履歴に移動します。"
+          : "These items already have a program for this machine type. Overwrite moves the current file to history."
       }
       maxWidth="max-w-xl"
       footer={

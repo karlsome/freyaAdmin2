@@ -71,3 +71,27 @@ export async function removeNcProgram(id, user) {
     "Failed to remove NC program"
   );
 }
+
+// PCE Files tab: one PCE for many 背番号 x machine types. entries: [{ code, suffix }].
+// A 409 throws an error with .isConflict and .conflicts (slot file names that already have a program).
+export async function uploadNcProgramsBulk(body) {
+  const res = await fetch(`${BASE_URL}api/nc-programs/bulk`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  if (res.status === 409 && data?.conflicts?.length) {
+    const err = new Error(`Already exist — ${data.conflicts.join(", ")}`);
+    err.isConflict = true;
+    err.conflicts = data.conflicts;
+    throw err;
+  }
+  if (!res.ok) throw new Error(data?.error || data?.details || `Upload failed (HTTP ${res.status})`);
+  return data;
+}
