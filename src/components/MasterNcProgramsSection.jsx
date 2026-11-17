@@ -91,20 +91,23 @@ function ProgramRow({ program, isJa, onPreview, children }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm font-semibold text-on-surface">
           <span className="text-emerald-600"><Icon name="check_circle" size={16} /></span>
-          <span className="truncate font-mono">{program.driveName || program.fileName}</span>
+          <span className="truncate" title={isJa ? "アップロードした元のファイル名" : "Name of the uploaded file"}>
+            {program.fileName || program.driveName}
+          </span>
         </div>
         <div className="mt-0.5 text-[11px] text-outline">
-          {(program.pointCount || 0).toLocaleString()} {isJa ? "ポイント" : "points"} · {fmtDate(program.uploadedAt)} · {program.uploadedBy}
-          {program.fileName && program.driveName && program.fileName !== program.driveName && (
-            <span> · {isJa ? "元ファイル" : "from"} {program.fileName}</span>
-          )}
+          <span className="font-mono" title={isJa ? "Google Drive「freyaAdmin pce 2」での保存名（機械への送信に使用）" : "Saved name in Google Drive 'freyaAdmin pce 2' (used to send to the machine)"}>
+            Drive: {program.drivePath || program.driveName}
+          </span>
+          {" · "}{(program.pointCount || 0).toLocaleString()} {isJa ? "ポイント" : "points"} · {fmtDate(program.uploadedAt)} · {program.uploadedBy}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <button type="button" className={btn} onClick={() => onPreview(program)}>
           <Icon name="visibility" /> {isJa ? "プレビュー" : "Preview"}
         </button>
-        <a className={btn} href={ncProgramPceUrl(program._id)} download>
+        <a className={btn} href={ncProgramPceUrl(program._id)} download
+          title={isJa ? `元のファイル名でダウンロード（${program.fileName || ""}）` : `Download with its original name (${program.fileName || ""})`}>
           <Icon name="download" /> PCE
         </a>
         <button type="button" className={btn} onClick={() => downloadJson(program).catch((e) => alert(e.message))}>
