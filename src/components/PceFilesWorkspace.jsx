@@ -6,7 +6,10 @@ import {
   fetchMasterPage,
   fetchMasterSchema,
   fetchSetsubiDBRecords,
+  updateMasterRecord,
+  uploadMasterImage,
 } from "../services/api";
+import MasterProductDetailModal from "./MasterProductDetailModal";
 import { uploadNcProgramsBulk } from "../services/ncApi";
 import { parsePce } from "../utils/pceParser";
 import { readStoredAuthUser } from "../utils/auth";
@@ -17,7 +20,9 @@ import {
   buildMasterFieldDefinitions,
   createMasterFilterRow,
   cleanMasterRecords,
+  extractRecordId,
   formatMasterValue,
+  getAuthUser,
   getMasterTabUI,
   getMasterTableColumns,
 } from "../utils/masterDB";
@@ -97,6 +102,11 @@ export default function PceFilesWorkspace({ onFlash }) {
   const [selectedGroupKeys, setSelectedGroupKeys] = useState(new Set());
   const requestIdRef = useRef(0);
   const [conflictState, setConflictState] = useState(null);
+  // Row click opens the same product detail modal as the 内装品 DB tab
+  const [detailRecord, setDetailRecord] = useState(null);
+  const [detailSaving, setDetailSaving] = useState(false);
+  const [detailUploading, setDetailUploading] = useState(false);
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   const distinctCacheRef = useRef(new Map());
   const loadDistinctOptions = useCallback(async (field) => {
@@ -171,7 +181,7 @@ export default function PceFilesWorkspace({ onFlash }) {
 
     loadRecords();
     return () => { cancelled = true; };
-  }, [page, pageSize, sort, simpleFilters, advancedQuery, searchTags, searchLogicMode, schemaFields]);
+  }, [page, pageSize, sort, simpleFilters, advancedQuery, searchTags, searchLogicMode, schemaFields, refreshNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -464,6 +474,47 @@ export default function PceFilesWorkspace({ onFlash }) {
     }
   }
 
+  async function handleSaveDetail(draft) {
+    const recordId = detailRecord && extractRecordId(detailRecord);
+    if (!recordId) {
+      onFlash?.({ type: "error", message: isJa ? "レコードIDが見つからないため更新できません。" : "This record is missing an ID and cannot be updated." });
+      return;
+    }
+    setDetailSaving(true);
+    try {
+      const authUser = getAuthUser();
+      await updateMasterRecord({ recordId, updates: draft, username: authUser.username, role: authUser.role, tabKey: "masterDB" });
+      setDetailRecord(null);
+      onFlash?.({ type: "success", message: isJa ? "マスターレコードを更新しました。" : "Master record updated successfully." });
+      setRefreshNonce((n) => n + 1);
+    } catch (err) {
+      onFlash?.({ type: "error", message: err.message || (isJa ? "レコードの更新に失敗しました。" : "Failed to update the selected record.") });
+    } finally {
+      setDetailSaving(false);
+    }
+  }
+
+  async function handleUploadDetailImage(imageFile) {
+    const recordId = detailRecord && extractRecordId(detailRecord);
+    if (!recordId) {
+      onFlash?.({ type: "error", message: isJa ? "レコードIDが見つからないため画像をアップロードできません。" : "This record is missing an ID and cannot accept an image upload." });
+      return;
+    }
+    setDetailUploading(true);
+    try {
+      const authUser = getAuthUser();
+      const result = await uploadMasterImage({ base64: await toBase64(imageFile), recordId, username: authUser.username, tabKey: "masterDB" });
+      setDetailRecord((cur) => (cur ? { ...cur, imageURL: result.imageURL } : cur));
+      onFlash?.({ type: "success", message: isJa ? "画像をアップロードしました。" : "Master image uploaded successfully." });
+      setRefreshNonce((n) => n + 1);
+      return result;
+    } catch (err) {
+      onFlash?.({ type: "error", message: err.message || (isJa ? "画像のアップロードに失敗しました。" : "Failed to upload the master image.") });
+    } finally {
+      setDetailUploading(false);
+    }
+  }
+
   function handleResolveConflict(resolutions) {
     if (!resolutions || resolutions === "cancel" || typeof resolutions !== "object") {
       setConflictState(null);
@@ -611,6 +662,7 @@ export default function PceFilesWorkspace({ onFlash }) {
             filteredCount={filteredCount}
             totalPages={totalPages}
             onSort={handleSort}
+            onRowClick={(record) => setDetailRecord(record)}
             onPageChange={(nextPage) => { if (nextPage < 1 || nextPage > totalPages) return; setPage(nextPage); }}
             onPageSizeChange={(nextPageSize) => { setPage(1); setPageSize(nextPageSize); }}
             pageSizeOptions={MASTER_PAGE_SIZE_OPTIONS}
@@ -715,6 +767,18 @@ export default function PceFilesWorkspace({ onFlash }) {
           )}
         </div>
       </div>
+      {detailRecord && (
+        <MasterProductDetailModal
+          key={extractRecordId(detailRecord) || detailRecord?.["品番"] || "pce-product-detail"}
+          open={!!detailRecord}
+          record={detailRecord}
+          saving={detailSaving}
+          uploading={detailUploading}
+          onClose={() => setDetailRecord(null)}
+          onSave={handleSaveDetail}
+          onUploadImage={handleUploadDetailImage}
+        />
+      )}
       <PceFilesConflictModal
         open={!!conflictState}
         conflicts={conflictState?.conflicts || []}
