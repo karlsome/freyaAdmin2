@@ -5,6 +5,7 @@
 // The tablet sends: machine version > type program. Files live in Google Drive "freyaAdmin pce 2"; the points (JSON) in Mongo.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import { parsePce } from "../utils/pceParser";
@@ -215,8 +216,14 @@ function HistoryModal({ slot, isJa, onClose, onRestored, onPreview }) {
   );
 }
 
-export default function MasterNcProgramsSection({ record }) {
+export default function MasterNcProgramsSection({ record, onLeave }) {
   const { language } = useLanguage();
+  const navigate = useNavigate();
+  // Machine-type PCEs are uploaded only in the PCE Files tab: close the item modal and go there
+  function goToPceFiles() {
+    onLeave?.();
+    navigate("/masterDB?tab=pceFiles");
+  }
   const isJa = language === "ja";
   const sebanggo = String(record?.背番号 || "").trim();
   const factory = String(record?.工場 || "").trim();
@@ -336,11 +343,17 @@ export default function MasterNcProgramsSection({ record }) {
         <span className="text-primary"><Icon name="precision_manufacturing" size={16} /></span>
         <span>{isJa ? "NCプログラム（AOL機）" : "NC programs (AOL machines)"}</span>
       </div>
-      <p className="mb-3 text-xs text-outline">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+      <p className="min-w-0 flex-1 text-xs text-outline">
         {isJa
           ? "機種ごとのPCEは「PCE Files」タブからアップロードします。特定の機械だけ違うPCEが必要な場合は、ここで「この機械専用」を追加できます。"
           : "PCEs for each machine type are uploaded in the PCE Files tab. If one machine needs a different PCE (tolerances), add a machine-specific version here."}
       </p>
+        <button type="button" className={btnPrimary} onClick={goToPceFiles}>
+          <Icon name="upload_file" /> {isJa ? "PCE Filesタブでアップロード" : "Upload in PCE Files tab"}
+          <Icon name="arrow_forward" />
+        </button>
+      </div>
 
       <input ref={fileInput} type="file" accept=".pce" className="hidden" onChange={(e) => onFileChosen(e.target.files?.[0])} />
 
@@ -394,8 +407,11 @@ export default function MasterNcProgramsSection({ record }) {
                     <Icon name="warning" size={16} />
                     <span>
                       {isJa
-                        ? "プログラム未登録：この機種には送信できません。「PCE Files」タブからアップロードしてください。"
-                        : "No program yet: this item cannot be sent to these machines. Upload it in the PCE Files tab."}
+                        ? "プログラム未登録：この機種には送信できません。"
+                        : "No program yet: this item cannot be sent to these machines."}{" "}
+                      <button type="button" className="font-bold text-primary underline underline-offset-2 cursor-pointer" onClick={goToPceFiles}>
+                        {isJa ? "PCE Filesタブでアップロード →" : "Upload in the PCE Files tab →"}
+                      </button>
                     </span>
                   </div>
                 )}

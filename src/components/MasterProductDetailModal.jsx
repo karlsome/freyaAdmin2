@@ -705,7 +705,7 @@ export default function MasterProductDetailModal({
               </div>
 
               {/* NC programs for the AOL cutters (non-SCNA items; SCNA has its own NC programs tab) */}
-              {record["工場"] !== "SCNA" && record["背番号"] && <MasterNcProgramsSection record={record} />}
+              {record["工場"] !== "SCNA" && record["背番号"] && <MasterNcProgramsSection record={record} onLeave={onClose} />}
 
               {/* 5. Remarks */}
               {record["備考"] && (
