@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-// Colours follow Xiao: SP4 cyan, SP6 purple. Any other pen is neutral grey until chosen.
-const PEN_COLORS = { 4: "#22d3ee", 6: "#a855f7" };
+// Colours follow Xiao's pen palette (SP0-SP11). Pens above 11 are neutral grey.
+const PEN_COLORS = {
+  0: "#9ca3af",  // grey
+  1: "#ef4444",  // red
+  2: "#facc15",  // yellow
+  3: "#4ade80",  // green
+  4: "#22d3ee",  // cyan
+  5: "#3b82f6",  // blue
+  6: "#a855f7",  // purple
+  7: "#ffffff",  // white
+  8: "#d1d5db",  // light grey
+  9: "#2f8f8f",  // teal
+  10: "#7e22ce", // dark purple
+  11: "#f97316", // orange
+};
 const OTHER_PEN_COLOR = "#9ca3af";
-const PEN_NAMES = { 4: "cyan", 6: "purple" };
+const PEN_NAMES = {
+  0: "grey", 1: "red", 2: "yellow", 3: "green", 4: "cyan", 5: "blue",
+  6: "purple", 7: "white", 8: "light grey", 9: "teal", 10: "dark purple", 11: "orange",
+};
 const PEN_UP_COLOR = "#6b7280";
 const LABEL_COLOR = "#f0a868";
 const PADDING_PX = 16;
