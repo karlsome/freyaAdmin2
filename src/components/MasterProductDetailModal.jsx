@@ -6,6 +6,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import MaterialDetailModal from "./MaterialDetailModal";
 import MasterProductEditModal from "./MasterProductEditModal";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import MasterNcProgramsSection from "./MasterNcProgramsSection";
 
 export default function MasterProductDetailModal({
   record,
@@ -702,6 +703,9 @@ export default function MasterProductDetailModal({
                   </div>
                 </div>
               </div>
+
+              {/* NC programs for the AOL cutters (non-SCNA items; SCNA has its own NC programs tab) */}
+              {record["工場"] !== "SCNA" && record["背番号"] && <MasterNcProgramsSection record={record} />}
 
               {/* 5. Remarks */}
               {record["備考"] && (
