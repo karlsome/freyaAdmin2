@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,6 +10,30 @@ import { BASE_URL } from '../services/api';
 import { readStoredAuthUser, getAuthDisplayName } from '../utils/auth';
 import { openFirstFactorySchedulePrintWindow } from '../utils/firstFactoryPdfExport';
 import * as xlsx from 'xlsx';
+
+// 11/20 from 2026-11-20
+const fmtMonthDay = (dateStr) => (dateStr ? `${Number(dateStr.slice(5, 7))}/${Number(dateStr.slice(8, 10))}` : '');
+// YYYY-MM-DD shifted by n days (local calendar, no time-zone drift)
+const shiftDateStr = (dateStr, n) => {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  const dt = new Date(y, m - 1, d + n);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
+const weekdayJa = (dateStr) => {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  return ['日', '月', '火', '水', '木', '金', '土'][new Date(y, m - 1, d).getDay()] || '';
+};
+// "11/20分": rolls added from another date's plan
+const SourceDateTag = ({ sourceDate, targetDate }) => (
+  sourceDate && sourceDate !== targetDate ? (
+    <span
+      className="shrink-0 rounded-[4px] bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-1.5 py-0.5 text-[9px] font-bold font-mono"
+      title={`${sourceDate} の計画から追加 (Added from the ${sourceDate} plan)`}
+    >
+      {fmtMonthDay(sourceDate)}分
+    </span>
+  ) : null
+);
 
 export default function FirstFactoryPage() {
   const { t, language } = useLanguage();
@@ -72,6 +96,9 @@ export default function FirstFactoryPage() {
   // Extract month (YYYY-MM) and day (1-31) from selectedDateStr
   const selectedMonth = selectedDateStr.substring(0, 7);
   const selectedDay = parseInt(selectedDateStr.substring(8, 10), 10);
+  // Rolls can be added from another date's Excel plan (sourceDate). Rolls without it belong to the target date.
+  const rollSrc = (item) => item?.sourceDate || selectedDateStr;
+  const discKey = (hinban, src) => `${hinban}|${src}`;
 
   const selectedDayOfWeekInfo = useMemo(() => {
     if (!selectedDateStr) return { day: 0, ja: '—', en: '—', isSunday: false, isSaturday: false };
@@ -240,7 +267,7 @@ export default function FirstFactoryPage() {
   };
 
   // Helper to split a hinban production quantity into roll / pack items
-  const createRollItemsForHinban = (foundItem, dayIndex) => {
+  const createRollItemsForHinban = (foundItem, dayIndex, sourceDate) => {
     if (!foundItem) return [];
     const qty = foundItem.production[dayIndex] || 0;
     const unit = extractUnit(foundItem);
@@ -262,6 +289,7 @@ export default function FirstFactoryPage() {
           type: 'hinban',
           hinban: foundItem.hinban,
           poolItemId: foundItem.id,
+          ...(sourceDate ? { sourceDate } : {}),
           rollIndex: i + 1,
           totalRolls: numRolls,
           meters: sheetCount,
@@ -287,6 +315,7 @@ export default function FirstFactoryPage() {
           type: 'hinban',
           hinban: foundItem.hinban,
           poolItemId: foundItem.id,
+          ...(sourceDate ? { sourceDate } : {}),
           rollIndex: i + 1,
           totalRolls: numRolls,
           meters: rollMeters,
@@ -393,10 +422,13 @@ export default function FirstFactoryPage() {
           if (!dayNum || !Array.isArray(sched.scheduleOrder) || sched.scheduleOrder.length === 0) return;
 
           const dayIssues = [];
-          const uniqueHinbans = [...new Set(sched.scheduleOrder.filter(i => i.type === 'hinban' && i.hinban).map(i => i.hinban))];
+          // Rolls pulled in from another date are checked against their own date, not this one
+          const dayKey = `${monthToSync}-${String(dayNum).padStart(2, '0')}`;
+          const ownRolls = sched.scheduleOrder.filter(i => i.type === 'hinban' && i.hinban && (!i.sourceDate || i.sourceDate === dayKey));
+          const uniqueHinbans = [...new Set(ownRolls.map(i => i.hinban))];
 
           uniqueHinbans.forEach(hinban => {
-            const scheduledRolls = sched.scheduleOrder.filter(i => i.hinban === hinban);
+            const scheduledRolls = ownRolls.filter(i => i.hinban === hinban);
             const scheduledMeters = scheduledRolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0);
             const found = parsedData.find(i => i.hinban === hinban);
 
@@ -438,6 +470,39 @@ export default function FirstFactoryPage() {
             });
           }
         });
+
+        // Rolls taken from this month's plan into another day ("11/19分"), on any day / month
+        try {
+          const usageRes = await fetch(`${BASE_URL}api/production/schedule/by-source?month=${encodeURIComponent(monthToSync)}`);
+          const usageJson = await usageRes.json();
+          (usageJson.usage || []).forEach(u => {
+            const bySrc = {};
+            u.rolls.forEach(r => {
+              const k = `${r.hinban}|${r.sourceDate}`;
+              if (!bySrc[k]) bySrc[k] = { hinban: r.hinban, src: r.sourceDate, meters: 0 };
+              bySrc[k].meters += r.meters;
+            });
+            const issues = [];
+            Object.values(bySrc).forEach(({ hinban, src, meters }) => {
+              const label = `${Number(src.slice(5, 7))}/${Number(src.slice(8, 10))}分`;
+              const scheduled = Number(meters.toFixed(1));
+              const found = parsedData.find(i => i.hinban === hinban);
+              const qty = found ? Number((found.production[Number(src.slice(8, 10)) - 1] || 0).toFixed(1)) : 0;
+              if (!found) issues.push({ hinban, type: 'missing', text: `${label}: Not found in Excel dataset for ${monthToSync}` });
+              else if (qty === 0) issues.push({ hinban, type: 'moved_or_zero', text: `${label}: Excel production for ${src} is now 0m` });
+              else if (qty !== scheduled) issues.push({ hinban, type: 'qty_mismatch', text: `${label}: Quantity changed: Scheduled ${scheduled}m → Excel ${qty}m` });
+            });
+            if (!issues.length) return;
+            const existing = impact.find(x => x.dateKey === u.dateStr);
+            if (existing) existing.issues.push(...issues);
+            else impact.push({ date: Number(u.dateStr.slice(8, 10)), dateKey: u.dateStr, issues });
+          });
+          impact.sort((x, y) => x.dateKey.localeCompare(y.dateKey));
+        } catch (usageErr) {
+          console.warn('Could not check rolls taken from this month on other days:', usageErr);
+        }
+        // Cached plans of other months may be this month: reload them when needed
+        setOtherMonthData(prev => { const next = { ...prev }; delete next[monthToSync]; return next; });
 
         if (impact.length > 0) {
           setSyncImpactReport(impact);
@@ -531,7 +596,37 @@ export default function FirstFactoryPage() {
       localStorage.setItem('firstFactory_setup_times', JSON.stringify(updated));
       return updated;
     });
+    // Shared with the factory tablet's ＋ (add task) list
+    fetch(BASE_URL + 'api/production/setup-presets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ times: { [name]: num } })
+    }).catch(() => {});
   };
+
+  // Task minutes live on the server (the tablet uses them too). First time: upload this browser's values.
+  useEffect(() => {
+    fetch(BASE_URL + 'api/production/setup-presets')
+      .then(r => r.json())
+      .then(json => {
+        if (!json.success) return;
+        if (json.saved) {
+          setSetupTimes(prev => {
+            const updated = { ...prev, ...json.times };
+            localStorage.setItem('firstFactory_setup_times', JSON.stringify(updated));
+            return updated;
+          });
+        } else {
+          fetch(BASE_URL + 'api/production/setup-presets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ times: setupTimes })
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpdateCustomName = (val) => {
     setCustomSetupName(val);
@@ -582,6 +677,12 @@ export default function FirstFactoryPage() {
     if ((currentSavedSchedule.startTime || '09:00') !== startTime) return true;
     return false;
   }, [currentSavedSchedule, scheduleOrder, startTime]);
+
+  // Read inside the live (SSE) handler, which is set up once per production date
+  const hasUnsavedChangesRef = useRef(false);
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const selectedMonthRef = useRef(selectedMonth);
+  selectedMonthRef.current = selectedMonth;
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -641,35 +742,110 @@ export default function FirstFactoryPage() {
     navigate(`/firstFactory/${nextTab}?date=${selectedDateStr}`);
   };
 
-  // Items that have production > 0 for this day
+  // Available to Schedule has its own date: items of another day can be added to the target day
+  const [poolDateStr, setPoolDateStr] = useState(selectedDateStr);
+  useEffect(() => { setPoolDateStr(selectedDateStr); }, [selectedDateStr]);
+  const poolMonth = poolDateStr.substring(0, 7);
+  const poolDay = parseInt(poolDateStr.substring(8, 10), 10);
+  const isOtherPoolDate = poolDateStr !== selectedDateStr;
+  // Excel plans of other months: for the Available date picker and for checking rolls pulled in from them
+  const [otherMonthData, setOtherMonthData] = useState({}); // { 'YYYY-MM': Excel rows }
+  const monthsLoading = useRef(new Set());
+  const loadOtherMonth = (month) => {
+    if (!month || month === selectedMonth || otherMonthData[month] || monthsLoading.current.has(month)) return;
+    monthsLoading.current.add(month);
+    fetch(`${BASE_URL}api/production/schedule?month=${encodeURIComponent(month)}`)
+      .then(r => r.json())
+      .then(json => setOtherMonthData(prev => ({ ...prev, [month]: json.success ? (json.data || []) : [] })))
+      .catch(() => setOtherMonthData(prev => ({ ...prev, [month]: [] })))
+      .finally(() => monthsLoading.current.delete(month));
+  };
+  useEffect(() => {
+    loadOtherMonth(poolMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poolMonth, selectedMonth]);
+  const sourceMonthsKey = [...new Set(scheduleOrder.filter(i => i.sourceDate).map(i => i.sourceDate.substring(0, 7)))].sort().join(',');
+  useEffect(() => {
+    sourceMonthsKey.split(',').filter(Boolean).forEach(loadOtherMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceMonthsKey, selectedMonth]);
+  const poolData = poolMonth === selectedMonth ? data : (otherMonthData[poolMonth] || []);
+  const poolDataLoading = poolMonth !== selectedMonth && !otherMonthData[poolMonth];
+
+  // Which other days already use this pool date's items (pulled forward / carried over, or its own saved list)
+  const [poolUsedElsewhere, setPoolUsedElsewhere] = useState([]); // [{ dateStr, hinbans }]
+  const [poolUsageTick, setPoolUsageTick] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${BASE_URL}api/production/schedule/by-source?date=${encodeURIComponent(poolDateStr)}`)
+      .then(r => r.json())
+      .then(json => { if (!cancelled) setPoolUsedElsewhere(json.success ? (json.usage || []) : []); })
+      .catch(() => { if (!cancelled) setPoolUsedElsewhere([]); });
+    return () => { cancelled = true; };
+  }, [poolDateStr, savedSchedules, poolUsageTick]);
+  // hinban -> other target dates (the day being edited here is taken from the unsaved list instead)
+  const poolHinbanUsedOn = useMemo(() => {
+    const map = {};
+    poolUsedElsewhere.forEach(u => {
+      if (u.dateStr === selectedDateStr) return;
+      (u.hinbans || []).forEach(h => { (map[h] = map[h] || []).push(u.dateStr); });
+    });
+    return map;
+  }, [poolUsedElsewhere, selectedDateStr]);
+
+  // Items that have production > 0 on the pool date
   const dailyProductionItems = useMemo(() => {
-    return data.filter(item => {
-      const prod = item.production[selectedDay - 1] || 0;
+    return poolData.filter(item => {
+      const prod = item.production[poolDay - 1] || 0;
       return prod > 0;
     });
-  }, [data, selectedDay]);
+  }, [poolData, poolDay]);
 
   // Split into Pool and Scheduled
   const scheduledItems = scheduleOrder;
 
   const [poolSearch, setPoolSearch] = useState('');
+
+  // 品番 or 基材コード as the name in the Available / schedule lists (the tablet shows 基材コード)
+  const [nameMode, setNameMode] = useState(() => {
+    try { return localStorage.getItem('firstFactory_nameMode') === 'kizai' ? 'kizai' : 'hinban'; } catch { return 'hinban'; }
+  });
+  const changeNameMode = (mode) => {
+    setNameMode(mode);
+    try { localStorage.setItem('firstFactory_nameMode', mode); } catch { /* ignore */ }
+  };
+  // 基材コード per 品番, from the material master's 品番構造 (same rule as the tablet / server)
+  const kizaiByHinban = useMemo(() => {
+    const map = {};
+    [...(data || []), ...Object.values(otherMonthData).flat()].forEach(item => {
+      const segs = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
+      const seg = segs.find(sg => sg.segment === '基材コード');
+      const kizai = seg ? (seg.name || seg['得意先'] || seg['入出荷先'] || '') : '';
+      if (item.hinban && kizai) map[item.hinban] = kizai;
+    });
+    return map;
+  }, [data, otherMonthData]);
+  const kizaiOf = (hinban) => kizaiByHinban[hinban] || '';
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
   const [poolSortBy, setPoolSortBy] = useState('timeOption-asc');
   const [poolBatchFilter, setPoolBatchFilter] = useState('all'); // 'all' | 'large' (>=500m) | 'small' (<200m)
   const [poolWidthFilter, setPoolWidthFilter] = useState('all');
   
   const poolItems = useMemo(() => {
-    const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
+    // Already in the list being edited (rolls whose source is the pool date) or used on another day
+    const usedHere = new Set(scheduleOrder.filter(s => s.type === 'hinban' && (s.sourceDate || selectedDateStr) === poolDateStr).map(s => s.hinban));
     return dailyProductionItems.filter(item => {
-      if (scheduledIds.has(item.id)) return false;
+      if (usedHere.has(item.hinban)) return false;
+      if (poolHinbanUsedOn[item.hinban]) return false;
       if (poolSearch) {
         const q = poolSearch.toLowerCase();
         const kataban = extractKataban(item).toLowerCase();
         const timeOpt = extractTimeOption(item).toLowerCase();
         const matchesHinban = item.hinban.toLowerCase().includes(q);
+        const matchesKizai = (kizaiByHinban[item.hinban] || '').toLowerCase().includes(q);
         const matchesKataban = kataban.includes(q);
         const matchesTimeOpt = timeOpt.includes(q);
-        if (!matchesHinban && !matchesKataban && !matchesTimeOpt) return false;
+        if (!matchesHinban && !matchesKizai && !matchesKataban && !matchesTimeOpt) return false;
       }
       
       // First Factory page focuses ONLY on products that have Process 2010 (粘着工程) in BOM or Master
@@ -695,7 +871,14 @@ export default function FirstFactoryPage() {
       
       return true;
     });
-  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive]);
+  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive, kizaiByHinban, poolDateStr, selectedDateStr, poolHinbanUsedOn]);
+
+  // Items of the pool date already scheduled on another day (shown as a note)
+  const poolUsedElsewhereList = useMemo(() => (
+    dailyProductionItems
+      .filter(item => poolHinbanUsedOn[item.hinban])
+      .map(item => ({ hinban: item.hinban, dates: poolHinbanUsedOn[item.hinban] }))
+  ), [dailyProductionItems, poolHinbanUsedOn]);
 
   // Compute available widths from poolItems
   const availableWidths = useMemo(() => {
@@ -709,7 +892,7 @@ export default function FirstFactoryPage() {
 
   const processedPoolItems = useMemo(() => {
     let items = poolItems.map(item => {
-      const qty = item.production[selectedDay - 1] || 0;
+      const qty = item.production[poolDay - 1] || 0;
       const unit = extractUnit(item);
       const kataban = extractKataban(item);
       const timeOption = extractTimeOption(item);
@@ -776,7 +959,7 @@ export default function FirstFactoryPage() {
     }
 
     return items;
-  }, [poolItems, selectedDay, poolBatchFilter, poolWidthFilter, poolSortBy]);
+  }, [poolItems, poolDay, poolBatchFilter, poolWidthFilter, poolSortBy]);
 
   const poolTotalMins = useMemo(() => {
     return processedPoolItems.reduce((acc, item) => acc + (item._durationMins || 0), 0);
@@ -793,76 +976,79 @@ export default function FirstFactoryPage() {
   };
 
   // --- DISCREPANCY DETECTION FOR THE SELECTED DATE ---
+  // Each group of rolls is checked against the Excel quantity of the date it came from:
+  // the target day for its own rolls, the source date for rolls pulled in ("11/19分").
   const currentDayDiscrepancies = useMemo(() => {
     if (!scheduleOrder || scheduleOrder.length === 0) {
       return { map: {}, list: [], count: 0 };
     }
 
-    const hinbanGroups = {};
+    const groups = {};
     scheduleOrder.forEach(item => {
       if (item.type === 'hinban' && item.hinban) {
-        if (!hinbanGroups[item.hinban]) {
-          hinbanGroups[item.hinban] = [];
-        }
-        hinbanGroups[item.hinban].push(item);
+        const src = rollSrc(item);
+        const key = discKey(item.hinban, src);
+        if (!groups[key]) groups[key] = { hinban: item.hinban, src, rolls: [] };
+        groups[key].rolls.push(item);
       }
     });
 
     const map = {};
     const list = [];
 
-    Object.entries(hinbanGroups).forEach(([hinban, rolls]) => {
+    Object.entries(groups).forEach(([key, { hinban, src, rolls }]) => {
+      const srcMonth = src.substring(0, 7);
+      const rows = srcMonth === selectedMonth ? data : otherMonthData[srcMonth];
+      if (!rows) return; // that month's plan is still loading
+      const isOwn = src === selectedDateStr;
+      const srcDay = parseInt(src.substring(8, 10), 10);
+      const prefix = isOwn ? '' : `${fmtMonthDay(src)}分: `;
       const scheduledMeters = Number(rolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
-      const foundRow = data.find(i => i.hinban === hinban);
+      const foundRow = rows.find(i => i.hinban === hinban);
+      const base = { key, hinban, sourceDate: src, isOwn, scheduledMeters, rollsCount: rolls.length };
 
       if (!foundRow) {
         const disc = {
-          hinban,
+          ...base,
           type: 'missing_in_excel',
           excelQty: 0,
-          scheduledMeters,
-          message: '品番が今月のエクセルデータに存在しません (Not in Excel)',
-          rollsCount: rolls.length
+          message: prefix + (isOwn ? '品番が今月のエクセルデータに存在しません (Not in Excel)' : `品番が ${srcMonth} のエクセルデータに存在しません (Not in Excel)`)
         };
-        map[hinban] = disc;
+        map[key] = disc;
         list.push(disc);
       } else {
-        const excelQty = Number((foundRow.production[selectedDay - 1] || 0).toFixed(1));
+        const excelQty = Number((foundRow.production[srcDay - 1] || 0).toFixed(1));
         if (excelQty === 0) {
           const otherDays = [];
           for (let d = 1; d <= 31; d++) {
             const q = foundRow.production[d - 1] || 0;
             if (q > 0) {
-              otherDays.push(`${d}日 (${q}m)`);
+              otherDays.push(`${isOwn ? '' : `${parseInt(srcMonth.substring(5, 7), 10)}/`}${d}日 (${q}m)`);
             }
           }
-          const movedText = otherDays.length > 0 
+          const movedText = prefix + (otherDays.length > 0 
             ? `エクセルで他日程に移動: ${otherDays.join(', ')}` 
-            : 'エクセル生産数: 0m';
+            : 'エクセル生産数: 0m');
           
           const disc = {
-            hinban,
+            ...base,
             type: 'moved_or_zero',
             excelQty: 0,
-            scheduledMeters,
             movedText,
             message: movedText,
-            rollsCount: rolls.length,
             foundRow
           };
-          map[hinban] = disc;
+          map[key] = disc;
           list.push(disc);
         } else if (excelQty !== scheduledMeters) {
           const disc = {
-            hinban,
+            ...base,
             type: 'qty_mismatch',
             excelQty,
-            scheduledMeters,
-            message: `エクセル数量不一致: スケジュール ${scheduledMeters}m → エクセル ${excelQty}m`,
-            rollsCount: rolls.length,
+            message: `${prefix}エクセル数量不一致: スケジュール ${scheduledMeters}m → エクセル ${excelQty}m`,
             foundRow
           };
-          map[hinban] = disc;
+          map[key] = disc;
           list.push(disc);
         }
       }
@@ -873,7 +1059,8 @@ export default function FirstFactoryPage() {
       list,
       count: list.length
     };
-  }, [scheduleOrder, data, selectedDay]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleOrder, data, selectedDay, selectedDateStr, selectedMonth, otherMonthData]);
 
   // Auto-align ONLY for the currently selected date (does not touch any other dates)
   const handleAutoAlignCurrentDate = () => {
@@ -891,7 +1078,7 @@ export default function FirstFactoryPage() {
         }
 
         const hinban = item.hinban;
-        const disc = currentDayDiscrepancies.map[hinban];
+        const disc = currentDayDiscrepancies.map[discKey(hinban, rollSrc(item))];
 
         if (!disc) {
           // No discrepancy, retain item
@@ -901,9 +1088,9 @@ export default function FirstFactoryPage() {
           continue;
         } else if (disc.type === 'qty_mismatch') {
           // Replace rolls with updated roll breakdown at this position
-          if (!processedHinbans.has(hinban)) {
-            processedHinbans.add(hinban);
-            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+          if (!processedHinbans.has(disc.key)) {
+            processedHinbans.add(disc.key);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, parseInt(disc.sourceDate.substring(8, 10), 10) - 1, disc.sourceDate);
             newOrder.push(...updatedRolls);
           }
         }
@@ -915,8 +1102,8 @@ export default function FirstFactoryPage() {
     setIsDiscrepancyModalOpen(false);
   };
 
-  const handleUpdateHinbanQty = (hinban) => {
-    const disc = currentDayDiscrepancies.map[hinban];
+  const handleUpdateHinbanQty = (hinban, src = selectedDateStr) => {
+    const disc = currentDayDiscrepancies.map[discKey(hinban, src)];
     if (!disc || !disc.foundRow) return;
 
     setScheduleOrder(prevOrder => {
@@ -925,10 +1112,10 @@ export default function FirstFactoryPage() {
 
       for (let i = 0; i < prevOrder.length; i++) {
         const item = prevOrder[i];
-        if (item.type === 'hinban' && item.hinban === hinban) {
+        if (item.type === 'hinban' && item.hinban === hinban && rollSrc(item) === src) {
           if (!replaced) {
             replaced = true;
-            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, parseInt(src.substring(8, 10), 10) - 1, src);
             newOrder.push(...updatedRolls);
           }
         } else {
@@ -945,7 +1132,7 @@ export default function FirstFactoryPage() {
       const authUser = readStoredAuthUser() || {};
       const scheduledBy = authUser.firstName ? `${authUser.firstName} ${authUser.lastName || ''}`.trim() : (authUser.username || 'Admin');
 
-      const res = await fetch(BASE_URL + 'api/production/schedule', {
+      const save = (force) => fetch(BASE_URL + 'api/production/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -953,10 +1140,25 @@ export default function FirstFactoryPage() {
           startTime, 
           month: selectedMonth, 
           date: selectedDay,
-          scheduledBy
+          scheduledBy,
+          baseRevision: currentSavedSchedule.revision || 0,
+          force
         })
       });
-      const json = await res.json();
+      let res = await save(false);
+      let json = await res.json();
+      if (res.status === 409 && json.conflict) {
+        // The factory tablet (or another admin) changed this day's list after it was loaded here
+        const by = json.lastChangedBy;
+        const who = by ? `${by.name || ''}${by.source === 'tablet' ? ` (${t('ff_scheduleConflictTablet')})` : ''}${by.detail ? ` – ${by.detail}` : ''}` : '';
+        if (window.confirm(`${t('ff_scheduleConflictReload')}${who ? `\n\n${who}` : ''}`)) {
+          fetchSchedule(selectedMonth);
+          return;
+        }
+        if (!window.confirm(t('ff_scheduleConflictOverwrite'))) return;
+        res = await save(true);
+        json = await res.json();
+      }
       if (json.success) {
         alert(t('ff_scheduleSavedSuccess') + ` (${selectedDateStr})`);
         fetchSchedule(selectedMonth); // Refresh
@@ -1470,6 +1672,11 @@ export default function FirstFactoryPage() {
   const [productionDateStr, setProductionDateStr] = useState(getLocalYYYYMMDD());
   const [productionSchedule, setProductionSchedule] = useState(null);
   const [productionStatuses, setProductionStatuses] = useState([]);
+  // Rolls excluded (除外) on the firstKojoNippo tablet for the selected date
+  const [excludedRolls, setExcludedRolls] = useState([]);
+  // 段替え / setup timers started & ended on the firstKojoNippo tablet, keyed by setupId (setup_<id>)
+  const [setupRecords, setSetupRecords] = useState({});
+  const [nowTick, setNowTick] = useState(Date.now());
   const [loadingProduction, setLoadingProduction] = useState(false);
   const [productionFilter, setProductionFilter] = useState('all');
   const [isLiveConnected, setIsLiveConnected] = useState(false);
@@ -1514,6 +1721,12 @@ export default function FirstFactoryPage() {
           } else {
             setProductionStatuses([]);
           }
+          setExcludedRolls(Array.isArray(statusJson.excludedRolls) ? statusJson.excludedRolls : []);
+          const setupMap = {};
+          (Array.isArray(statusJson.setupRecords) ? statusJson.setupRecords : []).forEach(rec => {
+            if (rec && rec.setupId) setupMap[rec.setupId] = rec;
+          });
+          setSetupRecords(setupMap);
         }
       } catch (err) {
         console.warn("Status fetch error:", err);
@@ -1525,6 +1738,14 @@ export default function FirstFactoryPage() {
       if (!isBackground) setLoadingProduction(false);
     }
   };
+
+  // Refresh the elapsed time of a running setup every 15s
+  const hasRunningSetup = Object.values(setupRecords).some(r => r?.status === 'running');
+  useEffect(() => {
+    if (!hasRunningSetup) return;
+    const id = setInterval(() => setNowTick(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, [hasRunningSetup]);
 
   useEffect(() => {
     if (activeTab !== 'production') return;
@@ -1576,8 +1797,12 @@ export default function FirstFactoryPage() {
                 }
               });
             }
-          } else if (data.type === 'schedule_update') {
+          } else if (data.type === 'schedule_update' || data.type === 'exclude_update' || data.type === 'setup_update') {
             fetchProductionData(productionDateStr, true);
+            if (data.type === 'schedule_update') setPoolUsageTick(n => n + 1);
+            if (data.type === 'schedule_update' && data.source === 'tablet' && !hasUnsavedChangesRef.current) {
+              fetchSchedule(selectedMonthRef.current);
+            }
           }
         } catch (err) {
           console.error("Error processing SSE event:", err);
@@ -1650,7 +1875,11 @@ export default function FirstFactoryPage() {
         return;
       }
 
-      if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban) {
+      // item.groupId is fixed by the server once the list is edited (tablet reorder / admin save):
+      // it keeps production records linked when a group moves, and keeps moved groups apart
+      if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban &&
+          (!item.groupId || item.groupId === currentGroup.groupId) &&
+          (item.sourceDate || '') === (currentGroup.items[0].sourceDate || '')) {
         currentGroup.items.push(item);
         currentGroup.totalDuration += Number(item.duration) || 0;
         currentGroup.totalMeters += Number(item.meters) || 0;
@@ -1659,7 +1888,7 @@ export default function FirstFactoryPage() {
       } else {
         currentGroup = {
           type: 'hinban',
-          groupId: `group_${item.hinban}_${idx}`,
+          groupId: item.groupId || `group_${item.hinban}_${idx}`,
           hinban: item.hinban,
           hinmei: item.hinmei || '',
           kizai: item.kizai || '',
@@ -1682,7 +1911,22 @@ export default function FirstFactoryPage() {
 
     const normStatus = (s) => (s === 'running' || s === 'active' ? 'in-progress' : s);
 
-    return groups.map((grp) => {
+    // Excluded rolls are matched by schedule item id, falling back to groupId+rollIndex, then orderIndex
+    const isRollExcluded = (grp, roll, rIdx) => {
+      const rollNum = Number(roll.rollIndex) || (rIdx + 1);
+      return excludedRolls.some(x =>
+        (roll.id && x.itemId === String(roll.id)) ||
+        (x.groupId && x.groupId === grp.groupId && Number(x.rollIndex) === rollNum) ||
+        (!x.itemId && roll.orderIndex && x.orderIndex && Number(x.orderIndex) === Number(roll.orderIndex) && (!x.hinban || x.hinban === roll.hinban))
+      );
+    };
+
+    return groups.map((g) => {
+      const excludedRollNums = new Set();
+      (g.type === 'hinban' ? g.items : []).forEach((roll, rIdx) => {
+        if (isRollExcluded(g, roll, rIdx)) excludedRollNums.add(Number(roll.rollIndex) || (rIdx + 1));
+      });
+      const grp = { ...g, excludedRollNums, excludedCount: excludedRollNums.size };
       // The queue flow stores ONE firstFactoryProduction doc PER ROLL (same groupId,
       // different rollIndex), each with its own printHistory. Aggregate them all —
       // picking only the first doc froze the card at roll #1.
@@ -1691,7 +1935,9 @@ export default function FirstFactoryPage() {
         recs = productionStatuses.filter(s => s.hinban === grp.hinban);
       }
       if (recs.length === 0) {
-        return { ...grp, status: 'pending', worker: '', machine: 'PSA2', actualStartTime: null, actualEndTime: null, actualDurationMins: null, statusRecord: null };
+        // Every roll excluded and nothing produced -> treat as canceled
+        const allExcluded = grp.items.length > 0 && grp.excludedCount >= grp.items.length;
+        return { ...grp, status: allExcluded ? 'canceled' : 'pending', worker: '', machine: 'PSA2', actualStartTime: null, actualEndTime: null, actualDurationMins: null, statusRecord: null };
       }
 
       const statuses = recs.map(r => normStatus(r.status || 'pending'));
@@ -1715,9 +1961,29 @@ export default function FirstFactoryPage() {
         });
       });
 
+      // Prefer the epoch timestamps rendered in JST: the server used to format
+      // actualStartTime/actualEndTime in its own zone (UTC), e.g. 09:32 JST -> "00:32".
+      const toJst = (epoch) => {
+        const n = Number(epoch);
+        if (!n) return null;
+        return new Date(n).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
+      };
+      // Excluded rolls will never be produced: once every roll is printed/completed or excluded, the group is done
+      if (status !== 'completed' && grp.excludedCount > 0) {
+        const printedNums = new Set(printHistory.map(p => Number(p.rollIndex)));
+        recs.forEach(r => {
+          if (normStatus(r.status) === 'completed' && r.rollIndex !== undefined && r.rollIndex !== null) printedNums.add(Number(r.rollIndex));
+        });
+        const allHandled = grp.items.every((roll, rIdx) => {
+          const n = Number(roll.rollIndex) || (rIdx + 1);
+          return printedNums.has(n) || grp.excludedRollNums.has(n);
+        });
+        if (allHandled) status = printedNums.size > 0 ? 'completed' : 'canceled';
+      }
+
       const byTime = (a, b) => String(a).localeCompare(String(b));
-      const starts = recs.map(r => r.actualStartTime).filter(Boolean).sort(byTime);
-      const ends = recs.map(r => r.actualEndTime).filter(Boolean).sort(byTime);
+      const starts = recs.map(r => toJst(r.startEpoch) || r.actualStartTime).filter(Boolean).sort(byTime);
+      const ends = recs.map(r => toJst(r.endEpoch) || r.actualEndTime).filter(Boolean).sort(byTime);
       const active = recs.find(r => normStatus(r.status) === 'in-progress');
       const latest = [...recs].sort((a, b) => (Number(b.rollIndex) || 0) - (Number(a.rollIndex) || 0))[0];
       const durations = recs.map(r => r.actualDurationMins).filter(v => v !== undefined && v !== null);
@@ -1733,7 +1999,7 @@ export default function FirstFactoryPage() {
         statusRecord: { ...recs[0], printHistory }
       };
     });
-  }, [productionSchedule, productionStatuses]);
+  }, [productionSchedule, productionStatuses, excludedRolls]);
 
   const productionStats = useMemo(() => {
     // Only account for product hinban batches (exclude setup items since setups are non-production changeovers)
@@ -1834,9 +2100,9 @@ export default function FirstFactoryPage() {
             duration: dragData.duration || 15
           });
         } else if (dragData.type === 'pool-hinban') {
-          const found = data.find(i => i.id === dragData.id);
+          const found = poolData.find(i => i.id === dragData.id);
           if (found) {
-            itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
+            itemsToInsert = createRollItemsForHinban(found, poolDay - 1, poolDateStr);
           }
         }
         
@@ -1864,9 +2130,9 @@ export default function FirstFactoryPage() {
           duration: dragData.duration || 15
         });
       } else if (dragData.type === 'pool-hinban') {
-        const found = data.find(i => i.id === dragData.id);
+        const found = poolData.find(i => i.id === dragData.id);
         if (found) {
-          itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
+          itemsToInsert = createRollItemsForHinban(found, poolDay - 1, poolDateStr);
         }
       }
       
@@ -1919,8 +2185,8 @@ export default function FirstFactoryPage() {
           index,
         });
       } else {
-        // Hinban item
-        if (currentGroup && currentGroup.hinban === item.hinban) {
+        // Hinban item (rolls of the same 品番 from different source dates stay separate)
+        if (currentGroup && currentGroup.hinban === item.hinban && currentGroup.sourceDate === (item.sourceDate || selectedDateStr)) {
           // Append to current group
           currentGroup.items.push({ item, index });
           currentGroup.endIndex = index;
@@ -1935,6 +2201,7 @@ export default function FirstFactoryPage() {
             type: 'hinban',
             id: `group_${item.hinban}_${index}`,
             hinban: item.hinban,
+            sourceDate: item.sourceDate || selectedDateStr,
             unit: item.unit || 'm',
             totalRolls: item.totalRolls || 1,
             startIndex: index,
@@ -2278,6 +2545,43 @@ export default function FirstFactoryPage() {
                   <h3 className="text-sm font-bold text-[var(--text-primary)]">
                     {t('ff_availableToSchedule')}
                   </h3>
+                  {/* The plan date to take items from (default: the target date), ‹ › = previous / next day */}
+                  <div className="inline-flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPoolDateStr(shiftDateStr(poolDateStr, -1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                    title={language === 'ja' ? '前の日' : 'Previous day'}
+                    aria-label={language === 'ja' ? '前の日' : 'Previous day'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
+                  </button>
+                  <input
+                    type="date"
+                    value={poolDateStr}
+                    onChange={(e) => e.target.value && setPoolDateStr(e.target.value)}
+                    className={`h-7 rounded-[6px] border px-2 text-xs font-mono font-bold outline-none cursor-pointer ${isOtherPoolDate ? 'border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'}`}
+                    title={language === 'ja' ? '引当元の日付 (他の日の計画も追加できます)' : 'Plan date to take items from'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPoolDateStr(shiftDateStr(poolDateStr, 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                    title={language === 'ja' ? '次の日' : 'Next day'}
+                    aria-label={language === 'ja' ? '次の日' : 'Next day'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+                  </button>
+                  </div>
+                  {isOtherPoolDate && (
+                    <button
+                      type="button"
+                      onClick={() => setPoolDateStr(selectedDateStr)}
+                      className="text-[11px] font-semibold text-[var(--freya-blue)] hover:underline cursor-pointer"
+                    >
+                      {language === 'ja' ? `対象日 (${fmtMonthDay(selectedDateStr)}) に戻す` : `Back to ${fmtMonthDay(selectedDateStr)}`}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-[4px] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-bold text-[var(--text-primary)] border border-[var(--border)] freya-tabular" title={t('ff_totalEstimatedFilteredTime')}>
@@ -2304,6 +2608,32 @@ export default function FirstFactoryPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Other plan date: where added items go, and items of that date already scheduled elsewhere */}
+              {isOtherPoolDate && (
+                <div className="rounded-[6px] border border-violet-500/30 bg-violet-500/5 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 font-medium">
+                  {language === 'ja'
+                    ? `${poolDateStr.replace(/-/g, '/')} の計画を表示中。追加すると ${selectedDateStr.replace(/-/g, '/')} の優先順位に「${fmtMonthDay(poolDateStr)}分」として入ります。`
+                    : `Showing the ${poolDateStr} plan. Added items go into the ${selectedDateStr} priority order, tagged "${fmtMonthDay(poolDateStr)}".`}
+                  {poolDataLoading && <span className="ml-2 opacity-70">{language === 'ja' ? '読み込み中…' : 'Loading…'}</span>}
+                </div>
+              )}
+              {poolUsedElsewhereList.length > 0 && (
+                <details className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                  <summary className="cursor-pointer font-semibold">
+                    {language === 'ja'
+                      ? `他の日に登録済み: ${poolUsedElsewhereList.length} 件 (一覧から非表示)`
+                      : `Already scheduled on another day: ${poolUsedElsewhereList.length} (hidden)`}
+                  </summary>
+                  <ul className="mt-1.5 flex flex-col gap-0.5 font-mono">
+                    {poolUsedElsewhereList.map(u => (
+                      <li key={u.hinban}>
+                        {nameMode === 'kizai' && kizaiOf(u.hinban) ? kizaiOf(u.hinban) : u.hinban} → {u.dates.map(d => fmtMonthDay(d)).join(', ')}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
 
               {/* Search & Filter Toolbar */}
               <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 flex flex-col gap-2">
@@ -2554,8 +2884,19 @@ export default function FirstFactoryPage() {
                 {processedPoolItems.length > 0 && (
                   <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] mb-1 select-none">
                     <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
-                      <div className="w-[220px] shrink-0 text-left font-mono">
-                        {language === 'ja' ? '品番' : 'Hinban'}
+                      <div className="w-[220px] shrink-0 text-left font-mono normal-case tracking-normal">
+                        <div className="inline-flex rounded-[5px] border border-[var(--border)] bg-[var(--surface)] p-0.5" role="group" aria-label={language === 'ja' ? '表示名' : 'Name shown'}>
+                          {[['hinban', language === 'ja' ? '品番' : 'Hinban'], ['kizai', language === 'ja' ? '基材コード' : 'Base material']].map(([mode, label]) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => changeNameMode(mode)}
+                              className={`px-2 py-0.5 rounded-[4px] text-[10px] font-semibold cursor-pointer transition-colors ${nameMode === mode ? 'bg-[var(--freya-blue)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div className="w-[85px] shrink-0 text-left font-mono">
                         {language === 'ja' ? '型番' : 'Kataban'}
@@ -2599,9 +2940,16 @@ export default function FirstFactoryPage() {
                         <div className="flex items-center gap-4 w-full">
                           {/* Column 1: Hinban */}
                           <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
+                            {nameMode === 'kizai' && kizaiOf(item.hinban) ? (
+                              <span className="flex flex-col min-w-0" title={`${kizaiOf(item.hinban)}\n${item.hinban}`}>
+                                <span className="font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate">{kizaiOf(item.hinban)}</span>
+                                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate">{item.hinban}</span>
+                              </span>
+                            ) : (
                             <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
                               {item.hinban}
                             </span>
+                            )}
                             {isRawMaterial && (
                               <span className="shrink-0 rounded-[4px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold font-mono uppercase tracking-wider">
                                 {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
@@ -2670,6 +3018,10 @@ export default function FirstFactoryPage() {
                     <h3 className="text-sm font-bold text-[var(--text-primary)] tracking-tight">
                       {t('ff_priorityOrder')}
                     </h3>
+                    {/* Target date: the day this list is for */}
+                    <span className="rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/30 px-2 py-0.5 text-xs font-mono font-bold text-[var(--freya-blue)]">
+                      {selectedDateStr.replace(/-/g, '/')} ({language === 'ja' ? weekdayJa(selectedDateStr) : selectedDayOfWeekInfo.en})
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
@@ -2837,7 +3189,7 @@ export default function FirstFactoryPage() {
 
                     // Helper to render an individual roll card
                     const renderRollCard = (item, rollItemIndex) => {
-                      const disc = currentDayDiscrepancies.map[item.hinban];
+                      const disc = currentDayDiscrepancies.map[discKey(item.hinban, rollSrc(item))];
                       const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                       const isQtyMismatch = disc && disc.type === 'qty_mismatch';
 
@@ -2881,9 +3233,17 @@ export default function FirstFactoryPage() {
                             <div className="flex items-center gap-4 w-full">
                               {/* Column 1: Hinban + Discrepancy Warnings */}
                               <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                {nameMode === 'kizai' && kizaiOf(item.hinban) ? (
+                                  <span className="flex flex-col min-w-0" title={`${kizaiOf(item.hinban)}\n${item.hinban}`}>
+                                    <span className="font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate">{kizaiOf(item.hinban)}</span>
+                                    <span className="font-mono text-[10px] text-[var(--text-muted)] truncate">{item.hinban}</span>
+                                  </span>
+                                ) : (
                                 <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
                                   {item.hinban}
                                 </span>
+                                )}
+                                <SourceDateTag sourceDate={item.sourceDate} targetDate={selectedDateStr} />
                                 {isZeroOrMissing && (
                                   <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
@@ -2936,7 +3296,7 @@ export default function FirstFactoryPage() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleUpdateHinbanQty(item.hinban);
+                                    handleUpdateHinbanQty(item.hinban, rollSrc(item));
                                   }}
                                   className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
                                   title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
@@ -2972,7 +3332,7 @@ export default function FirstFactoryPage() {
 
                     // If Collapsed: Render obvious stacked card with full start-to-end time
                     if (isCollapsed) {
-                      const disc = currentDayDiscrepancies.map[group.hinban];
+                      const disc = currentDayDiscrepancies.map[discKey(group.hinban, rollSrc(group.items[0]?.item))];
                       const groupIsZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                       const groupIsQtyMismatch = disc && disc.type === 'qty_mismatch';
                       const matchedPool = data.find(d => d.hinban === group.hinban);
@@ -3026,9 +3386,17 @@ export default function FirstFactoryPage() {
                             <div className="flex items-center gap-4 w-full">
                               {/* Column 1: Hinban + Discrepancy Warnings */}
                               <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                {nameMode === 'kizai' && kizaiOf(group.hinban) ? (
+                                  <span className="flex flex-col min-w-0" title={`${kizaiOf(group.hinban)}\n${group.hinban}`}>
+                                    <span className="font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate">{kizaiOf(group.hinban)}</span>
+                                    <span className="font-mono text-[10px] text-[var(--text-muted)] truncate">{group.hinban}</span>
+                                  </span>
+                                ) : (
                                 <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={group.hinban}>
                                   {group.hinban}
                                 </span>
+                                )}
+                                <SourceDateTag sourceDate={group.items[0]?.item?.sourceDate} targetDate={selectedDateStr} />
                                 {groupIsZeroOrMissing && (
                                   <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
@@ -3100,7 +3468,7 @@ export default function FirstFactoryPage() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleUpdateHinbanQty(group.hinban);
+                                    handleUpdateHinbanQty(group.hinban, rollSrc(group.items[0]?.item));
                                   }}
                                   className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
                                   title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
@@ -3490,6 +3858,14 @@ export default function FirstFactoryPage() {
 
                 if (group.type === 'setup') {
                   const setupItem = group.items[0];
+                  const setupRec = setupRecords[group.groupId];
+                  const setupRunning = setupRec?.status === 'running';
+                  const setupDone = setupRec?.status === 'done';
+                  const plannedMins = Number(group.totalDuration) || 0;
+                  const actualMins = setupDone
+                    ? Number(setupRec.durationMins) || 0
+                    : setupRunning ? Math.max(0, Math.floor((nowTick - Number(setupRec.startEpoch || nowTick)) / 60000)) : null;
+                  const setupOver = actualMins != null && plannedMins > 0 && actualMins > plannedMins;
                   return (
                     <div 
                       key={group.groupId}
@@ -3511,10 +3887,37 @@ export default function FirstFactoryPage() {
                           <p className="text-xs text-[var(--text-muted)] font-mono freya-tabular mt-0.5">
                             🕒 {t('ff_scheduledTime')}: {group.startTime} ～ {group.endTime} ({group.totalDuration} {t('ff_minutesShort')})
                           </p>
+                          {setupRec && (
+                            <p className={`text-xs font-mono freya-tabular mt-0.5 font-semibold ${setupOver ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                              ⏱ {language === 'ja' ? '実績' : 'Actual'}: {setupRec.startTime || '—'} ～ {setupDone ? (setupRec.endTime || '—') : (language === 'ja' ? '実行中' : 'running')}
+                              {' '}({actualMins} {t('ff_minutesShort')}{setupOver ? (language === 'ja' ? ` / +${actualMins - plannedMins}分 超過` : ` / +${actualMins - plannedMins} over`) : ''})
+                              {setupRec.startedBy ? ` · ${setupRec.startedBy}` : ''}
+                              {(setupRec.startEdited || setupRec.endEdited) && (
+                                <span
+                                  className="ml-2 rounded-[4px] bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400"
+                                  title={language === 'ja' ? 'タブレットで時刻が修正されています' : 'Time was corrected on the tablet'}
+                                >
+                                  ✎ {language === 'ja' ? '修正済' : 'Edited'}
+                                </span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {setupRunning && (
+                          <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white">
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span>
+                            {language === 'ja' ? '段替え中' : 'Running'}
+                          </span>
+                        )}
+                        {setupDone && (
+                          <span className={`inline-flex items-center gap-1 rounded-[4px] px-2.5 py-1 text-xs font-semibold border ${setupOver ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'}`}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
+                            {language === 'ja' ? '完了' : 'Done'}
+                          </span>
+                        )}
                         <span className="rounded-[4px] bg-amber-500/10 px-2.5 py-1 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400 border border-amber-500/20">
                           ⚙️ {group.totalDuration} {t('ff_minutesShort')}
                         </span>
@@ -3594,6 +3997,13 @@ export default function FirstFactoryPage() {
                             {group.actualDurationMins && (
                               <span className="font-mono">({group.actualDurationMins}{t('ff_minutesShort')})</span>
                             )}
+                          </div>
+                        )}
+
+                        {group.excludedCount > 0 && (
+                          <div className="inline-flex items-center gap-1 rounded-[4px] bg-rose-500/10 px-2 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/20" title={t('ff_excludedRollsTooltip')}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>block</span>
+                            <span>{language === 'ja' ? `除外 ${group.excludedCount}巻` : `${group.excludedCount} Excluded`}</span>
                           </div>
                         )}
 
@@ -3684,6 +4094,7 @@ export default function FirstFactoryPage() {
                       );
                       const printedCount = printedRollIndices.size;
                       const totalRolls = group.items.length;
+                      const excludedNums = group.excludedRollNums || new Set();
                       const allDone = totalRolls > 0 && printedCount >= totalRolls;
 
                       return (
@@ -3699,6 +4110,23 @@ export default function FirstFactoryPage() {
                           {group.items.map((roll, rIdx) => {
                             const rollNum = Number(roll.rollIndex) || (rIdx + 1);
                             const isPrinted = printedRollIndices.has(rollNum);
+                            const isExcluded = !isPrinted && excludedNums.has(rollNum);
+
+                            if (isExcluded) {
+                              return (
+                                <div
+                                  key={roll.id || rIdx}
+                                  className="inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-xs border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold"
+                                  title={t('ff_rollExcludedTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls)}
+                                >
+                                  <span className="material-symbols-outlined text-rose-600 dark:text-rose-400" style={{ fontSize: 14 }}>cancel</span>
+                                  <span className="font-mono freya-tabular line-through">
+                                    {rollNum}/{totalRolls}
+                                  </span>
+                                  <span className="font-mono text-[11px]">{language === 'ja' ? '除外' : 'Excluded'}</span>
+                                </div>
+                              );
+                            }
 
                             return (
                               <div
@@ -3817,13 +4245,16 @@ export default function FirstFactoryPage() {
                 const isZeroOrMissing = disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel';
                 return (
                   <div 
-                    key={disc.hinban} 
+ key={disc.key} 
                     className={`rounded-[6px] border p-3 flex flex-col gap-2 ${
                       isZeroOrMissing ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/30 bg-amber-500/5'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-[var(--text-primary)]">{disc.hinban}</span>
+                      <span className="font-semibold text-sm text-[var(--text-primary)] inline-flex items-center gap-1.5">
+                        {nameMode === 'kizai' && kizaiOf(disc.hinban) ? kizaiOf(disc.hinban) : disc.hinban}
+                        <SourceDateTag sourceDate={disc.sourceDate} targetDate={selectedDateStr} />
+                      </span>
                       <span className="text-xs text-[var(--text-muted)] font-mono freya-tabular">
                         {language === 'ja' 
                           ? `設定済: ${disc.scheduledMeters}m (${disc.rollsCount} 巻)` 
@@ -3850,7 +4281,7 @@ export default function FirstFactoryPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setScheduleOrder(prev => prev.filter(i => i.hinban !== disc.hinban));
+                            setScheduleOrder(prev => prev.filter(i => !(i.type === 'hinban' && i.hinban === disc.hinban && rollSrc(i) === disc.sourceDate)));
                           }}
                           className="inline-flex items-center gap-1 rounded-[6px] border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-500/20 transition-colors cursor-pointer"
                         >
@@ -3860,7 +4291,7 @@ export default function FirstFactoryPage() {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleUpdateHinbanQty(disc.hinban)}
+                          onClick={() => handleUpdateHinbanQty(disc.hinban, disc.sourceDate)}
                           className="inline-flex items-center gap-1 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
@@ -3927,7 +4358,7 @@ export default function FirstFactoryPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 font-semibold text-xs text-[var(--text-primary)]">
                         <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>calendar_today</span>
-                        <span className="font-mono freya-tabular">{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
+                        <span className="font-mono freya-tabular">{fmtMonthDay(report.dateKey)}</span>
                         <span className="rounded-[4px] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
                           {language === 'ja' ? `${report.issues.length} 件の変更` : `${report.issues.length} issue${report.issues.length === 1 ? '' : 's'}`}
                         </span>

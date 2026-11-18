@@ -25,6 +25,16 @@ import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
 
+// HH:MM in JST from an epoch / date. The stored actualStartTime/actualEndTime text was written in
+// UTC by older servers (09:32 JST -> "00:32"), so prefer the timestamps.
+const jstHM = (value) => {
+  if (value === undefined || value === null || value === "") return "";
+  const raw = value && value.$date ? value.$date : value;
+  const d = typeof raw === "number" || /^\d+$/.test(String(raw)) ? new Date(Number(raw)) : new Date(raw);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" });
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "";
@@ -1036,8 +1046,8 @@ export default function FactoryDetailPage({ combined = false }) {
                               {r.date || "—"}
                             </div>
                             <div className="text-[10px] text-[var(--text-muted)] font-mono">
-                              {r.actualStartTime || r.startTime || "—"}
-                              {r.actualEndTime ? ` → ${r.actualEndTime}` : ""}
+                              {jstHM(r.startEpoch || r.startedAt) || r.actualStartTime || r.startTime || "—"}
+                              {(jstHM(r.endEpoch || r.completedAt) || r.actualEndTime) ? ` → ${jstHM(r.endEpoch || r.completedAt) || r.actualEndTime}` : ""}
                               {r.actualDurationMins ? ` (${r.actualDurationMins}m)` : ""}
                             </div>
                           </td>
