@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -531,7 +531,37 @@ export default function FirstFactoryPage() {
       localStorage.setItem('firstFactory_setup_times', JSON.stringify(updated));
       return updated;
     });
+    // Shared with the factory tablet's ＋ (add task) list
+    fetch(BASE_URL + 'api/production/setup-presets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ times: { [name]: num } })
+    }).catch(() => {});
   };
+
+  // Task minutes live on the server (the tablet uses them too). First time: upload this browser's values.
+  useEffect(() => {
+    fetch(BASE_URL + 'api/production/setup-presets')
+      .then(r => r.json())
+      .then(json => {
+        if (!json.success) return;
+        if (json.saved) {
+          setSetupTimes(prev => {
+            const updated = { ...prev, ...json.times };
+            localStorage.setItem('firstFactory_setup_times', JSON.stringify(updated));
+            return updated;
+          });
+        } else {
+          fetch(BASE_URL + 'api/production/setup-presets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ times: setupTimes })
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpdateCustomName = (val) => {
     setCustomSetupName(val);
@@ -582,6 +612,12 @@ export default function FirstFactoryPage() {
     if ((currentSavedSchedule.startTime || '09:00') !== startTime) return true;
     return false;
   }, [currentSavedSchedule, scheduleOrder, startTime]);
+
+  // Read inside the live (SSE) handler, which is set up once per production date
+  const hasUnsavedChangesRef = useRef(false);
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const selectedMonthRef = useRef(selectedMonth);
+  selectedMonthRef.current = selectedMonth;
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -945,7 +981,7 @@ export default function FirstFactoryPage() {
       const authUser = readStoredAuthUser() || {};
       const scheduledBy = authUser.firstName ? `${authUser.firstName} ${authUser.lastName || ''}`.trim() : (authUser.username || 'Admin');
 
-      const res = await fetch(BASE_URL + 'api/production/schedule', {
+      const save = (force) => fetch(BASE_URL + 'api/production/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -953,10 +989,25 @@ export default function FirstFactoryPage() {
           startTime, 
           month: selectedMonth, 
           date: selectedDay,
-          scheduledBy
+          scheduledBy,
+          baseRevision: currentSavedSchedule.revision || 0,
+          force
         })
       });
-      const json = await res.json();
+      let res = await save(false);
+      let json = await res.json();
+      if (res.status === 409 && json.conflict) {
+        // The factory tablet (or another admin) changed this day's list after it was loaded here
+        const by = json.lastChangedBy;
+        const who = by ? `${by.name || ''}${by.source === 'tablet' ? ` (${t('ff_scheduleConflictTablet')})` : ''}${by.detail ? ` – ${by.detail}` : ''}` : '';
+        if (window.confirm(`${t('ff_scheduleConflictReload')}${who ? `\n\n${who}` : ''}`)) {
+          fetchSchedule(selectedMonth);
+          return;
+        }
+        if (!window.confirm(t('ff_scheduleConflictOverwrite'))) return;
+        res = await save(true);
+        json = await res.json();
+      }
       if (json.success) {
         alert(t('ff_scheduleSavedSuccess') + ` (${selectedDateStr})`);
         fetchSchedule(selectedMonth); // Refresh
@@ -1597,6 +1648,9 @@ export default function FirstFactoryPage() {
             }
           } else if (data.type === 'schedule_update' || data.type === 'exclude_update' || data.type === 'setup_update') {
             fetchProductionData(productionDateStr, true);
+            if (data.type === 'schedule_update' && data.source === 'tablet' && !hasUnsavedChangesRef.current) {
+              fetchSchedule(selectedMonthRef.current);
+            }
           }
         } catch (err) {
           console.error("Error processing SSE event:", err);
@@ -1669,7 +1723,10 @@ export default function FirstFactoryPage() {
         return;
       }
 
-      if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban) {
+      // item.groupId is fixed by the server once the list is edited (tablet reorder / admin save):
+      // it keeps production records linked when a group moves, and keeps moved groups apart
+      if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban &&
+          (!item.groupId || item.groupId === currentGroup.groupId)) {
         currentGroup.items.push(item);
         currentGroup.totalDuration += Number(item.duration) || 0;
         currentGroup.totalMeters += Number(item.meters) || 0;
@@ -1678,7 +1735,7 @@ export default function FirstFactoryPage() {
       } else {
         currentGroup = {
           type: 'hinban',
-          groupId: `group_${item.hinban}_${idx}`,
+          groupId: item.groupId || `group_${item.hinban}_${idx}`,
           hinban: item.hinban,
           hinmei: item.hinmei || '',
           kizai: item.kizai || '',
@@ -1707,7 +1764,7 @@ export default function FirstFactoryPage() {
       return excludedRolls.some(x =>
         (roll.id && x.itemId === String(roll.id)) ||
         (x.groupId && x.groupId === grp.groupId && Number(x.rollIndex) === rollNum) ||
-        (roll.orderIndex && x.orderIndex && Number(x.orderIndex) === Number(roll.orderIndex) && (!x.hinban || x.hinban === roll.hinban))
+        (!x.itemId && roll.orderIndex && x.orderIndex && Number(x.orderIndex) === Number(roll.orderIndex) && (!x.hinban || x.hinban === roll.hinban))
       );
     };
 

@@ -600,6 +600,9 @@ const translations = {
     ff_saveDailySchedule: "Save Daily Schedule",
     ff_savingSchedule: "Saving...",
     ff_scheduleSavedSuccess: "Daily schedule saved successfully!",
+    ff_scheduleConflictReload: "This day's list was changed on the factory tablet (or by another admin) after you opened it.\n\nOK: load the latest list (your unsaved changes here are discarded)\nCancel: keep your version",
+    ff_scheduleConflictOverwrite: "Overwrite the factory's changes with your version? Tasks added or groups moved on the tablet will be lost.",
+    ff_scheduleConflictTablet: "tablet",
     ff_scheduleSaveError: "Failed to save schedule.",
     ff_resetScheduleConfirm: "Are you sure you want to reset the schedule? All items will be moved back to the pool.",
 
@@ -1984,6 +1987,9 @@ const translations = {
     ff_saveDailySchedule: "本日の優先順位を保存",
     ff_savingSchedule: "保存中...",
     ff_scheduleSavedSuccess: "日別スケジュールを正常に保存しました！",
+    ff_scheduleConflictReload: "この日のリストは、開いた後に工場のタブレット（または他の管理者）で変更されています。\n\nOK：最新のリストを読み込む（ここでの未保存の変更は破棄）\nキャンセル：自分の内容を残す",
+    ff_scheduleConflictOverwrite: "工場側の変更を自分の内容で上書きしますか？タブレットで追加した作業や並べ替えは失われます。",
+    ff_scheduleConflictTablet: "タブレット",
     ff_scheduleSaveError: "スケジュールの保存に失敗しました。",
     ff_resetScheduleConfirm: "スケジュールをリセットしてもよろしいですか？すべての項目がプールに戻されます。",
 
