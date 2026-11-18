@@ -22,7 +22,7 @@ export default function FirstFactoryDetailModal({
   const isJa = language === "ja";
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("spec");
+  const [activeTab, setActiveTab] = useState("factory");
   const [photoPreview, setPhotoPreview] = useState(null);
   const [masterImage, setMasterImage] = useState(null);
 
@@ -109,6 +109,11 @@ export default function FirstFactoryDetailModal({
 
   const tabs = [
     {
+      key: "factory",
+      label: isJa ? "現場データ" : "Factory Data",
+      labelJa: "現場データ",
+    },
+    {
       key: "spec",
       label: isJa ? "仕様・品目情報" : "Product Specs",
       labelJa: "仕様・品目情報",
@@ -128,11 +133,6 @@ export default function FirstFactoryDetailModal({
       label: isJa ? "印刷履歴・固有ID" : "Print History",
       labelJa: "印刷履歴・固有ID",
       badge: Array.isArray(r.printHistory) ? r.printHistory.length : 0,
-    },
-    {
-      key: "factory",
-      label: isJa ? "現場データ" : "Factory Data",
-      labelJa: "現場データ",
     },
   ];
 
@@ -731,6 +731,52 @@ export default function FirstFactoryDetailModal({
 
           {activeTab === "factory" && (
             <div className="space-y-4">
+              {/* Material label photo taken on the feeding tablet */}
+              {photoUrl ? (
+                <div className="p-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                  <div
+                    onClick={handleOpenPhotoPreview}
+                    className="relative group cursor-zoom-in rounded-[6px] overflow-hidden border border-[var(--border)] bg-black/5 hover:border-[var(--freya-blue)] transition-all flex-shrink-0"
+                    title={isJa ? "クリックして拡大表示" : "Click to enlarge"}
+                  >
+                    <img
+                      src={photoUrl}
+                      alt={isJa ? "材料現品票写真" : "Material Label Photo"}
+                      className="h-40 sm:h-48 w-auto max-w-full object-contain rounded-[5px]"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-center justify-center transition-colors">
+                      <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 drop-shadow-md text-2xl transition-opacity">zoom_in</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5 text-xs w-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[var(--text-primary)] flex items-center gap-1.5 font-mono">
+                        <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>photo_camera</span>
+                        {isJa ? "材料現品票写真 (投入時撮影)" : "Material Label Photo (taken at feeding)"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleOpenPhotoPreview}
+                        className="text-[11px] font-mono font-semibold text-[var(--freya-blue)] hover:underline inline-flex items-center gap-0.5"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fullscreen</span>
+                        {isJa ? "拡大" : "Enlarge"}
+                      </button>
+                    </div>
+                    {!(r.imageUrl || r.photoUrl || r.imageURL) && masterImage?.imageURL && (
+                      <p className="text-[11px] font-mono text-amber-600 dark:text-amber-400">
+                        {isJa ? "※ 撮影写真なし — マスター画像を表示中" : "No captured photo — showing master image"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] text-center text-xs text-[var(--text-muted)] font-mono flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>no_photography</span>
+                  <span>{isJa ? "材料現品票写真なし" : "No photo captured for this roll"}</span>
+                </div>
+              )}
+
               {/* Workers entered on the tablets */}
               <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 space-y-3">
                 <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono flex items-center gap-1.5">
