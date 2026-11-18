@@ -220,6 +220,8 @@ export default function FirstFactoryDetailModal({
     { label: "総長", sub: isJa ? "" : "Gross", value: fmtM(r.socho) },
     { label: "S引長", sub: isJa ? "" : "S deduction", value: fmtM(r.shiki) },
     { label: "実長", sub: isJa ? "" : "Actual", value: fmtM(r.bicho) },
+    { label: "開始時刻", sub: isJa ? "" : "Start", value: fmtJst(r.startEpoch || r.startedAt) || r.actualStartTime },
+    { label: "終了時刻", sub: isJa ? "" : "End", value: fmtJst(r.endEpoch || r.completedAt) || r.actualEndTime },
   ];
   const otherValues = [
     { label: isJa ? "実巻長 (完了時)" : "Final Roll Meters", value: fmtM(r.meters ?? r.rollMeters) },
