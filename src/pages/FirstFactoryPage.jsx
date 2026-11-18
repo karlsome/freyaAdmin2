@@ -1715,9 +1715,16 @@ export default function FirstFactoryPage() {
         });
       });
 
+      // Prefer the epoch timestamps rendered in JST: the server used to format
+      // actualStartTime/actualEndTime in its own zone (UTC), e.g. 09:32 JST -> "00:32".
+      const toJst = (epoch) => {
+        const n = Number(epoch);
+        if (!n) return null;
+        return new Date(n).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
+      };
       const byTime = (a, b) => String(a).localeCompare(String(b));
-      const starts = recs.map(r => r.actualStartTime).filter(Boolean).sort(byTime);
-      const ends = recs.map(r => r.actualEndTime).filter(Boolean).sort(byTime);
+      const starts = recs.map(r => toJst(r.startEpoch) || r.actualStartTime).filter(Boolean).sort(byTime);
+      const ends = recs.map(r => toJst(r.endEpoch) || r.actualEndTime).filter(Boolean).sort(byTime);
       const active = recs.find(r => normStatus(r.status) === 'in-progress');
       const latest = [...recs].sort((a, b) => (Number(b.rollIndex) || 0) - (Number(a.rollIndex) || 0))[0];
       const durations = recs.map(r => r.actualDurationMins).filter(v => v !== undefined && v !== null);
