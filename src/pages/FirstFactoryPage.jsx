@@ -689,6 +689,27 @@ export default function FirstFactoryPage() {
   const scheduledItems = scheduleOrder;
 
   const [poolSearch, setPoolSearch] = useState('');
+
+  // 品番 or 基材コード as the name in the Available / schedule lists (the tablet shows 基材コード)
+  const [nameMode, setNameMode] = useState(() => {
+    try { return localStorage.getItem('firstFactory_nameMode') === 'kizai' ? 'kizai' : 'hinban'; } catch { return 'hinban'; }
+  });
+  const changeNameMode = (mode) => {
+    setNameMode(mode);
+    try { localStorage.setItem('firstFactory_nameMode', mode); } catch { /* ignore */ }
+  };
+  // 基材コード per 品番, from the material master's 品番構造 (same rule as the tablet / server)
+  const kizaiByHinban = useMemo(() => {
+    const map = {};
+    (data || []).forEach(item => {
+      const segs = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
+      const seg = segs.find(sg => sg.segment === '基材コード');
+      const kizai = seg ? (seg.name || seg['得意先'] || seg['入出荷先'] || '') : '';
+      if (item.hinban && kizai) map[item.hinban] = kizai;
+    });
+    return map;
+  }, [data]);
+  const kizaiOf = (hinban) => kizaiByHinban[hinban] || '';
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
   const [poolSortBy, setPoolSortBy] = useState('timeOption-asc');
   const [poolBatchFilter, setPoolBatchFilter] = useState('all'); // 'all' | 'large' (>=500m) | 'small' (<200m)
@@ -703,9 +724,10 @@ export default function FirstFactoryPage() {
         const kataban = extractKataban(item).toLowerCase();
         const timeOpt = extractTimeOption(item).toLowerCase();
         const matchesHinban = item.hinban.toLowerCase().includes(q);
+        const matchesKizai = (kizaiByHinban[item.hinban] || '').toLowerCase().includes(q);
         const matchesKataban = kataban.includes(q);
         const matchesTimeOpt = timeOpt.includes(q);
-        if (!matchesHinban && !matchesKataban && !matchesTimeOpt) return false;
+        if (!matchesHinban && !matchesKizai && !matchesKataban && !matchesTimeOpt) return false;
       }
       
       // First Factory page focuses ONLY on products that have Process 2010 (粘着工程) in BOM or Master
@@ -731,7 +753,7 @@ export default function FirstFactoryPage() {
       
       return true;
     });
-  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive]);
+  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive, kizaiByHinban]);
 
   // Compute available widths from poolItems
   const availableWidths = useMemo(() => {
@@ -2667,8 +2689,19 @@ export default function FirstFactoryPage() {
                 {processedPoolItems.length > 0 && (
                   <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] mb-1 select-none">
                     <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
-                      <div className="w-[220px] shrink-0 text-left font-mono">
-                        {language === 'ja' ? '品番' : 'Hinban'}
+                      <div className="w-[220px] shrink-0 text-left font-mono normal-case tracking-normal">
+                        <div className="inline-flex rounded-[5px] border border-[var(--border)] bg-[var(--surface)] p-0.5" role="group" aria-label={language === 'ja' ? '表示名' : 'Name shown'}>
+                          {[['hinban', language === 'ja' ? '品番' : 'Hinban'], ['kizai', language === 'ja' ? '基材コード' : 'Base material']].map(([mode, label]) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => changeNameMode(mode)}
+                              className={`px-2 py-0.5 rounded-[4px] text-[10px] font-semibold cursor-pointer transition-colors ${nameMode === mode ? 'bg-[var(--freya-blue)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div className="w-[85px] shrink-0 text-left font-mono">
                         {language === 'ja' ? '型番' : 'Kataban'}
@@ -2712,9 +2745,16 @@ export default function FirstFactoryPage() {
                         <div className="flex items-center gap-4 w-full">
                           {/* Column 1: Hinban */}
                           <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
+                            {nameMode === 'kizai' && kizaiOf(item.hinban) ? (
+                              <span className="flex flex-col min-w-0" title={`${kizaiOf(item.hinban)}\n${item.hinban}`}>
+                                <span className="font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate">{kizaiOf(item.hinban)}</span>
+                                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate">{item.hinban}</span>
+                              </span>
+                            ) : (
                             <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
                               {item.hinban}
                             </span>
+                            )}
                             {isRawMaterial && (
                               <span className="shrink-0 rounded-[4px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold font-mono uppercase tracking-wider">
                                 {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
@@ -2994,9 +3034,16 @@ export default function FirstFactoryPage() {
                             <div className="flex items-center gap-4 w-full">
                               {/* Column 1: Hinban + Discrepancy Warnings */}
                               <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                {nameMode === 'kizai' && kizaiOf(item.hinban) ? (
+                                  <span className="flex flex-col min-w-0" title={`${kizaiOf(item.hinban)}\n${item.hinban}`}>
+                                    <span className="font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate">{kizaiOf(item.hinban)}</span>
+                                    <span className="font-mono text-[10px] text-[var(--text-muted)] truncate">{item.hinban}</span>
+                                  </span>
+                                ) : (
                                 <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
                                   {item.hinban}
                                 </span>
+                                )}
                                 {isZeroOrMissing && (
                                   <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
