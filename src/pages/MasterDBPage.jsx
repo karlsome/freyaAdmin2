@@ -366,6 +366,7 @@ export default function MasterDBPage() {
         next.set("tab", tab.key);
         next.delete("search");
         next.delete("detail");
+        next.delete("process");
         return next;
       });
       resetFirstTabState(tab.key);

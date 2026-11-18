@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchDefectDefinitions,
@@ -65,7 +66,11 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   const [infoProducts, setInfoProducts] = useState([]);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoError, setInfoError] = useState("");
-  const [selectedProcess, setSelectedProcess] = useState(FURYO_DEFAULT_PROCESS);
+  // Selected process lives in the URL (?process=pressDB) so each list is linkable / back-button friendly
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processFromUrl = searchParams.get("process");
+  const selectedProcess = processFromUrl && FURYO_PROCESS_DEFECTS[processFromUrl] ? processFromUrl : FURYO_DEFAULT_PROCESS;
+  const previousProcessRef = useRef(selectedProcess);
   const [processDefs, setProcessDefs] = useState(getDefaultProcessDefs);
   const [processDefsError, setProcessDefsError] = useState("");
   const [fixedDirty, setFixedDirty] = useState(false);
@@ -102,6 +107,17 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   useEffect(() => {
     selectedModelRef.current = selectedModel;
   }, [selectedModel]);
+
+  // Process changed via URL (back/forward or a link): drop any in-progress edits
+  useEffect(() => {
+    if (previousProcessRef.current === selectedProcess) return;
+    previousProcessRef.current = selectedProcess;
+    setFixedDirty(false);
+    setEditMode(false);
+    setTranslating({});
+    setDraftCounters(cloneCounterMap(originalCounters));
+    setDraftCountersEn(cloneCounterMap(originalCountersEn));
+  }, [selectedProcess, originalCounters, originalCountersEn]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,7 +253,12 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
     }
     if (editMode) handleCancelEdit();
     setFixedDirty(false);
-    setSelectedProcess(processKey);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (processKey === FURYO_DEFAULT_PROCESS) next.delete("process");
+      else next.set("process", processKey);
+      return next;
+    });
   }
 
   function handleStartEdit() {
