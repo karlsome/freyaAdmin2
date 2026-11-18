@@ -1722,6 +1722,16 @@ export async function saveDefectDefinition({ model, counters, countersEn, userna
   });
 }
 
+// Per-process defect items (pressDB / slitDB / SRSDB): built-in + admin-added
+export async function fetchProcessDefectDefinitions() {
+  const result = await _getJson("processDefectDefinitions");
+  return Array.isArray(result) ? result : [];
+}
+
+export async function saveProcessDefectDefinition({ process, items, username }) {
+  return _postJson("processDefectDefinitions", { process, items, username });
+}
+
 export async function fetchFuryoModelProducts(model) {
   return query(
     "Sasaki_Coating_MasterDB",

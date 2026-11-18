@@ -106,7 +106,7 @@ export const FURYO_PROCESS_DEFECTS = {
   },
   SRSDB: {
     labelJa: "転写",
-    labelEn: "Transfer",
+    labelEn: "SRS",
     icon: "move_down",
     descriptionJa: "固定の不良項目（6項目）",
     descriptionEn: "Fixed defect items (6)",

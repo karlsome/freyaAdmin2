@@ -4,6 +4,7 @@ import {
   fetchDefectDefinitions,
   fetchFuryoModelProducts,
   fetchFuryoModels,
+  fetchProcessDefectDefinitions,
   saveDefectDefinition,
   translateJapaneseText,
 } from "../services/api";
@@ -26,6 +27,15 @@ import FuryoDefinitionPanel from "./FuryoDefinitionPanel";
 import FuryoFixedDefectsPanel from "./FuryoFixedDefectsPanel";
 import FuryoModelInfoModal from "./FuryoModelInfoModal";
 import FuryoModelListPanel from "./FuryoModelListPanel";
+
+// Built-in items for each fixed-field process, used until the server list loads (or if it fails)
+function getDefaultProcessDefs() {
+  return Object.fromEntries(
+    Object.entries(FURYO_PROCESS_DEFECTS)
+      .filter(([, proc]) => proc.counters)
+      .map(([key, proc]) => [key, { items: proc.counters.map((c) => ({ ...c, builtIn: true })), updatedAt: null, updatedBy: "" }]),
+  );
+}
 
 function cloneCounterMap(counterMap = {}) {
   return { ...counterMap };
@@ -56,6 +66,9 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoError, setInfoError] = useState("");
   const [selectedProcess, setSelectedProcess] = useState(FURYO_DEFAULT_PROCESS);
+  const [processDefs, setProcessDefs] = useState(getDefaultProcessDefs);
+  const [processDefsError, setProcessDefsError] = useState("");
+  const [fixedDirty, setFixedDirty] = useState(false);
   const selectedModelRef = useRef(selectedModel);
   const processDef = FURYO_PROCESS_DEFECTS[selectedProcess];
   const isModelProcess = !processDef?.counters;
@@ -148,6 +161,37 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   }, [refreshToken, isJa]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadProcessDefs() {
+      setProcessDefsError("");
+      try {
+        const docs = await fetchProcessDefectDefinitions();
+        if (cancelled) return;
+        setProcessDefs((current) => {
+          const next = { ...current };
+          docs.forEach((doc) => {
+            if (!next[doc.process] || !Array.isArray(doc.items)) return;
+            next[doc.process] = { items: doc.items, updatedAt: doc.updatedAt || null, updatedBy: doc.updatedBy || "" };
+          });
+          return next;
+        });
+      } catch (loadError) {
+        if (cancelled) return;
+        setProcessDefsError(
+          (isJa ? "工程別の不良項目を読み込めませんでした（既定項目を表示中）: " : "Couldn't load per-process defect items (showing built-ins): ")
+            + (loadError.message || ""),
+        );
+      }
+    }
+
+    loadProcessDefs();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshToken, isJa]);
+
+  useEffect(() => {
     if (!infoModel) return undefined;
     let cancelled = false;
 
@@ -187,10 +231,12 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
 
   function handleSelectProcess(processKey) {
     if (processKey === selectedProcess) return;
-    if (editMode && hasChanges && !window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?")) {
+    const dirty = (editMode && hasChanges) || fixedDirty;
+    if (dirty && !window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?")) {
       return;
     }
     if (editMode) handleCancelEdit();
+    setFixedDirty(false);
     setSelectedProcess(processKey);
   }
 
@@ -337,7 +383,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
                 </span>
                 <span className="text-[11px] opacity-70">
                   {proc.counters
-                    ? `${proc.counters.length}${isJa ? "項目" : " items"}`
+                    ? `${processDefs[key]?.items?.length ?? proc.counters.length}${isJa ? "項目" : " items"}`
                     : (isJa ? "モデル別定義" : "Per-model")}
                 </span>
               </button>
@@ -347,7 +393,31 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       </div>
 
       {!isModelProcess ? (
-        <FuryoFixedDefectsPanel processKey={selectedProcess} process={processDef} />
+        <>
+          {processDefsError && (
+            <div className="mb-4 rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-4 py-3 text-xs font-medium text-[var(--status-danger)]">
+              {processDefsError}
+            </div>
+          )}
+          <FuryoFixedDefectsPanel
+            key={selectedProcess}
+            processKey={selectedProcess}
+            process={processDef}
+            items={processDefs[selectedProcess]?.items || []}
+            updatedAt={processDefs[selectedProcess]?.updatedAt}
+            updatedBy={processDefs[selectedProcess]?.updatedBy}
+            canEdit={canEdit && !processDefsError}
+            username={authUser?.username || "unknown"}
+            onDirtyChange={setFixedDirty}
+            onFlash={onFlash}
+            onSaved={(processKey, items) => {
+              setProcessDefs((current) => ({
+                ...current,
+                [processKey]: { items, updatedAt: new Date().toISOString(), updatedBy: authUser?.username || "unknown" },
+              }));
+            }}
+          />
+        </>
       ) : (
       <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
