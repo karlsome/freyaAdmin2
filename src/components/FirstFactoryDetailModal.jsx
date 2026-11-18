@@ -129,6 +129,98 @@ export default function FirstFactoryDetailModal({
       labelJa: "印刷履歴・固有ID",
       badge: Array.isArray(r.printHistory) ? r.printHistory.length : 0,
     },
+    {
+      key: "factory",
+      label: isJa ? "現場データ" : "Factory Data",
+      labelJa: "現場データ",
+    },
+  ];
+
+  // ── Factory Data helpers (values entered/scanned on the 第一工場 tablets) ──
+  const toDate = (v) => {
+    if (v === undefined || v === null || v === "") return null;
+    const raw = v?.$date ?? v;
+    const d = typeof raw === "number" || /^\d+$/.test(String(raw)) ? new Date(Number(raw)) : new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const fmtJst = (v, withDate = false) => {
+    const d = toDate(v);
+    if (!d) return null;
+    return d.toLocaleString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      ...(withDate ? { month: "2-digit", day: "2-digit" } : {}),
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  const WORKER_ROLE_DEFS = [
+    { key: "feeding", ja: "投入", en: "Feeding" },
+    { key: "operator", ja: "オペレーター", en: "Operator" },
+    { key: "support", ja: "サポート", en: "Support" },
+    { key: "cutter", ja: "カッター", en: "Cutter" },
+    { key: "unloader", ja: "取り出し", en: "Unloader" },
+  ];
+  const workerRoles = r.workerRoles && typeof r.workerRoles === "object" ? r.workerRoles : null;
+  const hasWorkerRoles = !!workerRoles && WORKER_ROLE_DEFS.some((d) => Array.isArray(workerRoles[d.key]) && workerRoles[d.key].length > 0);
+
+  const prints = Array.isArray(r.printHistory) ? r.printHistory : [];
+  const factoryEvents = [
+    {
+      key: "fed",
+      icon: "input",
+      label: isJa ? "投入登録 (タブレット1)" : "Fed / Enqueued (Tablet 1)",
+      time: fmtJst(r.createdAt, true),
+      who: r.feederWorker || r.worker || "",
+      tone: "blue",
+    },
+    {
+      key: "start",
+      icon: "play_circle",
+      label: isJa ? "生産開始" : "Production Start",
+      time: fmtJst(r.startEpoch || r.startedAt, true) || r.actualStartTime || null,
+      who: "",
+      tone: "purple",
+    },
+    ...prints.map((p, idx) => ({
+      key: `print-${idx}`,
+      icon: p.manualAdvance ? "skip_next" : "print",
+      label: p.manualAdvance
+        ? (isJa ? `手動進行 (印刷なし)${p.reason ? `: ${p.reason}` : ""}` : `Manual advance (no print)${p.reason ? `: ${p.reason}` : ""}`)
+        : (isJa ? `ラベル印刷 #${idx + 1}${p.lotNo ? ` (ロット ${p.lotNo})` : ""}` : `Label print #${idx + 1}${p.lotNo ? ` (Lot ${p.lotNo})` : ""}`),
+      time: fmtJst(p.timestamp, true) || p.timeStr || null,
+      who: p.worker || "",
+      tone: p.manualAdvance ? "amber" : "emerald",
+    })),
+    {
+      key: "end",
+      icon: r.finishedEarly ? "flag" : "check_circle",
+      label: r.finishedEarly
+        ? (isJa ? "完了 (早期終了)" : "Completed (finished early)")
+        : (isJa ? "完了 (タブレット2)" : "Completed (Tablet 2)"),
+      time: fmtJst(r.endEpoch || r.completedAt, true) || r.actualEndTime || null,
+      who: r.wrapperWorker || "",
+      tone: "emerald",
+    },
+  ].filter((e) => e.time || e.who);
+
+  const toneClass = {
+    blue: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+    purple: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
+    emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  };
+
+  const enteredValues = [
+    { label: isJa ? "入力ロット番号" : "Lot No (entered)", value: r.lotNo },
+    { label: isJa ? "材料長 (入力)" : "Material Length (entered)", value: r.rawMaterialLength ? `${r.rawMaterialLength} m` : "" },
+    { label: isJa ? "粗長" : "Socho (Gross)", value: r.socho ? `${r.socho} m` : "" },
+    { label: isJa ? "敷" : "Shiki", value: r.shiki !== undefined && r.shiki !== null && r.shiki !== "" ? `${r.shiki} m` : "" },
+    { label: isJa ? "微調" : "Bicho (Adj)", value: r.bicho !== undefined && r.bicho !== null && r.bicho !== "" ? `${r.bicho} m` : "" },
+    { label: isJa ? "実巻長 (完了時)" : "Final Roll Meters", value: (r.meters ?? r.rollMeters) != null ? `${r.meters ?? r.rollMeters} m` : "" },
+    { label: isJa ? "メーカーUID" : "Manufacturer UID", value: r.manufacturerUid },
+    { label: isJa ? "作業時間" : "Duration", value: r.actualDurationMins != null ? `${r.actualDurationMins} ${isJa ? "分" : "min"}` : "" },
   ];
 
   const modal = (
@@ -634,6 +726,128 @@ export default function FirstFactoryDetailModal({
                   {isJa ? "ラベル印刷履歴はありません" : "No print history entries logged"}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === "factory" && (
+            <div className="space-y-4">
+              {/* Workers entered on the tablets */}
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 space-y-3">
+                <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>groups</span>
+                  {isJa ? "作業者 (タブレット入力)" : "Workers (entered on tablet)"}
+                </p>
+
+                {hasWorkerRoles ? (
+                  <div className="space-y-1.5">
+                    {WORKER_ROLE_DEFS.map((d, idx) => {
+                      const names = Array.isArray(workerRoles[d.key]) ? workerRoles[d.key] : [];
+                      return (
+                        <div key={d.key} className="flex items-start gap-3 text-xs border-b border-[var(--border)] pb-1.5 last:border-b-0">
+                          <span className="w-36 flex-shrink-0 font-mono text-[var(--text-muted)]">
+                            {idx + 1}. {isJa ? d.ja : d.en}
+                            <span className="opacity-70"> ({isJa ? d.en : d.ja})</span>
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {names.length > 0 ? names.map((n) => (
+                              <span key={n} className="px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[var(--text-primary)]">
+                                {n}
+                              </span>
+                            )) : <span className="text-[var(--text-muted)]">—</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono">
+                    {isJa ? "役割別の作業者記録なし (旧形式)" : "No per-role worker record (older roll)"}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <p className="text-[10px] font-semibold text-[var(--text-muted)] font-mono mb-0.5">
+                      {isJa ? "投入登録者 (タブレット1)" : "Fed by (Tablet 1)"}
+                    </p>
+                    <p className="text-xs font-bold text-[var(--text-primary)]">{r.feederWorker || r.worker || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[var(--text-muted)] font-mono mb-0.5">
+                      {isJa ? "包装・印刷者 (タブレット2)" : "Wrapped / printed by (Tablet 2)"}
+                    </p>
+                    <p className="text-xs font-bold text-[var(--text-primary)]">{r.wrapperWorker || "—"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                  {isJa ? "作業タイムライン (JST)" : "Timeline (JST)"}
+                </p>
+                {factoryEvents.length > 0 ? (
+                  <ol className="relative border-l border-[var(--border)] ml-3 space-y-3">
+                    {factoryEvents.map((e) => (
+                      <li key={e.key} className="ml-5">
+                        <span className={`absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full ${toneClass[e.tone]}`}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{e.icon}</span>
+                        </span>
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
+                          <span className="font-semibold text-[var(--text-primary)]">{e.label}</span>
+                          <span className="font-mono text-[var(--text-secondary)]">{e.time || "—"}</span>
+                        </div>
+                        {e.who && (
+                          <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">
+                            {isJa ? "担当: " : "By: "}<span className="font-semibold text-[var(--text-primary)]">{e.who}</span>
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="p-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] text-center text-xs text-[var(--text-muted)] font-mono">
+                    {isJa ? "記録なし" : "No events recorded"}
+                  </div>
+                )}
+              </div>
+
+              {/* Entered / scanned values */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                  {isJa ? "入力・スキャン値" : "Entered & Scanned Values"}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
+                  {enteredValues.map((f) => (
+                    <div key={f.label} className="flex justify-between border-b border-[var(--border)] pb-1.5">
+                      <span className="text-[var(--text-muted)] font-mono">{f.label}:</span>
+                      <span className="font-bold text-[var(--text-primary)] font-mono select-all">{f.value || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 space-y-1">
+                  <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                    {isJa ? "スキャンした材料QR" : "Scanned Material QR"}
+                  </p>
+                  <p className="text-xs font-mono text-[var(--text-primary)] break-all select-all whitespace-pre-wrap bg-[var(--surface)] p-2 rounded-[4px] border border-[var(--border)]">
+                    {r.rawMaterialQR || (isJa ? "（QRデータ未読込）" : "(No QR code recorded)")}
+                  </p>
+                </div>
+                {(r.manualAdvance || r.finishedEarly) && (
+                  <div className="flex flex-wrap gap-2 text-[11px] font-mono">
+                    {r.manualAdvance && (
+                      <span className="px-2 py-0.5 rounded-[4px] bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold">
+                        {isJa ? "手動進行 (印刷不可)" : "Manual advance (no print)"}{r.manualReason ? `: ${r.manualReason}` : ""}
+                      </span>
+                    )}
+                    {r.finishedEarly && (
+                      <span className="px-2 py-0.5 rounded-[4px] bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold">
+                        {isJa ? "早期終了" : "Finished early"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
