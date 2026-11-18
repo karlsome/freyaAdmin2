@@ -3580,6 +3580,14 @@ export default function FirstFactoryPage() {
                               ⏱ {language === 'ja' ? '実績' : 'Actual'}: {setupRec.startTime || '—'} ～ {setupDone ? (setupRec.endTime || '—') : (language === 'ja' ? '実行中' : 'running')}
                               {' '}({actualMins} {t('ff_minutesShort')}{setupOver ? (language === 'ja' ? ` / +${actualMins - plannedMins}分 超過` : ` / +${actualMins - plannedMins} over`) : ''})
                               {setupRec.startedBy ? ` · ${setupRec.startedBy}` : ''}
+                              {(setupRec.startEdited || setupRec.endEdited) && (
+                                <span
+                                  className="ml-2 rounded-[4px] bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400"
+                                  title={language === 'ja' ? 'タブレットで時刻が修正されています' : 'Time was corrected on the tablet'}
+                                >
+                                  ✎ {language === 'ja' ? '修正済' : 'Edited'}
+                                </span>
+                              )}
                             </p>
                           )}
                         </div>
