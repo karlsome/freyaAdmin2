@@ -16,12 +16,14 @@ function processLabel(key, isJa) {
 }
 
 // ── Set editor: left = defect master, right = the set (drag to reorder) ─────
-function SetEditorModal({ draft, setDraft, catalog, catalogById, saving, readOnly, onSave, onClose, isJa }) {
+function SetEditorModal({ draft, setDraft, catalog, catalogById, saving, canEdit, onEdit, onCancelEdit, onDelete, onSave, onClose, isJa }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
   const [search, setSearch] = useState("");
   if (!draft) return null;
 
+  // Existing sets open view-only; 編集 switches to edit mode. New sets start in edit mode.
+  const readOnly = !draft.editing;
   const items = draft.items.filter((id) => catalogById.get(id) && !catalogById.get(id).deleted);
   const inSet = new Set(items);
   const query = search.trim().toLowerCase();
@@ -53,20 +55,40 @@ function SetEditorModal({ draft, setDraft, catalog, catalogById, saving, readOnl
       eyebrow={isJa ? "不良セット" : "Defect set"}
       title={readOnly ? draft.name : draft.id ? (isJa ? "セットを編集" : "Edit set") : (isJa ? "新しいセット" : "New set")}
       subtitle={readOnly
-        ? (isJa ? "閲覧のみ" : "View only")
+        ? (isJa ? `${items.length + 1}項目（その他を含む）` : `${items.length + 1} items (including その他)`)
         : (isJa ? "左のマスタからクリックで追加し、右側でドラッグして並べ替えます。その他は自動で最後に付きます。" : "Click defects in the master (left) to add them, drag on the right to reorder. その他 is always added last.")}
       maxWidth="max-w-5xl"
-      footer={(
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={saving} className={`${buttonBase} border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]`}>
-            {readOnly ? (isJa ? "閉じる" : "Close") : (isJa ? "キャンセル" : "Cancel")}
-          </button>
-          {!readOnly && (
-            <button type="button" onClick={onSave} disabled={saving || !draft.name.trim()} className={`${buttonBase} bg-[var(--freya-blue)] text-white hover:opacity-90`}>
-              <span className={`material-symbols-outlined ${saving ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>{saving ? "progress_activity" : "save"}</span>
-              {isJa ? "保存" : "Save"}
+      footer={readOnly ? (
+        <div className="flex w-full items-center justify-between gap-2">
+          <div>
+            {canEdit && (
+              <button type="button" onClick={onDelete} className={`${buttonBase} border border-error/40 text-error hover:bg-error/10`}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                {isJa ? "セットを削除" : "Delete set"}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} className={`${buttonBase} border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]`}>
+              {isJa ? "閉じる" : "Close"}
             </button>
-          )}
+            {canEdit && (
+              <button type="button" onClick={onEdit} className={`${buttonBase} bg-[var(--freya-blue)] text-white hover:opacity-90`}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                {isJa ? "編集" : "Edit"}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" onClick={onCancelEdit} disabled={saving} className={`${buttonBase} border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]`}>
+            {isJa ? "キャンセル" : "Cancel"}
+          </button>
+          <button type="button" onClick={onSave} disabled={saving || !draft.name.trim()} className={`${buttonBase} bg-[var(--freya-blue)] text-white hover:opacity-90`}>
+            <span className={`material-symbols-outlined ${saving ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>{saving ? "progress_activity" : "save"}</span>
+            {isJa ? "保存" : "Save"}
+          </button>
         </div>
       )}
     >
@@ -270,7 +292,7 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
   const isJa = language === "ja";
 
   const [draft, setDraft] = useState(null);
-  const openSet = (set) => setDraft({ id: set.id, name: set.name, items: [...(set.items || [])] });
+  const openSet = (set, editing = false) => setDraft({ id: set.id, name: set.name, items: [...(set.items || [])], editing });
   const [saving, setSaving] = useState(false);
   const [usageSetId, setUsageSetId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -297,7 +319,8 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
       });
       if (result?.set) onSetSaved(result.set);
       flash("success", isJa ? `セット「${draft.name.trim()}」を保存しました。` : `Saved set ${draft.name.trim()}.`);
-      setDraft(null);
+      // back to the view of the saved set
+      setDraft(result?.set ? { ...draft, ...result.set, items: [...(result.set.items || [])], editing: false } : null);
     } catch (error) {
       flash("error", error.message || (isJa ? "保存に失敗しました。" : "Save failed."));
     } finally {
@@ -352,7 +375,7 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
             {sets.length} {isJa ? "セット" : "sets"}
           </span>
           {canEdit && (
-            <button type="button" onClick={() => setDraft({ id: "", name: "", items: [] })} className={`${buttonBase} bg-[var(--freya-blue)] text-white hover:opacity-90`}>
+            <button type="button" onClick={() => setDraft({ id: "", name: "", items: [], editing: true })} className={`${buttonBase} bg-[var(--freya-blue)] text-white hover:opacity-90`}>
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
               {isJa ? "新しいセット" : "New set"}
             </button>
@@ -417,7 +440,7 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
                 {canEdit && (
                   <td className="px-5 py-2.5 text-right">
                     <div className="inline-flex gap-1">
-                      <button type="button" onClick={(event) => { event.stopPropagation(); openSet(set); }} className={iconButton} title={isJa ? "編集" : "Edit"}>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); openSet(set, true); }} className={iconButton} title={isJa ? "編集" : "Edit"}>
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
                       </button>
                       <button
@@ -439,7 +462,15 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
 
       <SetEditorModal
         key={draft ? draft.id || "new" : "closed"}
-        readOnly={!canEdit}
+        canEdit={canEdit}
+        onEdit={() => setDraft((current) => ({ ...current, editing: true }))}
+        onCancelEdit={() => {
+          if (saving) return;
+          const saved = draft?.id && sets.find((set) => set.id === draft.id);
+          if (saved) openSet(saved); // discard edits, back to view
+          else setDraft(null);
+        }}
+        onDelete={() => { setUsageSetId(draft.id); setDraft(null); }}
         draft={draft}
         setDraft={setDraft}
         catalog={catalog}
