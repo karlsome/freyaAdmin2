@@ -1472,6 +1472,9 @@ export default function FirstFactoryPage() {
   const [productionStatuses, setProductionStatuses] = useState([]);
   // Rolls excluded (除外) on the firstKojoNippo tablet for the selected date
   const [excludedRolls, setExcludedRolls] = useState([]);
+  // 段替え / setup timers started & ended on the firstKojoNippo tablet, keyed by setupId (setup_<id>)
+  const [setupRecords, setSetupRecords] = useState({});
+  const [nowTick, setNowTick] = useState(Date.now());
   const [loadingProduction, setLoadingProduction] = useState(false);
   const [productionFilter, setProductionFilter] = useState('all');
   const [isLiveConnected, setIsLiveConnected] = useState(false);
@@ -1517,6 +1520,11 @@ export default function FirstFactoryPage() {
             setProductionStatuses([]);
           }
           setExcludedRolls(Array.isArray(statusJson.excludedRolls) ? statusJson.excludedRolls : []);
+          const setupMap = {};
+          (Array.isArray(statusJson.setupRecords) ? statusJson.setupRecords : []).forEach(rec => {
+            if (rec && rec.setupId) setupMap[rec.setupId] = rec;
+          });
+          setSetupRecords(setupMap);
         }
       } catch (err) {
         console.warn("Status fetch error:", err);
@@ -1528,6 +1536,14 @@ export default function FirstFactoryPage() {
       if (!isBackground) setLoadingProduction(false);
     }
   };
+
+  // Refresh the elapsed time of a running setup every 15s
+  const hasRunningSetup = Object.values(setupRecords).some(r => r?.status === 'running');
+  useEffect(() => {
+    if (!hasRunningSetup) return;
+    const id = setInterval(() => setNowTick(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, [hasRunningSetup]);
 
   useEffect(() => {
     if (activeTab !== 'production') return;
@@ -1579,7 +1595,7 @@ export default function FirstFactoryPage() {
                 }
               });
             }
-          } else if (data.type === 'schedule_update' || data.type === 'exclude_update') {
+          } else if (data.type === 'schedule_update' || data.type === 'exclude_update' || data.type === 'setup_update') {
             fetchProductionData(productionDateStr, true);
           }
         } catch (err) {
@@ -3530,6 +3546,14 @@ export default function FirstFactoryPage() {
 
                 if (group.type === 'setup') {
                   const setupItem = group.items[0];
+                  const setupRec = setupRecords[group.groupId];
+                  const setupRunning = setupRec?.status === 'running';
+                  const setupDone = setupRec?.status === 'done';
+                  const plannedMins = Number(group.totalDuration) || 0;
+                  const actualMins = setupDone
+                    ? Number(setupRec.durationMins) || 0
+                    : setupRunning ? Math.max(0, Math.floor((nowTick - Number(setupRec.startEpoch || nowTick)) / 60000)) : null;
+                  const setupOver = actualMins != null && plannedMins > 0 && actualMins > plannedMins;
                   return (
                     <div 
                       key={group.groupId}
@@ -3551,10 +3575,29 @@ export default function FirstFactoryPage() {
                           <p className="text-xs text-[var(--text-muted)] font-mono freya-tabular mt-0.5">
                             🕒 {t('ff_scheduledTime')}: {group.startTime} ～ {group.endTime} ({group.totalDuration} {t('ff_minutesShort')})
                           </p>
+                          {setupRec && (
+                            <p className={`text-xs font-mono freya-tabular mt-0.5 font-semibold ${setupOver ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                              ⏱ {language === 'ja' ? '実績' : 'Actual'}: {setupRec.startTime || '—'} ～ {setupDone ? (setupRec.endTime || '—') : (language === 'ja' ? '実行中' : 'running')}
+                              {' '}({actualMins} {t('ff_minutesShort')}{setupOver ? (language === 'ja' ? ` / +${actualMins - plannedMins}分 超過` : ` / +${actualMins - plannedMins} over`) : ''})
+                              {setupRec.startedBy ? ` · ${setupRec.startedBy}` : ''}
+                            </p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {setupRunning && (
+                          <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white">
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span>
+                            {language === 'ja' ? '段替え中' : 'Running'}
+                          </span>
+                        )}
+                        {setupDone && (
+                          <span className={`inline-flex items-center gap-1 rounded-[4px] px-2.5 py-1 text-xs font-semibold border ${setupOver ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'}`}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
+                            {language === 'ja' ? '完了' : 'Done'}
+                          </span>
+                        )}
                         <span className="rounded-[4px] bg-amber-500/10 px-2.5 py-1 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400 border border-amber-500/20">
                           ⚙️ {group.totalDuration} {t('ff_minutesShort')}
                         </span>
