@@ -1680,20 +1680,57 @@ export default function FirstFactoryPage() {
       }
     });
 
+    const normStatus = (s) => (s === 'running' || s === 'active' ? 'in-progress' : s);
+
     return groups.map((grp) => {
-      const rec = productionStatuses.find(s => s.groupId === grp.groupId || (s.hinban === grp.hinban && grp.type === 'hinban'));
-      let status = rec?.status || 'pending';
-      if (status === 'running') status = 'in-progress';
+      // The queue flow stores ONE firstFactoryProduction doc PER ROLL (same groupId,
+      // different rollIndex), each with its own printHistory. Aggregate them all —
+      // picking only the first doc froze the card at roll #1.
+      let recs = productionStatuses.filter(s => s.groupId === grp.groupId);
+      if (recs.length === 0 && grp.type === 'hinban') {
+        recs = productionStatuses.filter(s => s.hinban === grp.hinban);
+      }
+      if (recs.length === 0) {
+        return { ...grp, status: 'pending', worker: '', machine: 'PSA2', actualStartTime: null, actualEndTime: null, actualDurationMins: null, statusRecord: null };
+      }
+
+      const statuses = recs.map(r => normStatus(r.status || 'pending'));
+      const completedCount = statuses.filter(s => s === 'completed').length;
+      const totalRolls = grp.items.length;
+      let status;
+      if (statuses.includes('in-progress')) status = 'in-progress';
+      else if (recs.length === 1 && recs[0].rollIndex === undefined) status = statuses[0]; // legacy single group doc
+      else if (completedCount >= totalRolls) status = 'completed';
+      else if (completedCount > 0) status = 'in-progress'; // between rolls
+      else if (statuses.every(s => s === 'canceled')) status = 'canceled';
+      else status = statuses.find(s => s !== 'canceled') || 'pending';
+
+      const printHistory = [];
+      recs.forEach(r => {
+        (Array.isArray(r.printHistory) ? r.printHistory : []).forEach(p => {
+          if (p?.manualAdvance) return;
+          const ri = p?.rollIndex ?? r.rollIndex;
+          if (ri === undefined || ri === null) return;
+          printHistory.push({ ...p, rollIndex: Number(ri) });
+        });
+      });
+
+      const byTime = (a, b) => String(a).localeCompare(String(b));
+      const starts = recs.map(r => r.actualStartTime).filter(Boolean).sort(byTime);
+      const ends = recs.map(r => r.actualEndTime).filter(Boolean).sort(byTime);
+      const active = recs.find(r => normStatus(r.status) === 'in-progress');
+      const latest = [...recs].sort((a, b) => (Number(b.rollIndex) || 0) - (Number(a.rollIndex) || 0))[0];
+      const durations = recs.map(r => r.actualDurationMins).filter(v => v !== undefined && v !== null);
 
       return {
         ...grp,
         status,
-        worker: rec?.worker || '',
-        machine: rec?.machine || 'PSA2',
-        actualStartTime: rec?.actualStartTime || null,
-        actualEndTime: rec?.actualEndTime || null,
-        actualDurationMins: rec?.actualDurationMins ?? null,
-        statusRecord: rec || null
+        worker: active?.worker || latest?.wrapperWorker || latest?.worker || recs[0].worker || '',
+        machine: recs[0].machine || 'PSA2',
+        actualStartTime: starts[0] || null,
+        actualEndTime: status === 'completed' ? (ends[ends.length - 1] || null) : null,
+        actualDurationMins: durations.length ? durations.reduce((a, b) => a + Number(b || 0), 0) : null,
+        statusRecord: { ...recs[0], printHistory }
       };
     });
   }, [productionSchedule, productionStatuses]);
