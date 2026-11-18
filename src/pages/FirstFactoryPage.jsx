@@ -97,7 +97,8 @@ export default function FirstFactoryPage() {
   const selectedMonth = selectedDateStr.substring(0, 7);
   const selectedDay = parseInt(selectedDateStr.substring(8, 10), 10);
   // Rolls can be added from another date's Excel plan (sourceDate). Rolls without it belong to the target date.
-  const isOwnDay = (item) => !item?.sourceDate || item.sourceDate === selectedDateStr;
+  const rollSrc = (item) => item?.sourceDate || selectedDateStr;
+  const discKey = (hinban, src) => `${hinban}|${src}`;
 
   const selectedDayOfWeekInfo = useMemo(() => {
     if (!selectedDateStr) return { day: 0, ja: '—', en: '—', isSunday: false, isSaturday: false };
@@ -470,6 +471,39 @@ export default function FirstFactoryPage() {
           }
         });
 
+        // Rolls taken from this month's plan into another day ("11/19分"), on any day / month
+        try {
+          const usageRes = await fetch(`${BASE_URL}api/production/schedule/by-source?month=${encodeURIComponent(monthToSync)}`);
+          const usageJson = await usageRes.json();
+          (usageJson.usage || []).forEach(u => {
+            const bySrc = {};
+            u.rolls.forEach(r => {
+              const k = `${r.hinban}|${r.sourceDate}`;
+              if (!bySrc[k]) bySrc[k] = { hinban: r.hinban, src: r.sourceDate, meters: 0 };
+              bySrc[k].meters += r.meters;
+            });
+            const issues = [];
+            Object.values(bySrc).forEach(({ hinban, src, meters }) => {
+              const label = `${Number(src.slice(5, 7))}/${Number(src.slice(8, 10))}分`;
+              const scheduled = Number(meters.toFixed(1));
+              const found = parsedData.find(i => i.hinban === hinban);
+              const qty = found ? Number((found.production[Number(src.slice(8, 10)) - 1] || 0).toFixed(1)) : 0;
+              if (!found) issues.push({ hinban, type: 'missing', text: `${label}: Not found in Excel dataset for ${monthToSync}` });
+              else if (qty === 0) issues.push({ hinban, type: 'moved_or_zero', text: `${label}: Excel production for ${src} is now 0m` });
+              else if (qty !== scheduled) issues.push({ hinban, type: 'qty_mismatch', text: `${label}: Quantity changed: Scheduled ${scheduled}m → Excel ${qty}m` });
+            });
+            if (!issues.length) return;
+            const existing = impact.find(x => x.dateKey === u.dateStr);
+            if (existing) existing.issues.push(...issues);
+            else impact.push({ date: Number(u.dateStr.slice(8, 10)), dateKey: u.dateStr, issues });
+          });
+          impact.sort((x, y) => x.dateKey.localeCompare(y.dateKey));
+        } catch (usageErr) {
+          console.warn('Could not check rolls taken from this month on other days:', usageErr);
+        }
+        // Cached plans of other months may be this month: reload them when needed
+        setOtherMonthData(prev => { const next = { ...prev }; delete next[monthToSync]; return next; });
+
         if (impact.length > 0) {
           setSyncImpactReport(impact);
           setIsImpactModalOpen(true);
@@ -714,17 +748,27 @@ export default function FirstFactoryPage() {
   const poolMonth = poolDateStr.substring(0, 7);
   const poolDay = parseInt(poolDateStr.substring(8, 10), 10);
   const isOtherPoolDate = poolDateStr !== selectedDateStr;
+  // Excel plans of other months: for the Available date picker and for checking rolls pulled in from them
   const [otherMonthData, setOtherMonthData] = useState({}); // { 'YYYY-MM': Excel rows }
-  useEffect(() => {
-    if (poolMonth === selectedMonth || otherMonthData[poolMonth]) return;
-    let cancelled = false;
-    fetch(`${BASE_URL}api/production/schedule?month=${encodeURIComponent(poolMonth)}`)
+  const monthsLoading = useRef(new Set());
+  const loadOtherMonth = (month) => {
+    if (!month || month === selectedMonth || otherMonthData[month] || monthsLoading.current.has(month)) return;
+    monthsLoading.current.add(month);
+    fetch(`${BASE_URL}api/production/schedule?month=${encodeURIComponent(month)}`)
       .then(r => r.json())
-      .then(json => { if (!cancelled) setOtherMonthData(prev => ({ ...prev, [poolMonth]: json.success ? (json.data || []) : [] })); })
-      .catch(() => { if (!cancelled) setOtherMonthData(prev => ({ ...prev, [poolMonth]: [] })); });
-    return () => { cancelled = true; };
+      .then(json => setOtherMonthData(prev => ({ ...prev, [month]: json.success ? (json.data || []) : [] })))
+      .catch(() => setOtherMonthData(prev => ({ ...prev, [month]: [] })))
+      .finally(() => monthsLoading.current.delete(month));
+  };
+  useEffect(() => {
+    loadOtherMonth(poolMonth);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poolMonth, selectedMonth]);
+  const sourceMonthsKey = [...new Set(scheduleOrder.filter(i => i.sourceDate).map(i => i.sourceDate.substring(0, 7)))].sort().join(',');
+  useEffect(() => {
+    sourceMonthsKey.split(',').filter(Boolean).forEach(loadOtherMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceMonthsKey, selectedMonth]);
   const poolData = poolMonth === selectedMonth ? data : (otherMonthData[poolMonth] || []);
   const poolDataLoading = poolMonth !== selectedMonth && !otherMonthData[poolMonth];
 
@@ -932,77 +976,79 @@ export default function FirstFactoryPage() {
   };
 
   // --- DISCREPANCY DETECTION FOR THE SELECTED DATE ---
+  // Each group of rolls is checked against the Excel quantity of the date it came from:
+  // the target day for its own rolls, the source date for rolls pulled in ("11/19分").
   const currentDayDiscrepancies = useMemo(() => {
     if (!scheduleOrder || scheduleOrder.length === 0) {
       return { map: {}, list: [], count: 0 };
     }
 
-    const hinbanGroups = {};
+    const groups = {};
     scheduleOrder.forEach(item => {
-      // Rolls pulled in from another date are not compared with this date's Excel quantity
-      if (item.type === 'hinban' && item.hinban && isOwnDay(item)) {
-        if (!hinbanGroups[item.hinban]) {
-          hinbanGroups[item.hinban] = [];
-        }
-        hinbanGroups[item.hinban].push(item);
+      if (item.type === 'hinban' && item.hinban) {
+        const src = rollSrc(item);
+        const key = discKey(item.hinban, src);
+        if (!groups[key]) groups[key] = { hinban: item.hinban, src, rolls: [] };
+        groups[key].rolls.push(item);
       }
     });
 
     const map = {};
     const list = [];
 
-    Object.entries(hinbanGroups).forEach(([hinban, rolls]) => {
+    Object.entries(groups).forEach(([key, { hinban, src, rolls }]) => {
+      const srcMonth = src.substring(0, 7);
+      const rows = srcMonth === selectedMonth ? data : otherMonthData[srcMonth];
+      if (!rows) return; // that month's plan is still loading
+      const isOwn = src === selectedDateStr;
+      const srcDay = parseInt(src.substring(8, 10), 10);
+      const prefix = isOwn ? '' : `${fmtMonthDay(src)}分: `;
       const scheduledMeters = Number(rolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
-      const foundRow = data.find(i => i.hinban === hinban);
+      const foundRow = rows.find(i => i.hinban === hinban);
+      const base = { key, hinban, sourceDate: src, isOwn, scheduledMeters, rollsCount: rolls.length };
 
       if (!foundRow) {
         const disc = {
-          hinban,
+          ...base,
           type: 'missing_in_excel',
           excelQty: 0,
-          scheduledMeters,
-          message: '品番が今月のエクセルデータに存在しません (Not in Excel)',
-          rollsCount: rolls.length
+          message: prefix + (isOwn ? '品番が今月のエクセルデータに存在しません (Not in Excel)' : `品番が ${srcMonth} のエクセルデータに存在しません (Not in Excel)`)
         };
-        map[hinban] = disc;
+        map[key] = disc;
         list.push(disc);
       } else {
-        const excelQty = Number((foundRow.production[selectedDay - 1] || 0).toFixed(1));
+        const excelQty = Number((foundRow.production[srcDay - 1] || 0).toFixed(1));
         if (excelQty === 0) {
           const otherDays = [];
           for (let d = 1; d <= 31; d++) {
             const q = foundRow.production[d - 1] || 0;
             if (q > 0) {
-              otherDays.push(`${d}日 (${q}m)`);
+              otherDays.push(`${isOwn ? '' : `${parseInt(srcMonth.substring(5, 7), 10)}/`}${d}日 (${q}m)`);
             }
           }
-          const movedText = otherDays.length > 0 
+          const movedText = prefix + (otherDays.length > 0 
             ? `エクセルで他日程に移動: ${otherDays.join(', ')}` 
-            : 'エクセル生産数: 0m';
+            : 'エクセル生産数: 0m');
           
           const disc = {
-            hinban,
+            ...base,
             type: 'moved_or_zero',
             excelQty: 0,
-            scheduledMeters,
             movedText,
             message: movedText,
-            rollsCount: rolls.length,
             foundRow
           };
-          map[hinban] = disc;
+          map[key] = disc;
           list.push(disc);
         } else if (excelQty !== scheduledMeters) {
           const disc = {
-            hinban,
+            ...base,
             type: 'qty_mismatch',
             excelQty,
-            scheduledMeters,
-            message: `エクセル数量不一致: スケジュール ${scheduledMeters}m → エクセル ${excelQty}m`,
-            rollsCount: rolls.length,
+            message: `${prefix}エクセル数量不一致: スケジュール ${scheduledMeters}m → エクセル ${excelQty}m`,
             foundRow
           };
-          map[hinban] = disc;
+          map[key] = disc;
           list.push(disc);
         }
       }
@@ -1013,7 +1059,8 @@ export default function FirstFactoryPage() {
       list,
       count: list.length
     };
-  }, [scheduleOrder, data, selectedDay]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleOrder, data, selectedDay, selectedDateStr, selectedMonth, otherMonthData]);
 
   // Auto-align ONLY for the currently selected date (does not touch any other dates)
   const handleAutoAlignCurrentDate = () => {
@@ -1031,7 +1078,7 @@ export default function FirstFactoryPage() {
         }
 
         const hinban = item.hinban;
-        const disc = isOwnDay(item) ? currentDayDiscrepancies.map[hinban] : null;
+        const disc = currentDayDiscrepancies.map[discKey(hinban, rollSrc(item))];
 
         if (!disc) {
           // No discrepancy, retain item
@@ -1041,9 +1088,9 @@ export default function FirstFactoryPage() {
           continue;
         } else if (disc.type === 'qty_mismatch') {
           // Replace rolls with updated roll breakdown at this position
-          if (!processedHinbans.has(hinban)) {
-            processedHinbans.add(hinban);
-            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1, selectedDateStr);
+          if (!processedHinbans.has(disc.key)) {
+            processedHinbans.add(disc.key);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, parseInt(disc.sourceDate.substring(8, 10), 10) - 1, disc.sourceDate);
             newOrder.push(...updatedRolls);
           }
         }
@@ -1055,8 +1102,8 @@ export default function FirstFactoryPage() {
     setIsDiscrepancyModalOpen(false);
   };
 
-  const handleUpdateHinbanQty = (hinban) => {
-    const disc = currentDayDiscrepancies.map[hinban];
+  const handleUpdateHinbanQty = (hinban, src = selectedDateStr) => {
+    const disc = currentDayDiscrepancies.map[discKey(hinban, src)];
     if (!disc || !disc.foundRow) return;
 
     setScheduleOrder(prevOrder => {
@@ -1065,10 +1112,10 @@ export default function FirstFactoryPage() {
 
       for (let i = 0; i < prevOrder.length; i++) {
         const item = prevOrder[i];
-        if (item.type === 'hinban' && item.hinban === hinban && isOwnDay(item)) {
+        if (item.type === 'hinban' && item.hinban === hinban && rollSrc(item) === src) {
           if (!replaced) {
             replaced = true;
-            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1, selectedDateStr);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, parseInt(src.substring(8, 10), 10) - 1, src);
             newOrder.push(...updatedRolls);
           }
         } else {
@@ -3142,7 +3189,7 @@ export default function FirstFactoryPage() {
 
                     // Helper to render an individual roll card
                     const renderRollCard = (item, rollItemIndex) => {
-                      const disc = isOwnDay(item) ? currentDayDiscrepancies.map[item.hinban] : null;
+                      const disc = currentDayDiscrepancies.map[discKey(item.hinban, rollSrc(item))];
                       const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                       const isQtyMismatch = disc && disc.type === 'qty_mismatch';
 
@@ -3249,7 +3296,7 @@ export default function FirstFactoryPage() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleUpdateHinbanQty(item.hinban);
+                                    handleUpdateHinbanQty(item.hinban, rollSrc(item));
                                   }}
                                   className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
                                   title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
@@ -3285,7 +3332,7 @@ export default function FirstFactoryPage() {
 
                     // If Collapsed: Render obvious stacked card with full start-to-end time
                     if (isCollapsed) {
-                      const disc = isOwnDay(group.items[0]?.item) ? currentDayDiscrepancies.map[group.hinban] : null;
+                      const disc = currentDayDiscrepancies.map[discKey(group.hinban, rollSrc(group.items[0]?.item))];
                       const groupIsZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                       const groupIsQtyMismatch = disc && disc.type === 'qty_mismatch';
                       const matchedPool = data.find(d => d.hinban === group.hinban);
@@ -3421,7 +3468,7 @@ export default function FirstFactoryPage() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleUpdateHinbanQty(group.hinban);
+                                    handleUpdateHinbanQty(group.hinban, rollSrc(group.items[0]?.item));
                                   }}
                                   className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
                                   title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
@@ -4198,13 +4245,16 @@ export default function FirstFactoryPage() {
                 const isZeroOrMissing = disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel';
                 return (
                   <div 
-                    key={disc.hinban} 
+ key={disc.key} 
                     className={`rounded-[6px] border p-3 flex flex-col gap-2 ${
                       isZeroOrMissing ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/30 bg-amber-500/5'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-[var(--text-primary)]">{disc.hinban}</span>
+                      <span className="font-semibold text-sm text-[var(--text-primary)] inline-flex items-center gap-1.5">
+                        {nameMode === 'kizai' && kizaiOf(disc.hinban) ? kizaiOf(disc.hinban) : disc.hinban}
+                        <SourceDateTag sourceDate={disc.sourceDate} targetDate={selectedDateStr} />
+                      </span>
                       <span className="text-xs text-[var(--text-muted)] font-mono freya-tabular">
                         {language === 'ja' 
                           ? `設定済: ${disc.scheduledMeters}m (${disc.rollsCount} 巻)` 
@@ -4231,7 +4281,7 @@ export default function FirstFactoryPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setScheduleOrder(prev => prev.filter(i => i.hinban !== disc.hinban));
+                            setScheduleOrder(prev => prev.filter(i => !(i.type === 'hinban' && i.hinban === disc.hinban && rollSrc(i) === disc.sourceDate)));
                           }}
                           className="inline-flex items-center gap-1 rounded-[6px] border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-500/20 transition-colors cursor-pointer"
                         >
@@ -4241,7 +4291,7 @@ export default function FirstFactoryPage() {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleUpdateHinbanQty(disc.hinban)}
+                          onClick={() => handleUpdateHinbanQty(disc.hinban, disc.sourceDate)}
                           className="inline-flex items-center gap-1 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
@@ -4308,7 +4358,7 @@ export default function FirstFactoryPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 font-semibold text-xs text-[var(--text-primary)]">
                         <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>calendar_today</span>
-                        <span className="font-mono freya-tabular">{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
+                        <span className="font-mono freya-tabular">{fmtMonthDay(report.dateKey)}</span>
                         <span className="rounded-[4px] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
                           {language === 'ja' ? `${report.issues.length} 件の変更` : `${report.issues.length} issue${report.issues.length === 1 ? '' : 's'}`}
                         </span>
