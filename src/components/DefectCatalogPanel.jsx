@@ -13,7 +13,7 @@ const iconButton =
 // 不良マスタ: every defect across products. Process lists pick from here, so names stay uniform.
 // usage: Map<id, processKey[]> of base lists that use the item (for delete warnings / chips).
 // baseLists: { processKey: { items: [id] } } (list order); overrides: per-model docs (for "model only" items)
-export default function DefectCatalogPanel({ catalog = [], usage = new Map(), baseLists = {}, overrides = [], canEdit = false, username = "", onChanged, onDirtyChange, onFlash }) {
+export default function DefectCatalogPanel({ catalog = [], usage = new Map(), baseLists = {}, overrides = [], sets = [], canEdit = false, username = "", onChanged, onDirtyChange, onFlash }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -67,12 +67,12 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
       const items = ids.map((id) => catalogById.get(id)).filter((item) => item && matches(item));
       groups.push({ key, label: isJa ? FURYO_SECTIONS[key].labelJa : FURYO_SECTIONS[key].labelEn, icon: FURYO_SECTIONS[key].icon, items: sortItems(items, (item) => ids.indexOf(item.id)) });
     });
-    const extraIds = new Set(overrides.flatMap((doc) => doc.extras || []));
+    const extraIds = new Set([...overrides.flatMap((doc) => doc.extras || []), ...sets.flatMap((set) => set.items || [])]);
     const rest = catalog.filter((item) => !inBase.has(item.id) && matches(item));
     const masterOrder = (item) => catalog.indexOf(item);
     groups.push({
       key: "modelOnly",
-      label: isJa ? "モデル別追加のみ" : "Model extras only",
+      label: isJa ? "セット・モデル別のみ" : "Sets / model extras only",
       icon: "tune",
       items: sortItems(rest.filter((item) => extraIds.has(item.id)), masterOrder),
     });
@@ -167,6 +167,7 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
   function renderRow(item, index, groupKey) {
     const editing = item.id === editingId;
     const used = usage.get(item.id) || [];
+    const inSets = sets.filter((set) => (set.items || []).includes(item.id));
     const isOther = item.id === DEFECT_OTHER_ID;
     return (
       <tr key={`${groupKey}-${item.id}`} className={`hover:bg-[var(--surface-subtle)] ${item.deleted ? "opacity-50" : ""}`}>
@@ -197,6 +198,12 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
                   {isJa ? FURYO_SECTIONS[key]?.labelJa : FURYO_SECTIONS[key]?.labelEn}
                 </span>
               ))}
+              {inSets.map((set) => (
+                <span key={set.id} className="inline-flex items-center gap-0.5 rounded-[4px] border border-[var(--freya-blue)]/30 bg-primary/10 px-1.5 py-px text-[10px] font-semibold text-primary" title={isJa ? "不良セット" : "Defect set"}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>category</span>
+                  {set.name}
+                </span>
+              ))}
             </div>
           )}
         </td>
@@ -225,7 +232,7 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
                     type="button"
                     onClick={() => handleDelete(item)}
                     disabled={busyId === item.id || !!editingId}
-                    className={`${iconButton} hover:bg-[var(--status-danger)]/10 hover:text-[var(--status-danger)]`}
+                    className={`${iconButton} hover:bg-error/10 hover:text-error`}
                     title={isJa ? "削除" : "Delete"}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>

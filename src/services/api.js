@@ -1750,8 +1750,24 @@ export async function fetchModelDefectOverrides(process = "") {
   return Array.isArray(result) ? result : [];
 }
 
-export async function saveModelDefectOverride({ process, model, hidden, extras, username }) {
-  return _postJson("modelDefectOverrides", { process, model, hidden, extras, username });
+export async function saveModelDefectOverride({ process, model, sources, hidden, extras, username }) {
+  return _postJson("modelDefectOverrides", { process, model, sources, hidden, extras, username });
+}
+
+// Defect sets (不良セット): named groups of master defects, shared across processes
+export async function fetchDefectSets() {
+  const result = await _getJson("defectSets");
+  return Array.isArray(result) ? result : [];
+}
+
+// action: "create" | "update" | "delete" (delete is refused while models use the set)
+export async function saveDefectSet({ action, id, name, items, username }) {
+  return _postJson("defectSets", { action, id, name, items, username });
+}
+
+// Remove a set from some models ({ process, model } targets) or from all of them
+export async function detachDefectSet({ setId, targets, all, username }) {
+  return _postJson("defectSets/detach", { setId, targets, all, username });
 }
 
 export async function fetchFuryoModelProducts(model) {

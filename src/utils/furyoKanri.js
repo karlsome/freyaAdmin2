@@ -98,13 +98,29 @@ export function withOtherLast(ids = []) {
   return [...ids.filter((id) => id !== DEFECT_OTHER_ID), DEFECT_OTHER_ID];
 }
 
-// base − hidden + extras, その他 last; deleted catalog items skipped (mirrors /resolvedDefectList)
-export function resolveDefectIds(baseIds = [], override = null, catalogById = new Map()) {
-  const hidden = new Set(override?.hidden || []);
+export const DEFECT_BASE_SOURCE = "base";
+
+export function overrideSources(override) {
+  const sources = (override?.sources || []).filter(Boolean);
+  return sources.length ? sources : [DEFECT_BASE_SOURCE];
+}
+
+// Ids contributed by the model's sources (base list and/or sets), in order, de-duplicated, without その他
+export function sourceDefectIds(sources, baseIds = [], setsById = new Map()) {
   const ids = [];
-  baseIds.forEach((id) => {
-    if (!hidden.has(id) && id !== DEFECT_OTHER_ID && !ids.includes(id)) ids.push(id);
+  sources.forEach((source) => {
+    const list = source === DEFECT_BASE_SOURCE ? baseIds : (setsById.get(source)?.items || []);
+    list.forEach((id) => {
+      if (id !== DEFECT_OTHER_ID && !ids.includes(id)) ids.push(id);
+    });
   });
+  return ids;
+}
+
+// sources − hidden + extras, その他 last; deleted catalog items skipped (mirrors /resolvedDefectList)
+export function resolveDefectIds(baseIds = [], override = null, catalogById = new Map(), setsById = new Map()) {
+  const hidden = new Set(override?.hidden || []);
+  const ids = sourceDefectIds(overrideSources(override), baseIds, setsById).filter((id) => !hidden.has(id));
   (override?.extras || []).forEach((id) => {
     if (id !== DEFECT_OTHER_ID && !ids.includes(id)) ids.push(id);
   });

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchDefectCatalog,
+  fetchDefectSets,
   fetchFuryoModels,
   fetchModelDefectOverrides,
   fetchProcessDefectDefinitions,
@@ -19,6 +20,7 @@ import {
 } from "../utils/furyoKanri";
 import { getAuthUser } from "../utils/masterDB";
 import DefectCatalogPanel from "./DefectCatalogPanel";
+import DefectSetsSection from "./DefectSetsSection";
 import FuryoLegacyCounterWorkspace from "./FuryoLegacyCounterWorkspace";
 import ProcessDefectPanel from "./ProcessDefectPanel";
 
@@ -41,6 +43,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   const [catalog, setCatalog] = useState([]);
   const [baseLists, setBaseLists] = useState({});
   const [overrides, setOverrides] = useState([]);
+  const [sets, setSets] = useState([]);
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,17 +55,19 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       setLoading(true);
       setError("");
       try {
-        const [nextCatalog, nextBase, nextOverrides, nextModels] = await Promise.all([
+        const [nextCatalog, nextBase, nextOverrides, nextModels, nextSets] = await Promise.all([
           fetchDefectCatalog(),
           fetchProcessDefectDefinitions(),
           fetchModelDefectOverrides(),
           fetchFuryoModels(),
+          fetchDefectSets(),
         ]);
         if (cancelled) return;
         setCatalog(nextCatalog);
         setBaseLists(Object.fromEntries(nextBase.map((doc) => [doc.process, doc])));
         setOverrides(nextOverrides);
         setModels(sortFuryoModels(nextModels));
+        setSets(nextSets);
       } catch (loadError) {
         if (!cancelled) setError(loadError.message || (isJa ? "不良項目の読み込みに失敗しました。" : "Failed to load defect lists."));
       } finally {
@@ -176,7 +181,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       </div>
 
       {error && (
-        <div className="mb-6 rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-4 py-3 text-xs font-medium text-[var(--status-danger)]">
+        <div className="mb-6 rounded-[8px] border border-error/30 bg-error/10 px-4 py-3 text-xs font-medium text-error">
           {error}
         </div>
       )}
@@ -207,11 +212,13 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
           {isJa ? "読み込み中..." : "Loading..."}
         </div>
       ) : section === FURYO_MASTER_KEY ? (
+        <div className="space-y-6">
         <DefectCatalogPanel
           catalog={catalog}
           usage={usage}
           baseLists={baseLists}
           overrides={overrides}
+          sets={sets}
           canEdit={editable}
           username={username}
           onDirtyChange={setDirty}
@@ -220,6 +227,28 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
             setCatalog((current) => (current.some((x) => x.id === item.id) ? current.map((x) => (x.id === item.id ? item : x)) : [...current, item]));
           }}
         />
+        <DefectSetsSection
+          sets={sets}
+          catalog={catalog}
+          catalogById={catalogById}
+          overrides={overrides}
+          canEdit={editable}
+          username={username}
+          onFlash={onFlash}
+          onSetSaved={(set) => setSets((current) => (current.some((x) => x.id === set.id) ? current.map((x) => (x.id === set.id ? set : x)) : [...current, set]))}
+          onSetDeleted={(id) => setSets((current) => current.filter((x) => x.id !== id))}
+          onOverridesUpdated={(updated) => {
+            setOverrides((current) => {
+              let next = [...current];
+              updated.forEach((doc) => {
+                next = next.filter((x) => !(x.process === doc.process && x.model === doc.model));
+                if (!doc.removed) next.push(doc);
+              });
+              return next;
+            });
+          }}
+        />
+        </div>
       ) : section === "kensaDB" && kensaView === "legacy" ? (
         <FuryoLegacyCounterWorkspace refreshToken={refreshToken} onFlash={onFlash} onDirtyChange={setDirty} />
       ) : (
@@ -231,6 +260,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
           baseIds={baseLists[section]?.items || [DEFECT_OTHER_ID]}
           baseMeta={baseLists[section]}
           overrides={overrides.filter((doc) => doc.process === section)}
+          sets={sets}
           models={models}
           canEdit={editable}
           username={username}

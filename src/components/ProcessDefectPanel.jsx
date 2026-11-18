@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import DefectPicker from "./DefectPicker";
 import { saveModelDefectOverride, saveProcessDefectDefinition } from "../services/api";
-import { DEFECT_OTHER_ID, FURYO_SECTIONS, resolveDefectIds, withOtherLast } from "../utils/furyoKanri";
+import { DEFECT_BASE_SOURCE, DEFECT_OTHER_ID, FURYO_SECTIONS, overrideSources, resolveDefectIds, sourceDefectIds, withOtherLast } from "../utils/furyoKanri";
 
 const inputClass =
   "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] placeholder:text-[var(--text-muted)]";
 const buttonBase =
   "inline-flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
 const iconButton =
-  "rounded-[6px] p-1 text-[var(--text-muted)] transition hover:bg-[var(--status-danger)]/10 hover:text-[var(--status-danger)]";
+  "rounded-[6px] p-1 text-[var(--text-muted)] transition hover:bg-error/10 hover:text-error";
 
 function sameList(a = [], b = []) {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -19,36 +20,6 @@ function formatUpdated(updatedAt, updatedBy, isJa) {
   const date = updatedAt ? new Date(updatedAt) : null;
   const when = date && !Number.isNaN(date.getTime()) ? date.toLocaleString(isJa ? "ja-JP" : "en-US") : "";
   return `${isJa ? "最終更新:" : "Last updated"} ${when}${updatedBy ? ` (${updatedBy})` : ""}`;
-}
-
-// Dropdown of master items that can still be added (not deleted, not already listed, not その他)
-function DefectPicker({ catalog, excludeIds, onPick, isJa }) {
-  const exclude = new Set(excludeIds);
-  const options = catalog
-    .filter((item) => !item.deleted && item.id !== DEFECT_OTHER_ID && !exclude.has(item.id))
-    .sort((a, b) => a.jp.localeCompare(b.jp, "ja"));
-
-  return (
-    <select
-      value=""
-      onChange={(event) => {
-        if (event.target.value) onPick(event.target.value);
-      }}
-      disabled={!options.length}
-      className={`${inputClass} max-w-xs cursor-pointer`}
-    >
-      <option value="">
-        {options.length
-          ? (isJa ? "＋ マスタから不良を追加..." : "+ Add defect from master...")
-          : (isJa ? "追加できる不良がありません" : "No more defects in master")}
-      </option>
-      {options.map((item) => (
-        <option key={item.id} value={item.id}>
-          {item.jp}{item.en ? ` / ${item.en}` : ""}
-        </option>
-      ))}
-    </select>
-  );
 }
 
 function SectionHeader({ icon, title, subtitle, children }) {
@@ -241,7 +212,63 @@ function BaseListCard({ processKey, catalogById, catalog, baseIds, baseMeta, can
 }
 
 // ── Per-model differences ────────────────────────────────────────────────────
-function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrides, models, canEdit, username, onSaved, onDirtyChange, onFlash }) {
+// Ordered source chips (基本リスト / sets): drag to reorder, × to remove, dropdown to add
+function SourceEditor({ sources, setSources, sets, isJa }) {
+  const [dragIndex, setDragIndex] = useState(null);
+  const setsById = new Map(sets.map((set) => [set.id, set]));
+  const nameOf = (source) => (source === DEFECT_BASE_SOURCE ? (isJa ? "基本リスト" : "Base list") : setsById.get(source)?.name || source);
+  const available = [DEFECT_BASE_SOURCE, ...sets.map((set) => set.id)].filter((source) => !sources.includes(source));
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {sources.map((source, index) => (
+        <span
+          key={source}
+          draggable
+          onDragStart={(event) => { setDragIndex(index); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(index)); }}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            if (dragIndex === null || dragIndex === index) return;
+            const next = [...sources];
+            const [moved] = next.splice(dragIndex, 1);
+            next.splice(index, 0, moved);
+            setSources(next);
+            setDragIndex(null);
+          }}
+          onDragEnd={() => setDragIndex(null)}
+          className={`inline-flex cursor-grab items-center gap-1 rounded-[6px] border border-[var(--freya-blue)]/40 bg-primary/10 py-1 pl-1.5 pr-1 text-xs font-semibold text-primary active:cursor-grabbing ${dragIndex === index ? "opacity-40" : ""}`}
+          title={isJa ? "ドラッグして順番を変更" : "Drag to reorder"}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>drag_indicator</span>
+          <span className="font-mono text-[10px] opacity-70">{index + 1}</span>
+          {nameOf(source)}
+          <button
+            type="button"
+            onClick={() => setSources(sources.filter((value) => value !== source))}
+            disabled={sources.length === 1}
+            className="rounded p-0.5 hover:bg-error/10 hover:text-error disabled:opacity-30"
+            title={sources.length === 1 ? (isJa ? "ソースは最低1つ必要です" : "At least one source is required") : (isJa ? "外す" : "Remove")}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+          </button>
+        </span>
+      ))}
+      {available.length > 0 && (
+        <select
+          value=""
+          onChange={(event) => { if (event.target.value) setSources([...sources, event.target.value]); }}
+          className="cursor-pointer rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none"
+        >
+          <option value="">{isJa ? "＋ ソースを追加..." : "+ Add source..."}</option>
+          {available.map((source) => <option key={source} value={source}>{nameOf(source)}</option>)}
+        </select>
+      )}
+    </div>
+  );
+}
+
+function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrides, sets, models, canEdit, username, onSaved, onDirtyChange, onFlash }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -251,12 +278,20 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
   const [editMode, setEditMode] = useState(false);
   const [hidden, setHidden] = useState([]);
   const [extras, setExtras] = useState([]);
+  const [sources, setSources] = useState([DEFECT_BASE_SOURCE]);
   const [saving, setSaving] = useState(false);
+  const setsById = new Map(sets.map((set) => [set.id, set]));
 
   const overrideByModel = new Map(overrides.map((doc) => [doc.model, doc]));
   const current = overrideByModel.get(selectedModel) || null;
-  const baseList = baseIds.filter((id) => id !== DEFECT_OTHER_ID && catalogById.get(id) && !catalogById.get(id).deleted);
-  const dirty = editMode && (!sameList([...hidden].sort(), [...(current?.hidden || [])].sort()) || !sameList(extras, current?.extras || []));
+  const viewSources = editMode ? sources : overrideSources(current);
+  // Items contributed by the sources (before hide/extras)
+  const baseList = sourceDefectIds(viewSources, baseIds, setsById).filter((id) => catalogById.get(id) && !catalogById.get(id).deleted);
+  const dirty = editMode && (
+    !sameList([...hidden].sort(), [...(current?.hidden || [])].sort())
+    || !sameList(extras, current?.extras || [])
+    || !sameList(sources, overrideSources(current))
+  );
 
   useEffect(() => {
     onDirtyChange(dirty);
@@ -276,16 +311,18 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
   function startEdit() {
     setHidden(current?.hidden || []);
     setExtras((current?.extras || []).filter((id) => catalogById.get(id) && !catalogById.get(id).deleted));
+    setSources(overrideSources(current).filter((source) => source === DEFECT_BASE_SOURCE || setsById.has(source)));
     setEditMode(true);
   }
 
-  async function persist(nextHidden, nextExtras, successMessage) {
+  async function persist(nextHidden, nextExtras, nextSources, successMessage) {
     setSaving(true);
     try {
-      const result = await saveModelDefectOverride({ process: processKey, model: selectedModel, hidden: nextHidden, extras: nextExtras, username });
+      const result = await saveModelDefectOverride({ process: processKey, model: selectedModel, sources: nextSources, hidden: nextHidden, extras: nextExtras, username });
       onSaved(selectedModel, result?.removed ? null : {
         process: processKey,
         model: selectedModel,
+        sources: result?.sources || nextSources,
         hidden: result?.hidden || nextHidden,
         extras: result?.extras || nextExtras,
         updatedAt: result?.updatedAt || new Date().toISOString(),
@@ -300,8 +337,8 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
     }
   }
 
-  const viewOverride = editMode ? { hidden, extras } : current;
-  const resolved = resolveDefectIds(baseIds, viewOverride, catalogById);
+  const viewOverride = editMode ? { sources, hidden, extras } : current;
+  const resolved = resolveDefectIds(baseIds, viewOverride, catalogById, setsById);
   const hiddenSet = new Set(viewOverride?.hidden || []);
   const extraIds = (viewOverride?.extras || []).filter((id) => catalogById.get(id) && !catalogById.get(id).deleted && !baseList.includes(id));
 
@@ -310,7 +347,7 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
       <SectionHeader
         icon="tune"
         title={isJa ? "モデル別設定" : "Per-model settings"}
-        subtitle={isJa ? "モデルごとに基本項目を非表示にしたり、専用の不良を追加できます（差分のみ保存）。" : "Hide base items or add model-specific defects (only the differences are stored)."}
+        subtitle={isJa ? "モデルごとに基本リスト・不良セットを組み合わせ、項目の非表示や専用の不良を追加できます（差分のみ保存）。" : "Combine the base list and defect sets per model, hide items or add model-specific defects (only the differences are stored)."}
       >
         <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-0.5 text-xs font-mono font-medium text-[var(--text-secondary)]">
           {overrides.length} {isJa ? "モデル設定済" : "customized"}
@@ -341,7 +378,10 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
                     }`}
                   >
                     <span className="flex-1 truncate font-mono font-medium text-[var(--text-primary)]">{model}</span>
-                    {doc?.hidden?.length > 0 && <span className="font-mono text-[11px] text-[var(--status-danger)]">−{doc.hidden.length}</span>}
+                    {overrideSources(doc).some((source) => source !== DEFECT_BASE_SOURCE) && (
+                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }} title={isJa ? "セット使用" : "Uses sets"}>category</span>
+                    )}
+                    {doc?.hidden?.length > 0 && <span className="font-mono text-[11px] text-error">−{doc.hidden.length}</span>}
                     {doc?.extras?.length > 0 && <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400">+{doc.extras.length}</span>}
                   </button>
                 </li>
@@ -373,7 +413,7 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
                         </button>
                         <button
                           type="button"
-                          onClick={() => persist(hidden, extras, isJa ? `${selectedModel} の設定を保存しました。` : `${selectedModel} saved.`)}
+                          onClick={() => persist(hidden, extras, sources, isJa ? `${selectedModel} の設定を保存しました。` : `${selectedModel} saved.`)}
                           disabled={!dirty || saving}
                           className={`${buttonBase} bg-[var(--freya-blue)] text-white hover:opacity-90`}
                         >
@@ -388,7 +428,7 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
                             type="button"
                             onClick={() => {
                               if (window.confirm(isJa ? `${selectedModel} を基本リストに戻しますか？` : `Reset ${selectedModel} to the base list?`)) {
-                                persist([], [], isJa ? `${selectedModel} を基本リストに戻しました。` : `${selectedModel} reset to base list.`);
+                                persist([], [], [DEFECT_BASE_SOURCE], isJa ? `${selectedModel} を基本リストに戻しました。` : `${selectedModel} reset to base list.`);
                               }
                             }}
                             disabled={saving}
@@ -411,7 +451,25 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
               <div className="grid flex-1 gap-5 p-5 xl:grid-cols-2">
                 <div>
                   <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-                    {isJa ? "基本リストの項目" : "Base list items"}
+                    {isJa ? "ソース（上から順に表示）" : "Sources (shown in this order)"}
+                  </div>
+                  <div className="mb-5">
+                    {editMode ? (
+                      <SourceEditor sources={sources} setSources={setSources} sets={sets} isJa={isJa} />
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {viewSources.map((source, index) => (
+                          <span key={source} className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                            <span className="font-mono text-[10px] opacity-70">{index + 1}</span>
+                            {source === DEFECT_BASE_SOURCE ? (isJa ? "基本リスト" : "Base list") : setsById.get(source)?.name || (isJa ? "（削除済みセット）" : "(deleted set)")}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                    {isJa ? "ソースの項目（チェックを外すと非表示）" : "Items from sources (uncheck to hide)"}
                   </div>
                   <ul className="space-y-1.5">
                     {baseList.map((id) => {
@@ -436,7 +494,7 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
                         </li>
                       );
                     })}
-                    {baseList.length === 0 && <li className="text-xs text-[var(--text-muted)]">{isJa ? "基本リストは空です" : "Base list is empty"}</li>}
+                    {baseList.length === 0 && <li className="text-xs text-[var(--text-muted)]">{isJa ? "ソースに項目がありません" : "Sources have no items"}</li>}
                   </ul>
 
                   <div className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
@@ -492,7 +550,7 @@ function ModelOverridesCard({ processKey, catalogById, catalog, baseIds, overrid
 
 // Process view: base list + per-model differences, both picked from the defect master
 export default function ProcessDefectPanel({
-  processKey, catalog, catalogById, baseIds, baseMeta, overrides, models, canEdit, username,
+  processKey, catalog, catalogById, baseIds, baseMeta, overrides, sets = [], models, canEdit, username,
   onBaseSaved, onOverrideSaved, onDirtyChange, onFlash,
 }) {
   const [baseDirty, setBaseDirty] = useState(false);
@@ -524,6 +582,7 @@ export default function ProcessDefectPanel({
         catalogById={catalogById}
         baseIds={baseIds}
         overrides={overrides}
+        sets={sets}
         models={models}
         canEdit={canEdit}
         username={username}
