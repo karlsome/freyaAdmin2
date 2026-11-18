@@ -13,6 +13,12 @@ import * as xlsx from 'xlsx';
 
 // 11/20 from 2026-11-20
 const fmtMonthDay = (dateStr) => (dateStr ? `${Number(dateStr.slice(5, 7))}/${Number(dateStr.slice(8, 10))}` : '');
+// YYYY-MM-DD shifted by n days (local calendar, no time-zone drift)
+const shiftDateStr = (dateStr, n) => {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  const dt = new Date(y, m - 1, d + n);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
 const weekdayJa = (dateStr) => {
   const [y, m, d] = String(dateStr).split('-').map(Number);
   return ['日', '月', '火', '水', '木', '金', '土'][new Date(y, m - 1, d).getDay()] || '';
@@ -2492,7 +2498,17 @@ export default function FirstFactoryPage() {
                   <h3 className="text-sm font-bold text-[var(--text-primary)]">
                     {t('ff_availableToSchedule')}
                   </h3>
-                  {/* The plan date to take items from (default: the target date) */}
+                  {/* The plan date to take items from (default: the target date), ‹ › = previous / next day */}
+                  <div className="inline-flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPoolDateStr(shiftDateStr(poolDateStr, -1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                    title={language === 'ja' ? '前の日' : 'Previous day'}
+                    aria-label={language === 'ja' ? '前の日' : 'Previous day'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
+                  </button>
                   <input
                     type="date"
                     value={poolDateStr}
@@ -2500,6 +2516,16 @@ export default function FirstFactoryPage() {
                     className={`h-7 rounded-[6px] border px-2 text-xs font-mono font-bold outline-none cursor-pointer ${isOtherPoolDate ? 'border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'}`}
                     title={language === 'ja' ? '引当元の日付 (他の日の計画も追加できます)' : 'Plan date to take items from'}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setPoolDateStr(shiftDateStr(poolDateStr, 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                    title={language === 'ja' ? '次の日' : 'Next day'}
+                    aria-label={language === 'ja' ? '次の日' : 'Next day'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+                  </button>
+                  </div>
                   {isOtherPoolDate && (
                     <button
                       type="button"
