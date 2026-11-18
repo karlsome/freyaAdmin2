@@ -157,7 +157,8 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
         : `"${item.jp}" is used in ${usedText}. Deleting hides it from tablets (history is kept). Delete?`)
       : (isJa ? `「${item.jp}」を削除しますか？（過去データは保持されます）` : `Delete "${item.jp}"? (History is kept.)`);
     if (!window.confirm(message)) return;
-    await run(item.id, { action: "delete", id: item.id }, isJa ? `「${item.jp}」を削除しました。` : `Deleted ${item.jp}.`);
+    const ok = await run(item.id, { action: "delete", id: item.id }, isJa ? `「${item.jp}」を削除しました。` : `Deleted ${item.jp}.`);
+    if (ok) setEditingId("");
   }
 
   async function handleRestore(item) {
@@ -211,6 +212,17 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
           <td className="px-5 py-2.5 text-right">
             {editing ? (
               <div className="inline-flex gap-1">
+                {!isOther && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item)}
+                    disabled={busyId === item.id}
+                    className={`${iconButton} mr-2 hover:bg-error/10 hover:text-error`}
+                    title={isJa ? "削除" : "Delete"}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                  </button>
+                )}
                 <button type="button" onClick={() => setEditingId("")} className={iconButton} title={isJa ? "キャンセル" : "Cancel"}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
                 </button>
@@ -223,22 +235,9 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>restore_from_trash</span>
               </button>
             ) : (
-              <div className="inline-flex gap-1">
-                <button type="button" onClick={() => startEdit(item)} disabled={!!editingId} className={iconButton} title={isJa ? "編集" : "Edit"}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-                </button>
-                {!isOther && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item)}
-                    disabled={busyId === item.id || !!editingId}
-                    className={`${iconButton} hover:bg-error/10 hover:text-error`}
-                    title={isJa ? "削除" : "Delete"}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                  </button>
-                )}
-              </div>
+              <button type="button" onClick={() => startEdit(item)} disabled={!!editingId} className={iconButton} title={isJa ? "編集" : "Edit"}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+              </button>
             )}
           </td>
         )}

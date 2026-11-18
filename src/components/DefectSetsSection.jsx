@@ -59,15 +59,7 @@ function SetEditorModal({ draft, setDraft, catalog, catalogById, saving, canEdit
         : (isJa ? "左のマスタからクリックで追加し、右側でドラッグして並べ替えます。その他は自動で最後に付きます。" : "Click defects in the master (left) to add them, drag on the right to reorder. その他 is always added last.")}
       maxWidth="max-w-5xl"
       footer={readOnly ? (
-        <div className="flex w-full items-center justify-between gap-2">
-          <div>
-            {canEdit && (
-              <button type="button" onClick={onDelete} className={`${buttonBase} border border-error/40 text-error hover:bg-error/10`}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-                {isJa ? "セットを削除" : "Delete set"}
-              </button>
-            )}
-          </div>
+        <div className="flex w-full items-center justify-end gap-2">
           <div className="flex items-center gap-2">
             <button type="button" onClick={onClose} className={`${buttonBase} border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]`}>
               {isJa ? "閉じる" : "Close"}
@@ -81,7 +73,16 @@ function SetEditorModal({ draft, setDraft, catalog, catalogById, saving, canEdit
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex w-full items-center justify-between gap-2">
+          <div>
+            {draft.id && (
+              <button type="button" onClick={onDelete} disabled={saving} className={`${buttonBase} border border-error/40 text-error hover:bg-error/10`}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                {isJa ? "セットを削除" : "Delete set"}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
           <button type="button" onClick={onCancelEdit} disabled={saving} className={`${buttonBase} border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]`}>
             {isJa ? "キャンセル" : "Cancel"}
           </button>
@@ -89,6 +90,7 @@ function SetEditorModal({ draft, setDraft, catalog, catalogById, saving, canEdit
             <span className={`material-symbols-outlined ${saving ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>{saving ? "progress_activity" : "save"}</span>
             {isJa ? "保存" : "Save"}
           </button>
+          </div>
         </div>
       )}
     >
@@ -390,7 +392,7 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
             <th className="px-5 py-2.5">{isJa ? "セット名" : "Name"}</th>
             <th className="px-5 py-2.5">{isJa ? "不良" : "Defects"}</th>
             <th className="w-32 px-5 py-2.5">{isJa ? "使用モデル" : "Used by"}</th>
-            {canEdit && <th className="w-24 px-5 py-2.5" />}
+            {canEdit && <th className="w-16 px-5 py-2.5" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--border)]">
@@ -439,19 +441,9 @@ export default function DefectSetsSection({ sets = [], catalog = [], catalogById
                 </td>
                 {canEdit && (
                   <td className="px-5 py-2.5 text-right">
-                    <div className="inline-flex gap-1">
-                      <button type="button" onClick={(event) => { event.stopPropagation(); openSet(set, true); }} className={iconButton} title={isJa ? "編集" : "Edit"}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => { event.stopPropagation(); setUsageSetId(set.id); }}
-                        className={`${iconButton} hover:bg-error/10 hover:text-error`}
-                        title={isJa ? "削除" : "Delete"}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                      </button>
-                    </div>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); openSet(set, true); }} className={iconButton} title={isJa ? "編集" : "Edit"}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+                    </button>
                   </td>
                 )}
               </tr>
