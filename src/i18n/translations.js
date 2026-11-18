@@ -749,6 +749,8 @@ const translations = {
     ff_printStatus: "Print Status:",
     ff_printedCount: "{printed} / {total} Printed",
     ff_rollPrintedTooltip: "Roll #{roll}/{total} - Printed",
+    ff_rollExcludedTooltip: "Roll #{roll}/{total} - Excluded on the tablet (not processed)",
+    ff_excludedRollsTooltip: "Rolls excluded on the tablet (not processed)",
     ff_rollWaitingPrintTooltip: "Roll #{roll}/{total} - Waiting for Print",
 
     // Modals
@@ -2132,6 +2134,8 @@ const translations = {
     ff_printStatus: "印刷状況:",
     ff_printedCount: "{printed} / {total} 枚 印刷済",
     ff_rollPrintedTooltip: "巻 #{roll}/{total} - 印刷完了",
+    ff_rollExcludedTooltip: "巻 #{roll}/{total} - タブレットで除外 (未処理)",
+    ff_excludedRollsTooltip: "タブレットで除外された巻 (未処理)",
     ff_rollWaitingPrintTooltip: "巻 #{roll}/{total} - 印刷待ち",
 
     // モーダル

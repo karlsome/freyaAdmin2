@@ -1470,6 +1470,8 @@ export default function FirstFactoryPage() {
   const [productionDateStr, setProductionDateStr] = useState(getLocalYYYYMMDD());
   const [productionSchedule, setProductionSchedule] = useState(null);
   const [productionStatuses, setProductionStatuses] = useState([]);
+  // Rolls excluded (除外) on the firstKojoNippo tablet for the selected date
+  const [excludedRolls, setExcludedRolls] = useState([]);
   const [loadingProduction, setLoadingProduction] = useState(false);
   const [productionFilter, setProductionFilter] = useState('all');
   const [isLiveConnected, setIsLiveConnected] = useState(false);
@@ -1514,6 +1516,7 @@ export default function FirstFactoryPage() {
           } else {
             setProductionStatuses([]);
           }
+          setExcludedRolls(Array.isArray(statusJson.excludedRolls) ? statusJson.excludedRolls : []);
         }
       } catch (err) {
         console.warn("Status fetch error:", err);
@@ -1576,7 +1579,7 @@ export default function FirstFactoryPage() {
                 }
               });
             }
-          } else if (data.type === 'schedule_update') {
+          } else if (data.type === 'schedule_update' || data.type === 'exclude_update') {
             fetchProductionData(productionDateStr, true);
           }
         } catch (err) {
@@ -1682,7 +1685,22 @@ export default function FirstFactoryPage() {
 
     const normStatus = (s) => (s === 'running' || s === 'active' ? 'in-progress' : s);
 
-    return groups.map((grp) => {
+    // Excluded rolls are matched by schedule item id, falling back to groupId+rollIndex, then orderIndex
+    const isRollExcluded = (grp, roll, rIdx) => {
+      const rollNum = Number(roll.rollIndex) || (rIdx + 1);
+      return excludedRolls.some(x =>
+        (roll.id && x.itemId === String(roll.id)) ||
+        (x.groupId && x.groupId === grp.groupId && Number(x.rollIndex) === rollNum) ||
+        (roll.orderIndex && x.orderIndex && Number(x.orderIndex) === Number(roll.orderIndex) && (!x.hinban || x.hinban === roll.hinban))
+      );
+    };
+
+    return groups.map((g) => {
+      const excludedRollNums = new Set();
+      (g.type === 'hinban' ? g.items : []).forEach((roll, rIdx) => {
+        if (isRollExcluded(g, roll, rIdx)) excludedRollNums.add(Number(roll.rollIndex) || (rIdx + 1));
+      });
+      const grp = { ...g, excludedRollNums, excludedCount: excludedRollNums.size };
       // The queue flow stores ONE firstFactoryProduction doc PER ROLL (same groupId,
       // different rollIndex), each with its own printHistory. Aggregate them all —
       // picking only the first doc froze the card at roll #1.
@@ -1691,7 +1709,9 @@ export default function FirstFactoryPage() {
         recs = productionStatuses.filter(s => s.hinban === grp.hinban);
       }
       if (recs.length === 0) {
-        return { ...grp, status: 'pending', worker: '', machine: 'PSA2', actualStartTime: null, actualEndTime: null, actualDurationMins: null, statusRecord: null };
+        // Every roll excluded and nothing produced -> treat as canceled
+        const allExcluded = grp.items.length > 0 && grp.excludedCount >= grp.items.length;
+        return { ...grp, status: allExcluded ? 'canceled' : 'pending', worker: '', machine: 'PSA2', actualStartTime: null, actualEndTime: null, actualDurationMins: null, statusRecord: null };
       }
 
       const statuses = recs.map(r => normStatus(r.status || 'pending'));
@@ -1722,6 +1742,19 @@ export default function FirstFactoryPage() {
         if (!n) return null;
         return new Date(n).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
       };
+      // Excluded rolls will never be produced: once every roll is printed/completed or excluded, the group is done
+      if (status !== 'completed' && grp.excludedCount > 0) {
+        const printedNums = new Set(printHistory.map(p => Number(p.rollIndex)));
+        recs.forEach(r => {
+          if (normStatus(r.status) === 'completed' && r.rollIndex !== undefined && r.rollIndex !== null) printedNums.add(Number(r.rollIndex));
+        });
+        const allHandled = grp.items.every((roll, rIdx) => {
+          const n = Number(roll.rollIndex) || (rIdx + 1);
+          return printedNums.has(n) || grp.excludedRollNums.has(n);
+        });
+        if (allHandled) status = printedNums.size > 0 ? 'completed' : 'canceled';
+      }
+
       const byTime = (a, b) => String(a).localeCompare(String(b));
       const starts = recs.map(r => toJst(r.startEpoch) || r.actualStartTime).filter(Boolean).sort(byTime);
       const ends = recs.map(r => toJst(r.endEpoch) || r.actualEndTime).filter(Boolean).sort(byTime);
@@ -1740,7 +1773,7 @@ export default function FirstFactoryPage() {
         statusRecord: { ...recs[0], printHistory }
       };
     });
-  }, [productionSchedule, productionStatuses]);
+  }, [productionSchedule, productionStatuses, excludedRolls]);
 
   const productionStats = useMemo(() => {
     // Only account for product hinban batches (exclude setup items since setups are non-production changeovers)
@@ -3604,6 +3637,13 @@ export default function FirstFactoryPage() {
                           </div>
                         )}
 
+                        {group.excludedCount > 0 && (
+                          <div className="inline-flex items-center gap-1 rounded-[4px] bg-rose-500/10 px-2 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/20" title={t('ff_excludedRollsTooltip')}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>block</span>
+                            <span>{language === 'ja' ? `除外 ${group.excludedCount}巻` : `${group.excludedCount} Excluded`}</span>
+                          </div>
+                        )}
+
                         {isPending && (
                           <div className="inline-flex items-center gap-1.5 rounded-[4px] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] border border-[var(--border)]">
                             <span className="material-symbols-outlined" style={{ fontSize: 15 }}>hourglass_empty</span>
@@ -3691,6 +3731,7 @@ export default function FirstFactoryPage() {
                       );
                       const printedCount = printedRollIndices.size;
                       const totalRolls = group.items.length;
+                      const excludedNums = group.excludedRollNums || new Set();
                       const allDone = totalRolls > 0 && printedCount >= totalRolls;
 
                       return (
@@ -3706,6 +3747,23 @@ export default function FirstFactoryPage() {
                           {group.items.map((roll, rIdx) => {
                             const rollNum = Number(roll.rollIndex) || (rIdx + 1);
                             const isPrinted = printedRollIndices.has(rollNum);
+                            const isExcluded = !isPrinted && excludedNums.has(rollNum);
+
+                            if (isExcluded) {
+                              return (
+                                <div
+                                  key={roll.id || rIdx}
+                                  className="inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-xs border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold"
+                                  title={t('ff_rollExcludedTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls)}
+                                >
+                                  <span className="material-symbols-outlined text-rose-600 dark:text-rose-400" style={{ fontSize: 14 }}>cancel</span>
+                                  <span className="font-mono freya-tabular line-through">
+                                    {rollNum}/{totalRolls}
+                                  </span>
+                                  <span className="font-mono text-[11px]">{language === 'ja' ? '除外' : 'Excluded'}</span>
+                                </div>
+                              );
+                            }
 
                             return (
                               <div
