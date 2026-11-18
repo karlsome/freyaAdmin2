@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { saveProcessDefectDefinition, translateJapaneseText } from "../services/api";
 
+let _uidSeq = 0;
+const nextUid = () => `row-${++_uidSeq}`;
+
 function cloneItems(items = []) {
-  return items.map((item) => ({ jp: item.jp || "", en: item.en || "", builtIn: !!item.builtIn }));
+  return items.map((item) => ({ uid: nextUid(), jp: item.jp || "", en: item.en || "", builtIn: !!item.builtIn }));
 }
 
 function itemsChanged(left = [], right = []) {
@@ -35,6 +38,9 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState({});
   const [validationError, setValidationError] = useState("");
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+  const rowRefs = useRef({});
 
   const hasChanges = editMode && itemsChanged(draft, items);
   const rows = editMode ? draft : items;
@@ -66,7 +72,22 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
   }
 
   function addItem() {
-    setDraft((current) => [...current, { jp: "", en: "", builtIn: false }]);
+    setDraft((current) => [...current, { uid: nextUid(), jp: "", en: "", builtIn: false }]);
+  }
+
+  function moveItem(from, to) {
+    if (from === null || to === null || from === to) return;
+    setDraft((current) => {
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
+  function endDrag() {
+    setDragIndex(null);
+    setOverIndex(null);
   }
 
   function removeItem(index) {
@@ -77,16 +98,17 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
   async function autoTranslate(index) {
     const item = draft[index];
     if (!item || item.builtIn || !item.jp.trim() || item.en.trim()) return;
-    setTranslating((current) => ({ ...current, [index]: true }));
+    const { uid } = item;
+    setTranslating((current) => ({ ...current, [uid]: true }));
     try {
       const translated = await translateJapaneseText(item.jp.trim());
       if (translated) {
-        setDraft((current) => current.map((it, i) => (i === index && !it.en.trim() ? { ...it, en: translated } : it)));
+        setDraft((current) => current.map((it) => (it.uid === uid && !it.en.trim() ? { ...it, en: translated } : it)));
       }
     } catch {
       // Translation is only a suggestion
     } finally {
-      setTranslating((current) => ({ ...current, [index]: false }));
+      setTranslating((current) => ({ ...current, [uid]: false }));
     }
   }
 
@@ -151,6 +173,7 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
         <table className="w-full text-left text-xs">
           <thead className="border-b border-[var(--border)] text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
             <tr>
+              {editMode && <th className="w-10 pl-4 pr-0 py-2.5" />}
               <th className="w-16 px-5 py-2.5">#</th>
               <th className="px-5 py-2.5">{isJa ? "日本語" : "Japanese"}</th>
               <th className="px-5 py-2.5">{isJa ? "英語" : "English"}</th>
@@ -160,7 +183,36 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
             {rows.map((item, index) => (
-              <tr key={item.builtIn ? `b-${item.jp}` : `c-${index}`} className="hover:bg-[var(--surface-subtle)]">
+              <tr
+                key={item.uid || `v-${item.jp}`}
+                ref={(el) => { if (item.uid) rowRefs.current[item.uid] = el; }}
+                onDragOver={editMode ? (event) => { event.preventDefault(); if (overIndex !== index) setOverIndex(index); } : undefined}
+                onDrop={editMode ? (event) => { event.preventDefault(); moveItem(dragIndex, index); endDrag(); } : undefined}
+                className={`hover:bg-[var(--surface-subtle)] ${dragIndex === index ? "opacity-40" : ""} ${
+                  editMode && dragIndex !== null && overIndex === index && dragIndex !== index
+                    ? (dragIndex < index ? "shadow-[inset_0_-2px_0_var(--freya-blue)]" : "shadow-[inset_0_2px_0_var(--freya-blue)]")
+                    : ""
+                }`}
+              >
+                {editMode && (
+                  <td className="w-10 pl-4 pr-0 py-2.5">
+                    <span
+                      draggable
+                      onDragStart={(event) => {
+                        setDragIndex(index);
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", String(index));
+                        const row = rowRefs.current[item.uid];
+                        if (row && event.dataTransfer.setDragImage) event.dataTransfer.setDragImage(row, 16, 16);
+                      }}
+                      onDragEnd={endDrag}
+                      title={isJa ? "ドラッグして並べ替え" : "Drag to reorder"}
+                      className="inline-flex cursor-grab items-center text-[var(--text-muted)] hover:text-[var(--text-primary)] active:cursor-grabbing"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>menu</span>
+                    </span>
+                  </td>
+                )}
                 <td className="px-5 py-2.5">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/12 font-mono text-[11px] font-bold text-primary">
                     {index + 1}
@@ -179,14 +231,7 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
                       className={item.builtIn ? lockedClass : inputClass}
                     />
                   ) : (
-                    <span className="inline-flex items-center gap-2">
-                      {item.jp}
-                      {!item.builtIn && (
-                        <span className="rounded-[4px] border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-px text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          {isJa ? "追加" : "Added"}
-                        </span>
-                      )}
-                    </span>
+                    item.jp
                   )}
                 </td>
                 <td className="px-5 py-2.5 text-[var(--text-secondary)]">
@@ -199,7 +244,7 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
                         placeholder={isJa ? "英語..." : "English..."}
                         className={`${inputClass} pr-8`}
                       />
-                      {translating[index] && (
+                      {translating[item.uid] && (
                         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--freya-blue)]">
                           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                         </span>
