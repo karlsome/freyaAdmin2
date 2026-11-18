@@ -66,3 +66,57 @@ export function filterFuryoModels(models = [], searchValue = "") {
 
   return sortFuryoModels(models).filter((model) => model.toLowerCase().includes(normalized));
 }
+
+// Per-process defect lists (ported from legacy freyaAdmin 不良管理).
+// kensaDB is defined per モデル (counters 1–12); the others are fixed in the system.
+export const FURYO_DEFAULT_PROCESS = "kensaDB";
+
+export const FURYO_PROCESS_DEFECTS = {
+  kensaDB: {
+    labelJa: "検査",
+    labelEn: "Inspection",
+    icon: "search",
+    descriptionJa: "モデルごとにカウンター1〜12の不良名を定義できます",
+    descriptionEn: "Define defect names for counters 1–12 per model",
+    counters: null,
+  },
+  pressDB: {
+    labelJa: "プレス",
+    labelEn: "Press",
+    icon: "hardware",
+    descriptionJa: "固定の不良項目（3項目）",
+    descriptionEn: "Fixed defect items (3)",
+    counters: [
+      { jp: "疵引不良", en: "Scratch Defect" },
+      { jp: "加工不良", en: "Processing Defect" },
+      { jp: "その他", en: "Other" },
+    ],
+  },
+  slitDB: {
+    labelJa: "スリット",
+    labelEn: "Slit",
+    icon: "content_cut",
+    descriptionJa: "固定の不良項目（3項目）",
+    descriptionEn: "Fixed defect items (3)",
+    counters: [
+      { jp: "疵引不良", en: "Scratch Defect" },
+      { jp: "加工不良", en: "Processing Defect" },
+      { jp: "その他", en: "Other" },
+    ],
+  },
+  SRSDB: {
+    labelJa: "転写",
+    labelEn: "Transfer",
+    icon: "move_down",
+    descriptionJa: "固定の不良項目（6項目）",
+    descriptionEn: "Fixed defect items (6)",
+    counters: [
+      { jp: "くっつき・めくれ", en: "Sticking / Peeling" },
+      { jp: "シワ", en: "Wrinkle" },
+      { jp: "転写位置ズレ", en: "Transfer Position Shift" },
+      { jp: "転写不良", en: "Transfer Defect" },
+      { jp: "文字欠け", en: "Character Missing" },
+      { jp: "その他", en: "Other" },
+    ],
+  },
+};

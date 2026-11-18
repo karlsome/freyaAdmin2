@@ -13,6 +13,8 @@ import {
   filterFuryoModels,
   FURYO_COUNTER_COUNT,
   FURYO_COUNTER_KEYS,
+  FURYO_DEFAULT_PROCESS,
+  FURYO_PROCESS_DEFECTS,
   getEmptyCounterMap,
   hasCounterChanges,
   normalizeCounterMap,
@@ -21,6 +23,7 @@ import {
 } from "../utils/furyoKanri";
 import { getAuthUser } from "../utils/masterDB";
 import FuryoDefinitionPanel from "./FuryoDefinitionPanel";
+import FuryoFixedDefectsPanel from "./FuryoFixedDefectsPanel";
 import FuryoModelInfoModal from "./FuryoModelInfoModal";
 import FuryoModelListPanel from "./FuryoModelListPanel";
 
@@ -52,7 +55,10 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   const [infoProducts, setInfoProducts] = useState([]);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoError, setInfoError] = useState("");
+  const [selectedProcess, setSelectedProcess] = useState(FURYO_DEFAULT_PROCESS);
   const selectedModelRef = useRef(selectedModel);
+  const processDef = FURYO_PROCESS_DEFECTS[selectedProcess];
+  const isModelProcess = !processDef?.counters;
 
   const filteredModels = filterFuryoModels(models, deferredSearchValue);
   const currentDefinition = selectedModel
@@ -179,6 +185,15 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
     loadDraftForModel(model);
   }
 
+  function handleSelectProcess(processKey) {
+    if (processKey === selectedProcess) return;
+    if (editMode && hasChanges && !window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?")) {
+      return;
+    }
+    if (editMode) handleCancelEdit();
+    setSelectedProcess(processKey);
+  }
+
   function handleStartEdit() {
     if (!selectedModel || !canEdit) return;
     setEditMode(true);
@@ -285,8 +300,8 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
             </h3>
             <p className="mt-1.5 max-w-3xl text-xs text-[var(--text-secondary)] leading-relaxed">
               {isJa
-                ? "カウンター1〜12のモデル別不良項目名を管理します。日英の二重言語入力、ロール制御、モデル該当製品の参照に対応しています。"
-                : "Manage model-specific defect labels for counters 1 through 12. This ports the legacy definition workflow, including bilingual fields, edit-role gating, and model product lookup."}
+                ? "プロセスごとの不良項目を確認します。検査 (kensaDB) はカウンター1〜12のモデル別不良項目名を管理でき、プレス・スリット・転写は固定項目です。"
+                : "Review defect items per process. Inspection (kensaDB) has model-specific labels for counters 1–12; Press, Slit and Transfer use fixed items."}
             </p>
           </div>
 
@@ -297,6 +312,44 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
         </div>
       </div>
 
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 mb-6 shadow-sm">
+        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+          {isJa ? "プロセスを選択" : "Select process"}
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Object.entries(FURYO_PROCESS_DEFECTS).map(([key, proc]) => {
+            const active = key === selectedProcess;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelectProcess(key)}
+                aria-pressed={active}
+                className={`flex flex-col items-center gap-1.5 rounded-[8px] border-2 px-3 py-3 transition ${
+                  active
+                    ? "border-[var(--freya-blue)] bg-primary/10 text-primary"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 24 }}>{proc.icon}</span>
+                <span className="text-xs font-semibold">
+                  {isJa ? proc.labelJa : proc.labelEn} <span className="font-mono font-normal opacity-70">({key})</span>
+                </span>
+                <span className="text-[11px] opacity-70">
+                  {proc.counters
+                    ? `${proc.counters.length}${isJa ? "項目" : " items"}`
+                    : (isJa ? "モデル別定義" : "Per-model")}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {!isModelProcess ? (
+        <FuryoFixedDefectsPanel processKey={selectedProcess} process={processDef} />
+      ) : (
+      <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         {stats.map((card) => (
           <div key={card.label} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
@@ -352,6 +405,8 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
           onChangeEN={handleChangeEN}
         />
       </div>
+      </>
+      )}
 
       <FuryoModelInfoModal
         model={infoModel}
