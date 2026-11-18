@@ -210,6 +210,8 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
         <DefectCatalogPanel
           catalog={catalog}
           usage={usage}
+          baseLists={baseLists}
+          overrides={overrides}
           canEdit={editable}
           username={username}
           onDirtyChange={setDirty}
