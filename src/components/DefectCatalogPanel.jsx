@@ -26,7 +26,7 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
   const [editJp, setEditJp] = useState("");
   const [editEn, setEditEn] = useState("");
   const [busyId, setBusyId] = useState("");
-  const [view, setView] = useState("process"); // "process" = grouped by process, "all" = every defect once
+  const [view, setView] = useState("all"); // "all" = every defect once (default), "process" = grouped by process
   const [sort, setSort] = useState({ key: "order", dir: 1 });
   const [collapsed, setCollapsed] = useState({});
 
@@ -262,8 +262,8 @@ export default function DefectCatalogPanel({ catalog = [], usage = new Map(), ba
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-0.5">
             {[
-              { key: "process", ja: "工程別", en: "By process" },
               { key: "all", ja: "全件", en: "All" },
+              { key: "process", ja: "工程別", en: "By process" },
             ].map((option) => (
               <button
                 key={option.key}
