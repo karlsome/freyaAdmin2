@@ -558,11 +558,11 @@ export default function FirstFactoryDetailModal({
                 </div>
                 <div className="flex justify-between border-b border-[var(--border)] pb-1.5">
                   <span className="text-[var(--text-muted)] font-mono">{isJa ? "開始時刻" : "Start Time"}:</span>
-                  <span className="font-bold text-[var(--text-primary)] font-mono">{r.actualStartTime || "—"}</span>
+                  <span className="font-bold text-[var(--text-primary)] font-mono">{fmtJst(r.startEpoch || r.startedAt) || r.actualStartTime || "—"}</span>
                 </div>
                 <div className="flex justify-between border-b border-[var(--border)] pb-1.5">
                   <span className="text-[var(--text-muted)] font-mono">{isJa ? "終了時刻" : "End Time"}:</span>
-                  <span className="font-bold text-[var(--text-primary)] font-mono">{r.actualEndTime || "—"}</span>
+                  <span className="font-bold text-[var(--text-primary)] font-mono">{fmtJst(r.endEpoch || r.completedAt) || r.actualEndTime || "—"}</span>
                 </div>
                 <div className="flex justify-between border-b border-[var(--border)] pb-1.5">
                   <span className="text-[var(--text-muted)] font-mono">{isJa ? "開始エポック (startEpoch)" : "Start Epoch"}:</span>
