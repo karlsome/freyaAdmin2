@@ -67,56 +67,50 @@ export function filterFuryoModels(models = [], searchValue = "") {
   return sortFuryoModels(models).filter((model) => model.toLowerCase().includes(normalized));
 }
 
-// Per-process defect lists (ported from legacy freyaAdmin 不良管理).
-// kensaDB is defined per モデル (counters 1–12); the others are fixed in the system.
+// 不良管理 sections. "master" is the defect catalog; the others are processes whose base list
+// (and per-model differences) is picked from that catalog. Lists are served by the Kurachi server.
 export const FURYO_DEFAULT_PROCESS = "kensaDB";
+export const FURYO_MASTER_KEY = "master";
+export const DEFECT_OTHER_ID = "other";
 
-export const FURYO_PROCESS_DEFECTS = {
-  kensaDB: {
-    labelJa: "検査",
-    labelEn: "Inspection",
-    icon: "search",
-    descriptionJa: "モデルごとにカウンター1〜12の不良名を定義できます",
-    descriptionEn: "Define defect names for counters 1–12 per model",
-    counters: null,
+export const FURYO_SECTIONS = {
+  master: {
+    labelJa: "不良マスタ",
+    labelEn: "Defect Master",
+    icon: "library_books",
+    descriptionJa: "全製品共通の不良項目一覧。各工程のリストはここから選択します。",
+    descriptionEn: "All defects across products. Each process picks its list from here.",
   },
-  pressDB: {
-    labelJa: "プレス",
-    labelEn: "Press",
-    icon: "hardware",
-    descriptionJa: "固定の不良項目（3項目）",
-    descriptionEn: "Fixed defect items (3)",
-    counters: [
-      { jp: "疵引不良", en: "Scratch Defect" },
-      { jp: "加工不良", en: "Processing Defect" },
-      { jp: "その他", en: "Other" },
-    ],
-  },
-  slitDB: {
-    labelJa: "スリット",
-    labelEn: "Slit",
-    icon: "content_cut",
-    descriptionJa: "固定の不良項目（3項目）",
-    descriptionEn: "Fixed defect items (3)",
-    counters: [
-      { jp: "疵引不良", en: "Scratch Defect" },
-      { jp: "加工不良", en: "Processing Defect" },
-      { jp: "その他", en: "Other" },
-    ],
-  },
-  SRSDB: {
-    labelJa: "転写",
-    labelEn: "SRS",
-    icon: "move_down",
-    descriptionJa: "固定の不良項目（6項目）",
-    descriptionEn: "Fixed defect items (6)",
-    counters: [
-      { jp: "くっつき・めくれ", en: "Sticking / Peeling" },
-      { jp: "シワ", en: "Wrinkle" },
-      { jp: "転写位置ズレ", en: "Transfer Position Shift" },
-      { jp: "転写不良", en: "Transfer Defect" },
-      { jp: "文字欠け", en: "Character Missing" },
-      { jp: "その他", en: "Other" },
-    ],
-  },
+  kensaDB: { labelJa: "検査", labelEn: "Inspection", icon: "search" },
+  pressDB: { labelJa: "プレス", labelEn: "Press", icon: "hardware" },
+  slitDB: { labelJa: "スリット", labelEn: "Slit", icon: "content_cut" },
+  SRSDB: { labelJa: "SRS", labelEn: "SRS", icon: "move_down" },
 };
+
+export const FURYO_PROCESS_KEYS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
+
+export function isFuryoProcess(key) {
+  return FURYO_PROCESS_KEYS.includes(key);
+}
+
+// Base ids with その他 forced last (mirrors the server)
+export function withOtherLast(ids = []) {
+  return [...ids.filter((id) => id !== DEFECT_OTHER_ID), DEFECT_OTHER_ID];
+}
+
+// base − hidden + extras, その他 last; deleted catalog items skipped (mirrors /resolvedDefectList)
+export function resolveDefectIds(baseIds = [], override = null, catalogById = new Map()) {
+  const hidden = new Set(override?.hidden || []);
+  const ids = [];
+  baseIds.forEach((id) => {
+    if (!hidden.has(id) && id !== DEFECT_OTHER_ID && !ids.includes(id)) ids.push(id);
+  });
+  (override?.extras || []).forEach((id) => {
+    if (id !== DEFECT_OTHER_ID && !ids.includes(id)) ids.push(id);
+  });
+  ids.push(DEFECT_OTHER_ID);
+  return ids.filter((id) => {
+    const item = catalogById.get(id);
+    return item && (id === DEFECT_OTHER_ID || !item.deleted);
+  });
+}

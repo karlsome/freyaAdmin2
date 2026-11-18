@@ -1,396 +1,159 @@
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
-  fetchDefectDefinitions,
-  fetchFuryoModelProducts,
+  fetchDefectCatalog,
   fetchFuryoModels,
+  fetchModelDefectOverrides,
   fetchProcessDefectDefinitions,
-  saveDefectDefinition,
-  translateJapaneseText,
 } from "../services/api";
 import {
   canEditFuryoDefinitions,
-  countDefinedCounters,
-  filterFuryoModels,
-  FURYO_COUNTER_COUNT,
-  FURYO_COUNTER_KEYS,
+  DEFECT_OTHER_ID,
   FURYO_DEFAULT_PROCESS,
-  FURYO_PROCESS_DEFECTS,
-  getEmptyCounterMap,
-  hasCounterChanges,
-  normalizeCounterMap,
-  normalizeDefectDefinitions,
+  FURYO_MASTER_KEY,
+  FURYO_PROCESS_KEYS,
+  FURYO_SECTIONS,
+  isFuryoProcess,
   sortFuryoModels,
 } from "../utils/furyoKanri";
 import { getAuthUser } from "../utils/masterDB";
-import FuryoDefinitionPanel from "./FuryoDefinitionPanel";
-import FuryoFixedDefectsPanel from "./FuryoFixedDefectsPanel";
-import FuryoModelInfoModal from "./FuryoModelInfoModal";
-import FuryoModelListPanel from "./FuryoModelListPanel";
+import DefectCatalogPanel from "./DefectCatalogPanel";
+import FuryoLegacyCounterWorkspace from "./FuryoLegacyCounterWorkspace";
+import ProcessDefectPanel from "./ProcessDefectPanel";
 
-// Built-in items for each fixed-field process, used until the server list loads (or if it fails)
-function getDefaultProcessDefs() {
-  return Object.fromEntries(
-    Object.entries(FURYO_PROCESS_DEFECTS)
-      .filter(([, proc]) => proc.counters)
-      .map(([key, proc]) => [key, { items: proc.counters.map((c) => ({ ...c, builtIn: true })), updatedAt: null, updatedBy: "" }]),
-  );
-}
+const SECTION_ORDER = [FURYO_MASTER_KEY, ...FURYO_PROCESS_KEYS];
 
-function cloneCounterMap(counterMap = {}) {
-  return { ...counterMap };
-}
-
+// 不良管理: defect master (不良マスタ) + per-process base lists + per-model differences.
+// URL: ?process=master|pressDB|slitDB|SRSDB (kensaDB is the default), kensa legacy view: &view=legacy
 export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
-
   const authUser = getAuthUser();
   const canEdit = canEditFuryoDefinitions(authUser?.role);
+  const username = authUser?.username || "unknown";
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sectionFromUrl = searchParams.get("process");
+  const section = sectionFromUrl === FURYO_MASTER_KEY || isFuryoProcess(sectionFromUrl) ? sectionFromUrl : FURYO_DEFAULT_PROCESS;
+  const kensaView = section === "kensaDB" && searchParams.get("view") === "legacy" ? "legacy" : "lists";
+
+  const [catalog, setCatalog] = useState([]);
+  const [baseLists, setBaseLists] = useState({});
+  const [overrides, setOverrides] = useState([]);
   const [models, setModels] = useState([]);
-  const [definitionsByModel, setDefinitionsByModel] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [searchValue, setSearchValue] = useState("");
-  const deferredSearchValue = useDeferredValue(searchValue);
-  const [selectedModel, setSelectedModel] = useState("");
-  const [draftCounters, setDraftCounters] = useState(getEmptyCounterMap());
-  const [draftCountersEn, setDraftCountersEn] = useState(getEmptyCounterMap());
-  const [originalCounters, setOriginalCounters] = useState(getEmptyCounterMap());
-  const [originalCountersEn, setOriginalCountersEn] = useState(getEmptyCounterMap());
-  const [editMode, setEditMode] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [translating, setTranslating] = useState({});
-  const [infoModel, setInfoModel] = useState("");
-  const [infoProducts, setInfoProducts] = useState([]);
-  const [infoLoading, setInfoLoading] = useState(false);
-  const [infoError, setInfoError] = useState("");
-  // Selected process lives in the URL (?process=pressDB) so each list is linkable / back-button friendly
-  const [searchParams, setSearchParams] = useSearchParams();
-  const processFromUrl = searchParams.get("process");
-  const selectedProcess = processFromUrl && FURYO_PROCESS_DEFECTS[processFromUrl] ? processFromUrl : FURYO_DEFAULT_PROCESS;
-  const previousProcessRef = useRef(selectedProcess);
-  const [processDefs, setProcessDefs] = useState(getDefaultProcessDefs);
-  const [processDefsError, setProcessDefsError] = useState("");
-  const [fixedDirty, setFixedDirty] = useState(false);
-  const selectedModelRef = useRef(selectedModel);
-  const processDef = FURYO_PROCESS_DEFECTS[selectedProcess];
-  const isModelProcess = !processDef?.counters;
-
-  const filteredModels = filterFuryoModels(models, deferredSearchValue);
-  const currentDefinition = selectedModel
-    ? definitionsByModel[selectedModel] || { counters: getEmptyCounterMap(), countersEn: getEmptyCounterMap() }
-    : null;
-  const hasChanges = hasCounterChanges(draftCounters, originalCounters) || hasCounterChanges(draftCountersEn, originalCountersEn);
-  const definedModels = models.filter((model) => countDefinedCounters(definitionsByModel[model]?.counters) > 0).length;
-  const completeModels = models.filter((model) => countDefinedCounters(definitionsByModel[model]?.counters) === FURYO_COUNTER_COUNT).length;
-
-  function publishFlash(type, message) {
-    if (typeof onFlash === "function") {
-      onFlash({ type, message });
-    }
-  }
-
-  function loadDraftForModel(model, nextDefinitions = definitionsByModel) {
-    const definition = nextDefinitions[model];
-    const counters = normalizeCounterMap(definition?.counters);
-    const countersEn = normalizeCounterMap(definition?.countersEn);
-    setDraftCounters(cloneCounterMap(counters));
-    setDraftCountersEn(cloneCounterMap(countersEn));
-    setOriginalCounters(cloneCounterMap(counters));
-    setOriginalCountersEn(cloneCounterMap(countersEn));
-    setEditMode(false);
-    setTranslating({});
-  }
-
-  useEffect(() => {
-    selectedModelRef.current = selectedModel;
-  }, [selectedModel]);
-
-  // Process changed via URL (back/forward or a link): drop any in-progress edits
-  useEffect(() => {
-    if (previousProcessRef.current === selectedProcess) return;
-    previousProcessRef.current = selectedProcess;
-    setFixedDirty(false);
-    setEditMode(false);
-    setTranslating({});
-    setDraftCounters(cloneCounterMap(originalCounters));
-    setDraftCountersEn(cloneCounterMap(originalCountersEn));
-  }, [selectedProcess, originalCounters, originalCountersEn]);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadWorkspace() {
+    async function load() {
       setLoading(true);
       setError("");
-
       try {
-        const [nextModels, nextDefinitions] = await Promise.all([
+        const [nextCatalog, nextBase, nextOverrides, nextModels] = await Promise.all([
+          fetchDefectCatalog(),
+          fetchProcessDefectDefinitions(),
+          fetchModelDefectOverrides(),
           fetchFuryoModels(),
-          fetchDefectDefinitions(),
         ]);
-
         if (cancelled) return;
-
-        const sortedModels = sortFuryoModels(nextModels);
-        const normalizedDefinitions = normalizeDefectDefinitions(nextDefinitions);
-
-        setModels(sortedModels);
-        setDefinitionsByModel(normalizedDefinitions);
-
-        const currentSelectedModel = selectedModelRef.current;
-
-        if (currentSelectedModel && sortedModels.includes(currentSelectedModel)) {
-          const definition = normalizedDefinitions[currentSelectedModel];
-          const counters = normalizeCounterMap(definition?.counters);
-          const countersEn = normalizeCounterMap(definition?.countersEn);
-          setDraftCounters(cloneCounterMap(counters));
-          setDraftCountersEn(cloneCounterMap(countersEn));
-          setOriginalCounters(cloneCounterMap(counters));
-          setOriginalCountersEn(cloneCounterMap(countersEn));
-          setEditMode(false);
-          setTranslating({});
-        } else if (currentSelectedModel && !sortedModels.includes(currentSelectedModel)) {
-          setSelectedModel("");
-          setDraftCounters(getEmptyCounterMap());
-          setDraftCountersEn(getEmptyCounterMap());
-          setOriginalCounters(getEmptyCounterMap());
-          setOriginalCountersEn(getEmptyCounterMap());
-          setEditMode(false);
-        }
+        setCatalog(nextCatalog);
+        setBaseLists(Object.fromEntries(nextBase.map((doc) => [doc.process, doc])));
+        setOverrides(nextOverrides);
+        setModels(sortFuryoModels(nextModels));
       } catch (loadError) {
-        if (cancelled) return;
-        setError(loadError.message || (isJa ? "不良項目定義の読み込みに失敗しました。" : "Failed to load defect definitions."));
+        if (!cancelled) setError(loadError.message || (isJa ? "不良項目の読み込みに失敗しました。" : "Failed to load defect lists."));
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
-
-    loadWorkspace();
+    load();
     return () => {
       cancelled = true;
     };
   }, [refreshToken, isJa]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const catalogById = new Map(catalog.map((item) => [item.id, item]));
+  const usage = new Map();
+  FURYO_PROCESS_KEYS.forEach((key) => {
+    (baseLists[key]?.items || []).forEach((id) => {
+      if (id === DEFECT_OTHER_ID) return;
+      usage.set(id, [...(usage.get(id) || []), key]);
+    });
+  });
 
-    async function loadProcessDefs() {
-      setProcessDefsError("");
-      try {
-        const docs = await fetchProcessDefectDefinitions();
-        if (cancelled) return;
-        setProcessDefs((current) => {
-          const next = { ...current };
-          docs.forEach((doc) => {
-            if (!next[doc.process] || !Array.isArray(doc.items)) return;
-            next[doc.process] = { items: doc.items, updatedAt: doc.updatedAt || null, updatedBy: doc.updatedBy || "" };
-          });
-          return next;
-        });
-      } catch (loadError) {
-        if (cancelled) return;
-        setProcessDefsError(
-          (isJa ? "工程別の不良項目を読み込めませんでした（既定項目を表示中）: " : "Couldn't load per-process defect items (showing built-ins): ")
-            + (loadError.message || ""),
-        );
-      }
-    }
-
-    loadProcessDefs();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshToken, isJa]);
-
-  useEffect(() => {
-    if (!infoModel) return undefined;
-    let cancelled = false;
-
-    async function loadModelProducts() {
-      setInfoLoading(true);
-      setInfoError("");
-
-      try {
-        const products = await fetchFuryoModelProducts(infoModel);
-        if (cancelled) return;
-        setInfoProducts(Array.isArray(products) ? products : []);
-      } catch (loadError) {
-        if (cancelled) return;
-        setInfoProducts([]);
-        setInfoError(loadError.message || (isJa ? "選択したモデルの製品一覧の取得に失敗しました。" : "Failed to load products for the selected model."));
-      } finally {
-        if (!cancelled) {
-          setInfoLoading(false);
-        }
-      }
-    }
-
-    loadModelProducts();
-    return () => {
-      cancelled = true;
-    };
-  }, [infoModel, isJa]);
-
-  function handleSelectModel(model) {
-    if (editMode && hasChanges && !window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?")) {
-      return;
-    }
-
-    setSelectedModel(model);
-    loadDraftForModel(model);
+  function confirmLeave() {
+    return !dirty || window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?");
   }
 
-  function handleSelectProcess(processKey) {
-    if (processKey === selectedProcess) return;
-    const dirty = (editMode && hasChanges) || fixedDirty;
-    if (dirty && !window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?")) {
-      return;
-    }
-    if (editMode) handleCancelEdit();
-    setFixedDirty(false);
+  function updateUrl(nextSection, nextView = "") {
     setSearchParams((params) => {
       const next = new URLSearchParams(params);
-      if (processKey === FURYO_DEFAULT_PROCESS) next.delete("process");
-      else next.set("process", processKey);
+      if (nextSection === FURYO_DEFAULT_PROCESS) next.delete("process");
+      else next.set("process", nextSection);
+      if (nextView) next.set("view", nextView);
+      else next.delete("view");
       return next;
     });
   }
 
-  function handleStartEdit() {
-    if (!selectedModel || !canEdit) return;
-    setEditMode(true);
+  function selectSection(key) {
+    if (key === section || !confirmLeave()) return;
+    setDirty(false);
+    updateUrl(key);
   }
 
-  function handleCancelEdit() {
-    setDraftCounters(cloneCounterMap(originalCounters));
-    setDraftCountersEn(cloneCounterMap(originalCountersEn));
-    setEditMode(false);
-    setTranslating({});
+  function selectKensaView(view) {
+    if (view === kensaView || !confirmLeave()) return;
+    setDirty(false);
+    updateUrl("kensaDB", view === "legacy" ? "legacy" : "");
   }
 
-  function handleClear() {
-    setDraftCounters(getEmptyCounterMap());
-    setDraftCountersEn(getEmptyCounterMap());
+  // Back/forward or a link changed the section: unmounted panels drop their edits
+  useEffect(() => {
+    setDirty(false);
+  }, [section, kensaView]);
+
+  function sectionCount(key) {
+    if (key === FURYO_MASTER_KEY) return catalog.filter((item) => !item.deleted).length;
+    return (baseLists[key]?.items || []).filter((id) => id === DEFECT_OTHER_ID || (catalogById.get(id) && !catalogById.get(id).deleted)).length;
   }
 
-  function handleChangeJP(counterKey, value) {
-    setDraftCounters((current) => ({ ...current, [counterKey]: value }));
-  }
-
-  function handleChangeEN(counterKey, value) {
-    setDraftCountersEn((current) => ({ ...current, [counterKey]: value }));
-  }
-
-  async function handleBlurJP(counterKey) {
-    if (!editMode) return;
-
-    const jpText = String(draftCounters[counterKey] || "").trim();
-    const enText = String(draftCountersEn[counterKey] || "").trim();
-    if (!jpText || enText) return;
-
-    setTranslating((current) => ({ ...current, [counterKey]: true }));
-    try {
-      const translated = await translateJapaneseText(jpText);
-      if (translated) {
-        setDraftCountersEn((current) => {
-          if (String(current[counterKey] || "").trim()) return current;
-          return { ...current, [counterKey]: translated };
-        });
-      }
-    } catch {
-      // Silent fallback: legacy behavior only logged translation failures.
-    } finally {
-      setTranslating((current) => ({ ...current, [counterKey]: false }));
-    }
-  }
-
-  async function handleSave() {
-    if (!selectedModel || !canEdit || !hasChanges) return;
-
-    setSaving(true);
-    try {
-      const counters = normalizeCounterMap(draftCounters);
-      const countersEn = normalizeCounterMap(draftCountersEn);
-
-      await saveDefectDefinition({
-        model: selectedModel,
-        counters,
-        countersEn,
-        username: authUser?.username || "unknown",
-      });
-
-      const nextDefinition = {
-        model: selectedModel,
-        counters,
-        countersEn,
-        updatedAt: new Date().toISOString(),
-        updatedBy: authUser?.username || "unknown",
-      };
-
-      setDefinitionsByModel((current) => ({
-        ...current,
-        [selectedModel]: nextDefinition,
-      }));
-      setOriginalCounters(cloneCounterMap(counters));
-      setOriginalCountersEn(cloneCounterMap(countersEn));
-      setEditMode(false);
-      publishFlash("success", isJa ? `モデル「${selectedModel}」の不良項目定義を保存しました。` : `${selectedModel} defect definition saved successfully.`);
-    } catch (saveError) {
-      publishFlash("error", saveError.message || (isJa ? "不良項目定義の保存に失敗しました。" : "Failed to save the defect definition."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const stats = [
-    { label: isJa ? "総モデル数" : "Total Models", value: models.length, icon: "inventory_2", accent: "bg-primary/12 text-primary" },
-    { label: isJa ? "定義済み" : "Defined", value: definedModels, icon: "rule", accent: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300" },
-    { label: isJa ? "全項目完了" : "Complete", value: completeModels, icon: "task_alt", accent: "bg-secondary/12 text-secondary" },
-    { label: isJa ? "編集権限" : "Access", value: canEdit ? (isJa ? "編集可能" : "Edit") : (isJa ? "閲覧のみ" : "View"), icon: "lock_open", accent: "bg-amber-500/12 text-amber-600 dark:text-amber-300" },
-  ];
+  const editable = canEdit && !error && !loading;
 
   return (
     <div>
-      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 mb-6 shadow-sm">
+      <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              {isJa ? "品質設定" : "Quality Setup"}
-            </div>
-            <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">
-              {isJa ? "不良項目管理 (不良管理)" : "Defect Management (不良管理)"}
-            </h3>
-            <p className="mt-1.5 max-w-3xl text-xs text-[var(--text-secondary)] leading-relaxed">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "品質設定" : "Quality Setup"}</div>
+            <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{isJa ? "不良項目管理 (不良管理)" : "Defect Management (不良管理)"}</h3>
+            <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-[var(--text-secondary)]">
               {isJa
-                ? "プロセスごとの不良項目を確認します。検査 (kensaDB) はカウンター1〜12のモデル別不良項目名を管理でき、プレス・スリット・転写は固定項目です。"
-                : "Review defect items per process. Inspection (kensaDB) has model-specific labels for counters 1–12; Press, Slit and Transfer use fixed items."}
+                ? "不良マスタに登録した不良から、工程ごとの基本リストとモデル別の違いを設定します。タブレットはこの設定に従って不良ボタンを表示します。"
+                : "Pick each process's base list, and per-model differences, from the defect master. Tablets show defect buttons from these lists."}
             </p>
           </div>
-
-          <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)]">
+          <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 font-mono text-xs text-[var(--text-secondary)]">
             {authUser?.username || (isJa ? "不明なユーザー" : "Unknown user")}
             {authUser?.role ? ` · ${authUser.role}` : ""}
+            {!canEdit && ` · ${isJa ? "閲覧のみ" : "view only"}`}
           </div>
         </div>
       </div>
 
-      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 mb-6 shadow-sm">
-        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-          {isJa ? "プロセスを選択" : "Select process"}
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Object.entries(FURYO_PROCESS_DEFECTS).map(([key, proc]) => {
-            const active = key === selectedProcess;
+      <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {SECTION_ORDER.map((key) => {
+            const meta = FURYO_SECTIONS[key];
+            const active = key === section;
             return (
               <button
                 key={key}
                 type="button"
-                onClick={() => handleSelectProcess(key)}
+                onClick={() => selectSection(key)}
                 aria-pressed={active}
                 className={`flex flex-col items-center gap-1.5 rounded-[8px] border-2 px-3 py-3 transition ${
                   active
@@ -398,65 +161,18 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
                     : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
                 }`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 24 }}>{proc.icon}</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 24 }}>{meta.icon}</span>
                 <span className="text-xs font-semibold">
-                  {isJa ? proc.labelJa : proc.labelEn} <span className="font-mono font-normal opacity-70">({key})</span>
+                  {isJa ? meta.labelJa : meta.labelEn}
+                  {key !== FURYO_MASTER_KEY && <span className="font-mono font-normal opacity-70"> ({key})</span>}
                 </span>
                 <span className="text-[11px] opacity-70">
-                  {proc.counters
-                    ? `${processDefs[key]?.items?.length ?? proc.counters.length}${isJa ? "項目" : " items"}`
-                    : (isJa ? "モデル別定義" : "Per-model")}
+                  {loading ? "…" : `${sectionCount(key)}${isJa ? "項目" : " items"}`}
                 </span>
               </button>
             );
           })}
         </div>
-      </div>
-
-      {!isModelProcess ? (
-        <>
-          {processDefsError && (
-            <div className="mb-4 rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-4 py-3 text-xs font-medium text-[var(--status-danger)]">
-              {processDefsError}
-            </div>
-          )}
-          <FuryoFixedDefectsPanel
-            key={selectedProcess}
-            processKey={selectedProcess}
-            process={processDef}
-            items={processDefs[selectedProcess]?.items || []}
-            updatedAt={processDefs[selectedProcess]?.updatedAt}
-            updatedBy={processDefs[selectedProcess]?.updatedBy}
-            canEdit={canEdit && !processDefsError}
-            username={authUser?.username || "unknown"}
-            onDirtyChange={setFixedDirty}
-            onFlash={onFlash}
-            onSaved={(processKey, items) => {
-              setProcessDefs((current) => ({
-                ...current,
-                [processKey]: { items, updatedAt: new Date().toISOString(), updatedBy: authUser?.username || "unknown" },
-              }));
-            }}
-          />
-        </>
-      ) : (
-      <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
-        {stats.map((card) => (
-          <div key={card.label} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-            <div className="flex items-center gap-3.5">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-[6px] ${card.accent}`}>
-                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
-                  {card.icon}
-                </span>
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{card.label}</div>
-                <div className="mt-0.5 text-2xl font-bold font-mono text-[var(--text-primary)]">{card.value}</div>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
 
       {error && (
@@ -465,51 +181,70 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[20rem_minmax(0,1fr)]">
-        <FuryoModelListPanel
-          models={filteredModels}
-          definitionsByModel={definitionsByModel}
-          selectedModel={selectedModel}
-          searchValue={searchValue}
-          loading={loading}
-          onSearchChange={setSearchValue}
-          onSelectModel={handleSelectModel}
-          onOpenModelInfo={(model) => setInfoModel(model)}
-        />
-
-        <FuryoDefinitionPanel
-          selectedModel={selectedModel}
-          definition={currentDefinition}
-          draftCounters={draftCounters}
-          draftCountersEn={draftCountersEn}
-          editMode={editMode}
-          canEdit={canEdit}
-          hasChanges={hasChanges}
-          saving={saving}
-          translating={translating}
-          onStartEdit={handleStartEdit}
-          onCancelEdit={handleCancelEdit}
-          onClear={handleClear}
-          onSave={handleSave}
-          onChangeJP={handleChangeJP}
-          onBlurJP={handleBlurJP}
-          onChangeEN={handleChangeEN}
-        />
-      </div>
-      </>
+      {section === "kensaDB" && (
+        <div className="mb-4 inline-flex rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-1 shadow-sm">
+          {[
+            { key: "lists", ja: "不良リスト", en: "Defect lists" },
+            { key: "legacy", ja: "旧カウンター定義", en: "Legacy counters" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => selectKensaView(tab.key)}
+              className={`rounded-[6px] px-3 py-1.5 text-xs font-semibold transition ${
+                kensaView === tab.key ? "bg-[var(--freya-blue)] text-white" : "text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+              }`}
+            >
+              {isJa ? tab.ja : tab.en}
+            </button>
+          ))}
+        </div>
       )}
 
-      <FuryoModelInfoModal
-        model={infoModel}
-        loading={infoLoading}
-        error={infoError}
-        products={infoProducts}
-        onClose={() => {
-          setInfoModel("");
-          setInfoProducts([]);
-          setInfoError("");
-        }}
-      />
+      {loading && !catalog.length ? (
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--text-muted)]">
+          <span className="material-symbols-outlined mr-2 animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+          {isJa ? "読み込み中..." : "Loading..."}
+        </div>
+      ) : section === FURYO_MASTER_KEY ? (
+        <DefectCatalogPanel
+          catalog={catalog}
+          usage={usage}
+          canEdit={editable}
+          username={username}
+          onDirtyChange={setDirty}
+          onFlash={onFlash}
+          onChanged={(item) => {
+            setCatalog((current) => (current.some((x) => x.id === item.id) ? current.map((x) => (x.id === item.id ? item : x)) : [...current, item]));
+          }}
+        />
+      ) : section === "kensaDB" && kensaView === "legacy" ? (
+        <FuryoLegacyCounterWorkspace refreshToken={refreshToken} onFlash={onFlash} onDirtyChange={setDirty} />
+      ) : (
+        <ProcessDefectPanel
+          key={section}
+          processKey={section}
+          catalog={catalog}
+          catalogById={catalogById}
+          baseIds={baseLists[section]?.items || [DEFECT_OTHER_ID]}
+          baseMeta={baseLists[section]}
+          overrides={overrides.filter((doc) => doc.process === section)}
+          models={models}
+          canEdit={editable}
+          username={username}
+          onDirtyChange={setDirty}
+          onFlash={onFlash}
+          onBaseSaved={(items, meta) => {
+            setBaseLists((current) => ({ ...current, [section]: { ...current[section], process: section, items, ...meta } }));
+          }}
+          onOverrideSaved={(model, doc) => {
+            setOverrides((current) => {
+              const rest = current.filter((x) => !(x.process === section && x.model === model));
+              return doc ? [...rest, doc] : rest;
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

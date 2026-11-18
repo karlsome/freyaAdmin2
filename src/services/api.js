@@ -1722,7 +1722,18 @@ export async function saveDefectDefinition({ model, counters, countersEn, userna
   });
 }
 
-// Per-process defect items (pressDB / slitDB / SRSDB): built-in + admin-added
+// ─── 不良管理: defect master + per-process lists + per-model differences ─────
+export async function fetchDefectCatalog() {
+  const result = await _getJson("defectCatalog");
+  return Array.isArray(result) ? result : [];
+}
+
+// action: "create" | "update" | "delete" | "restore"
+export async function saveDefectCatalogItem({ action, id, jp, en, username }) {
+  return _postJson("defectCatalog", { action, id, jp, en, username });
+}
+
+// Base lists: [{ process, items: [id], updatedAt, updatedBy }]
 export async function fetchProcessDefectDefinitions() {
   const result = await _getJson("processDefectDefinitions");
   return Array.isArray(result) ? result : [];
@@ -1730,6 +1741,17 @@ export async function fetchProcessDefectDefinitions() {
 
 export async function saveProcessDefectDefinition({ process, items, username }) {
   return _postJson("processDefectDefinitions", { process, items, username });
+}
+
+// Per-model differences: [{ process, model, hidden: [id], extras: [id], updatedAt, updatedBy }]
+export async function fetchModelDefectOverrides(process = "") {
+  const query = process ? `?${new URLSearchParams({ process }).toString()}` : "";
+  const result = await _getJson(`modelDefectOverrides${query}`);
+  return Array.isArray(result) ? result : [];
+}
+
+export async function saveModelDefectOverride({ process, model, hidden, extras, username }) {
+  return _postJson("modelDefectOverrides", { process, model, hidden, extras, username });
 }
 
 export async function fetchFuryoModelProducts(model) {
