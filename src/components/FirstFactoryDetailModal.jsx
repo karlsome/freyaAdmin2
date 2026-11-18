@@ -212,13 +212,17 @@ export default function FirstFactoryDetailModal({
     amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
   };
 
-  const enteredValues = [
-    { label: isJa ? "入力ロット番号" : "Lot No (entered)", value: r.lotNo },
-    { label: isJa ? "材料長 (入力)" : "Material Length (entered)", value: r.rawMaterialLength ? `${r.rawMaterialLength} m` : "" },
-    { label: isJa ? "粗長" : "Socho (Gross)", value: r.socho ? `${r.socho} m` : "" },
-    { label: isJa ? "敷" : "Shiki", value: r.shiki !== undefined && r.shiki !== null && r.shiki !== "" ? `${r.shiki} m` : "" },
-    { label: isJa ? "微調" : "Bicho (Adj)", value: r.bicho !== undefined && r.bicho !== null && r.bicho !== "" ? `${r.bicho} m` : "" },
-    { label: isJa ? "実巻長 (完了時)" : "Final Roll Meters", value: (r.meters ?? r.rollMeters) != null ? `${r.meters ?? r.rollMeters} m` : "" },
+  const fmtM = (v) => (v !== undefined && v !== null && v !== "" ? `${v} m` : "");
+  // Same order as the material label: Lot → QR → 総長 → S引長 → 実長
+  const labelValues = [
+    { label: isJa ? "ロット番号" : "Lot No", value: r.lotNo },
+    { label: isJa ? "材料QR" : "Material QR", value: r.rawMaterialQR, wrap: true },
+    { label: "総長", sub: isJa ? "" : "Gross", value: fmtM(r.socho) },
+    { label: "S引長", sub: isJa ? "" : "S deduction", value: fmtM(r.shiki) },
+    { label: "実長", sub: isJa ? "" : "Actual", value: fmtM(r.bicho) },
+  ];
+  const otherValues = [
+    { label: isJa ? "実巻長 (完了時)" : "Final Roll Meters", value: fmtM(r.meters ?? r.rollMeters) },
     { label: isJa ? "メーカーUID" : "Manufacturer UID", value: r.manufacturerUid },
     { label: isJa ? "作業時間" : "Duration", value: r.actualDurationMins != null ? `${r.actualDurationMins} ${isJa ? "分" : "min"}` : "" },
   ];
@@ -863,21 +867,26 @@ export default function FirstFactoryDetailModal({
                 <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
                   {isJa ? "入力・スキャン値" : "Entered & Scanned Values"}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
-                  {enteredValues.map((f) => (
+                <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] divide-y divide-[var(--border)]">
+                  {labelValues.map((f, idx) => (
+                    <div key={f.label} className="flex items-start gap-4 px-3 py-2.5">
+                      <span className="w-28 flex-shrink-0 text-xs text-[var(--text-muted)] font-mono">
+                        {idx + 1}. <span className="font-bold text-[var(--text-primary)]">{f.label}</span>
+                        {f.sub ? <span className="block pl-4 text-[10px]">{f.sub}</span> : null}
+                      </span>
+                      <span className={`flex-1 text-right font-mono font-bold text-[var(--text-primary)] select-all ${f.wrap ? "text-xs break-all" : "text-base"}`}>
+                        {f.value || "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5 text-xs pt-1">
+                  {otherValues.map((f) => (
                     <div key={f.label} className="flex justify-between border-b border-[var(--border)] pb-1.5">
                       <span className="text-[var(--text-muted)] font-mono">{f.label}:</span>
                       <span className="font-bold text-[var(--text-primary)] font-mono select-all">{f.value || "—"}</span>
                     </div>
                   ))}
-                </div>
-                <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 space-y-1">
-                  <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
-                    {isJa ? "スキャンした材料QR" : "Scanned Material QR"}
-                  </p>
-                  <p className="text-xs font-mono text-[var(--text-primary)] break-all select-all whitespace-pre-wrap bg-[var(--surface)] p-2 rounded-[4px] border border-[var(--border)]">
-                    {r.rawMaterialQR || (isJa ? "（QRデータ未読込）" : "(No QR code recorded)")}
-                  </p>
                 </div>
                 {(r.manualAdvance || r.finishedEarly) && (
                   <div className="flex flex-wrap gap-2 text-[11px] font-mono">
