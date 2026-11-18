@@ -298,14 +298,8 @@ export default function FuryoFixedDefectsPanel({ processKey, process, items = []
         </div>
       )}
 
-      <div className="m-5 flex items-start gap-2 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
-        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
-        <p>
-          {isJa
-            ? "既定項目（鍵マーク）は記録済みデータのフィールド名のため名前変更・削除はできません。追加した項目はまだタブレットに表示されず、記録されません。"
-            : "Built-in items (lock icon) are field names in recorded data, so they can't be renamed or removed. Added items don't appear on the tablets yet and aren't recorded."}
-        </p>
-      </div>
+      {(editMode || validationError) && <div className="h-4" />}
+
 
       {canEdit && (
         <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-3">
