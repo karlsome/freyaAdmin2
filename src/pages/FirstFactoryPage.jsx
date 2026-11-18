@@ -11,6 +11,24 @@ import { readStoredAuthUser, getAuthDisplayName } from '../utils/auth';
 import { openFirstFactorySchedulePrintWindow } from '../utils/firstFactoryPdfExport';
 import * as xlsx from 'xlsx';
 
+// 11/20 from 2026-11-20
+const fmtMonthDay = (dateStr) => (dateStr ? `${Number(dateStr.slice(5, 7))}/${Number(dateStr.slice(8, 10))}` : '');
+const weekdayJa = (dateStr) => {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  return ['日', '月', '火', '水', '木', '金', '土'][new Date(y, m - 1, d).getDay()] || '';
+};
+// "11/20分": rolls added from another date's plan
+const SourceDateTag = ({ sourceDate, targetDate }) => (
+  sourceDate && sourceDate !== targetDate ? (
+    <span
+      className="shrink-0 rounded-[4px] bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-1.5 py-0.5 text-[9px] font-bold font-mono"
+      title={`${sourceDate} の計画から追加 (Added from the ${sourceDate} plan)`}
+    >
+      {fmtMonthDay(sourceDate)}分
+    </span>
+  ) : null
+);
+
 export default function FirstFactoryPage() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
@@ -72,6 +90,8 @@ export default function FirstFactoryPage() {
   // Extract month (YYYY-MM) and day (1-31) from selectedDateStr
   const selectedMonth = selectedDateStr.substring(0, 7);
   const selectedDay = parseInt(selectedDateStr.substring(8, 10), 10);
+  // Rolls can be added from another date's Excel plan (sourceDate). Rolls without it belong to the target date.
+  const isOwnDay = (item) => !item?.sourceDate || item.sourceDate === selectedDateStr;
 
   const selectedDayOfWeekInfo = useMemo(() => {
     if (!selectedDateStr) return { day: 0, ja: '—', en: '—', isSunday: false, isSaturday: false };
@@ -240,7 +260,7 @@ export default function FirstFactoryPage() {
   };
 
   // Helper to split a hinban production quantity into roll / pack items
-  const createRollItemsForHinban = (foundItem, dayIndex) => {
+  const createRollItemsForHinban = (foundItem, dayIndex, sourceDate) => {
     if (!foundItem) return [];
     const qty = foundItem.production[dayIndex] || 0;
     const unit = extractUnit(foundItem);
@@ -262,6 +282,7 @@ export default function FirstFactoryPage() {
           type: 'hinban',
           hinban: foundItem.hinban,
           poolItemId: foundItem.id,
+          ...(sourceDate ? { sourceDate } : {}),
           rollIndex: i + 1,
           totalRolls: numRolls,
           meters: sheetCount,
@@ -287,6 +308,7 @@ export default function FirstFactoryPage() {
           type: 'hinban',
           hinban: foundItem.hinban,
           poolItemId: foundItem.id,
+          ...(sourceDate ? { sourceDate } : {}),
           rollIndex: i + 1,
           totalRolls: numRolls,
           meters: rollMeters,
@@ -393,10 +415,13 @@ export default function FirstFactoryPage() {
           if (!dayNum || !Array.isArray(sched.scheduleOrder) || sched.scheduleOrder.length === 0) return;
 
           const dayIssues = [];
-          const uniqueHinbans = [...new Set(sched.scheduleOrder.filter(i => i.type === 'hinban' && i.hinban).map(i => i.hinban))];
+          // Rolls pulled in from another date are checked against their own date, not this one
+          const dayKey = `${monthToSync}-${String(dayNum).padStart(2, '0')}`;
+          const ownRolls = sched.scheduleOrder.filter(i => i.type === 'hinban' && i.hinban && (!i.sourceDate || i.sourceDate === dayKey));
+          const uniqueHinbans = [...new Set(ownRolls.map(i => i.hinban))];
 
           uniqueHinbans.forEach(hinban => {
-            const scheduledRolls = sched.scheduleOrder.filter(i => i.hinban === hinban);
+            const scheduledRolls = ownRolls.filter(i => i.hinban === hinban);
             const scheduledMeters = scheduledRolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0);
             const found = parsedData.find(i => i.hinban === hinban);
 
@@ -677,13 +702,54 @@ export default function FirstFactoryPage() {
     navigate(`/firstFactory/${nextTab}?date=${selectedDateStr}`);
   };
 
-  // Items that have production > 0 for this day
+  // Available to Schedule has its own date: items of another day can be added to the target day
+  const [poolDateStr, setPoolDateStr] = useState(selectedDateStr);
+  useEffect(() => { setPoolDateStr(selectedDateStr); }, [selectedDateStr]);
+  const poolMonth = poolDateStr.substring(0, 7);
+  const poolDay = parseInt(poolDateStr.substring(8, 10), 10);
+  const isOtherPoolDate = poolDateStr !== selectedDateStr;
+  const [otherMonthData, setOtherMonthData] = useState({}); // { 'YYYY-MM': Excel rows }
+  useEffect(() => {
+    if (poolMonth === selectedMonth || otherMonthData[poolMonth]) return;
+    let cancelled = false;
+    fetch(`${BASE_URL}api/production/schedule?month=${encodeURIComponent(poolMonth)}`)
+      .then(r => r.json())
+      .then(json => { if (!cancelled) setOtherMonthData(prev => ({ ...prev, [poolMonth]: json.success ? (json.data || []) : [] })); })
+      .catch(() => { if (!cancelled) setOtherMonthData(prev => ({ ...prev, [poolMonth]: [] })); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poolMonth, selectedMonth]);
+  const poolData = poolMonth === selectedMonth ? data : (otherMonthData[poolMonth] || []);
+  const poolDataLoading = poolMonth !== selectedMonth && !otherMonthData[poolMonth];
+
+  // Which other days already use this pool date's items (pulled forward / carried over, or its own saved list)
+  const [poolUsedElsewhere, setPoolUsedElsewhere] = useState([]); // [{ dateStr, hinbans }]
+  const [poolUsageTick, setPoolUsageTick] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${BASE_URL}api/production/schedule/by-source?date=${encodeURIComponent(poolDateStr)}`)
+      .then(r => r.json())
+      .then(json => { if (!cancelled) setPoolUsedElsewhere(json.success ? (json.usage || []) : []); })
+      .catch(() => { if (!cancelled) setPoolUsedElsewhere([]); });
+    return () => { cancelled = true; };
+  }, [poolDateStr, savedSchedules, poolUsageTick]);
+  // hinban -> other target dates (the day being edited here is taken from the unsaved list instead)
+  const poolHinbanUsedOn = useMemo(() => {
+    const map = {};
+    poolUsedElsewhere.forEach(u => {
+      if (u.dateStr === selectedDateStr) return;
+      (u.hinbans || []).forEach(h => { (map[h] = map[h] || []).push(u.dateStr); });
+    });
+    return map;
+  }, [poolUsedElsewhere, selectedDateStr]);
+
+  // Items that have production > 0 on the pool date
   const dailyProductionItems = useMemo(() => {
-    return data.filter(item => {
-      const prod = item.production[selectedDay - 1] || 0;
+    return poolData.filter(item => {
+      const prod = item.production[poolDay - 1] || 0;
       return prod > 0;
     });
-  }, [data, selectedDay]);
+  }, [poolData, poolDay]);
 
   // Split into Pool and Scheduled
   const scheduledItems = scheduleOrder;
@@ -701,14 +767,14 @@ export default function FirstFactoryPage() {
   // 基材コード per 品番, from the material master's 品番構造 (same rule as the tablet / server)
   const kizaiByHinban = useMemo(() => {
     const map = {};
-    (data || []).forEach(item => {
+    [...(data || []), ...Object.values(otherMonthData).flat()].forEach(item => {
       const segs = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
       const seg = segs.find(sg => sg.segment === '基材コード');
       const kizai = seg ? (seg.name || seg['得意先'] || seg['入出荷先'] || '') : '';
       if (item.hinban && kizai) map[item.hinban] = kizai;
     });
     return map;
-  }, [data]);
+  }, [data, otherMonthData]);
   const kizaiOf = (hinban) => kizaiByHinban[hinban] || '';
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
   const [poolSortBy, setPoolSortBy] = useState('timeOption-asc');
@@ -716,9 +782,11 @@ export default function FirstFactoryPage() {
   const [poolWidthFilter, setPoolWidthFilter] = useState('all');
   
   const poolItems = useMemo(() => {
-    const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
+    // Already in the list being edited (rolls whose source is the pool date) or used on another day
+    const usedHere = new Set(scheduleOrder.filter(s => s.type === 'hinban' && (s.sourceDate || selectedDateStr) === poolDateStr).map(s => s.hinban));
     return dailyProductionItems.filter(item => {
-      if (scheduledIds.has(item.id)) return false;
+      if (usedHere.has(item.hinban)) return false;
+      if (poolHinbanUsedOn[item.hinban]) return false;
       if (poolSearch) {
         const q = poolSearch.toLowerCase();
         const kataban = extractKataban(item).toLowerCase();
@@ -753,7 +821,14 @@ export default function FirstFactoryPage() {
       
       return true;
     });
-  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive, kizaiByHinban]);
+  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive, kizaiByHinban, poolDateStr, selectedDateStr, poolHinbanUsedOn]);
+
+  // Items of the pool date already scheduled on another day (shown as a note)
+  const poolUsedElsewhereList = useMemo(() => (
+    dailyProductionItems
+      .filter(item => poolHinbanUsedOn[item.hinban])
+      .map(item => ({ hinban: item.hinban, dates: poolHinbanUsedOn[item.hinban] }))
+  ), [dailyProductionItems, poolHinbanUsedOn]);
 
   // Compute available widths from poolItems
   const availableWidths = useMemo(() => {
@@ -767,7 +842,7 @@ export default function FirstFactoryPage() {
 
   const processedPoolItems = useMemo(() => {
     let items = poolItems.map(item => {
-      const qty = item.production[selectedDay - 1] || 0;
+      const qty = item.production[poolDay - 1] || 0;
       const unit = extractUnit(item);
       const kataban = extractKataban(item);
       const timeOption = extractTimeOption(item);
@@ -834,7 +909,7 @@ export default function FirstFactoryPage() {
     }
 
     return items;
-  }, [poolItems, selectedDay, poolBatchFilter, poolWidthFilter, poolSortBy]);
+  }, [poolItems, poolDay, poolBatchFilter, poolWidthFilter, poolSortBy]);
 
   const poolTotalMins = useMemo(() => {
     return processedPoolItems.reduce((acc, item) => acc + (item._durationMins || 0), 0);
@@ -858,7 +933,8 @@ export default function FirstFactoryPage() {
 
     const hinbanGroups = {};
     scheduleOrder.forEach(item => {
-      if (item.type === 'hinban' && item.hinban) {
+      // Rolls pulled in from another date are not compared with this date's Excel quantity
+      if (item.type === 'hinban' && item.hinban && isOwnDay(item)) {
         if (!hinbanGroups[item.hinban]) {
           hinbanGroups[item.hinban] = [];
         }
@@ -949,7 +1025,7 @@ export default function FirstFactoryPage() {
         }
 
         const hinban = item.hinban;
-        const disc = currentDayDiscrepancies.map[hinban];
+        const disc = isOwnDay(item) ? currentDayDiscrepancies.map[hinban] : null;
 
         if (!disc) {
           // No discrepancy, retain item
@@ -961,7 +1037,7 @@ export default function FirstFactoryPage() {
           // Replace rolls with updated roll breakdown at this position
           if (!processedHinbans.has(hinban)) {
             processedHinbans.add(hinban);
-            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1, selectedDateStr);
             newOrder.push(...updatedRolls);
           }
         }
@@ -983,10 +1059,10 @@ export default function FirstFactoryPage() {
 
       for (let i = 0; i < prevOrder.length; i++) {
         const item = prevOrder[i];
-        if (item.type === 'hinban' && item.hinban === hinban) {
+        if (item.type === 'hinban' && item.hinban === hinban && isOwnDay(item)) {
           if (!replaced) {
             replaced = true;
-            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1, selectedDateStr);
             newOrder.push(...updatedRolls);
           }
         } else {
@@ -1670,6 +1746,7 @@ export default function FirstFactoryPage() {
             }
           } else if (data.type === 'schedule_update' || data.type === 'exclude_update' || data.type === 'setup_update') {
             fetchProductionData(productionDateStr, true);
+            if (data.type === 'schedule_update') setPoolUsageTick(n => n + 1);
             if (data.type === 'schedule_update' && data.source === 'tablet' && !hasUnsavedChangesRef.current) {
               fetchSchedule(selectedMonthRef.current);
             }
@@ -1748,7 +1825,8 @@ export default function FirstFactoryPage() {
       // item.groupId is fixed by the server once the list is edited (tablet reorder / admin save):
       // it keeps production records linked when a group moves, and keeps moved groups apart
       if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban &&
-          (!item.groupId || item.groupId === currentGroup.groupId)) {
+          (!item.groupId || item.groupId === currentGroup.groupId) &&
+          (item.sourceDate || '') === (currentGroup.items[0].sourceDate || '')) {
         currentGroup.items.push(item);
         currentGroup.totalDuration += Number(item.duration) || 0;
         currentGroup.totalMeters += Number(item.meters) || 0;
@@ -1969,9 +2047,9 @@ export default function FirstFactoryPage() {
             duration: dragData.duration || 15
           });
         } else if (dragData.type === 'pool-hinban') {
-          const found = data.find(i => i.id === dragData.id);
+          const found = poolData.find(i => i.id === dragData.id);
           if (found) {
-            itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
+            itemsToInsert = createRollItemsForHinban(found, poolDay - 1, poolDateStr);
           }
         }
         
@@ -1999,9 +2077,9 @@ export default function FirstFactoryPage() {
           duration: dragData.duration || 15
         });
       } else if (dragData.type === 'pool-hinban') {
-        const found = data.find(i => i.id === dragData.id);
+        const found = poolData.find(i => i.id === dragData.id);
         if (found) {
-          itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
+          itemsToInsert = createRollItemsForHinban(found, poolDay - 1, poolDateStr);
         }
       }
       
@@ -2054,8 +2132,8 @@ export default function FirstFactoryPage() {
           index,
         });
       } else {
-        // Hinban item
-        if (currentGroup && currentGroup.hinban === item.hinban) {
+        // Hinban item (rolls of the same 品番 from different source dates stay separate)
+        if (currentGroup && currentGroup.hinban === item.hinban && currentGroup.sourceDate === (item.sourceDate || selectedDateStr)) {
           // Append to current group
           currentGroup.items.push({ item, index });
           currentGroup.endIndex = index;
@@ -2070,6 +2148,7 @@ export default function FirstFactoryPage() {
             type: 'hinban',
             id: `group_${item.hinban}_${index}`,
             hinban: item.hinban,
+            sourceDate: item.sourceDate || selectedDateStr,
             unit: item.unit || 'm',
             totalRolls: item.totalRolls || 1,
             startIndex: index,
@@ -2413,6 +2492,23 @@ export default function FirstFactoryPage() {
                   <h3 className="text-sm font-bold text-[var(--text-primary)]">
                     {t('ff_availableToSchedule')}
                   </h3>
+                  {/* The plan date to take items from (default: the target date) */}
+                  <input
+                    type="date"
+                    value={poolDateStr}
+                    onChange={(e) => e.target.value && setPoolDateStr(e.target.value)}
+                    className={`h-7 rounded-[6px] border px-2 text-xs font-mono font-bold outline-none cursor-pointer ${isOtherPoolDate ? 'border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'}`}
+                    title={language === 'ja' ? '引当元の日付 (他の日の計画も追加できます)' : 'Plan date to take items from'}
+                  />
+                  {isOtherPoolDate && (
+                    <button
+                      type="button"
+                      onClick={() => setPoolDateStr(selectedDateStr)}
+                      className="text-[11px] font-semibold text-[var(--freya-blue)] hover:underline cursor-pointer"
+                    >
+                      {language === 'ja' ? `対象日 (${fmtMonthDay(selectedDateStr)}) に戻す` : `Back to ${fmtMonthDay(selectedDateStr)}`}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-[4px] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-bold text-[var(--text-primary)] border border-[var(--border)] freya-tabular" title={t('ff_totalEstimatedFilteredTime')}>
@@ -2439,6 +2535,32 @@ export default function FirstFactoryPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Other plan date: where added items go, and items of that date already scheduled elsewhere */}
+              {isOtherPoolDate && (
+                <div className="rounded-[6px] border border-violet-500/30 bg-violet-500/5 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 font-medium">
+                  {language === 'ja'
+                    ? `${poolDateStr.replace(/-/g, '/')} の計画を表示中。追加すると ${selectedDateStr.replace(/-/g, '/')} の優先順位に「${fmtMonthDay(poolDateStr)}分」として入ります。`
+                    : `Showing the ${poolDateStr} plan. Added items go into the ${selectedDateStr} priority order, tagged "${fmtMonthDay(poolDateStr)}".`}
+                  {poolDataLoading && <span className="ml-2 opacity-70">{language === 'ja' ? '読み込み中…' : 'Loading…'}</span>}
+                </div>
+              )}
+              {poolUsedElsewhereList.length > 0 && (
+                <details className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                  <summary className="cursor-pointer font-semibold">
+                    {language === 'ja'
+                      ? `他の日に登録済み: ${poolUsedElsewhereList.length} 件 (一覧から非表示)`
+                      : `Already scheduled on another day: ${poolUsedElsewhereList.length} (hidden)`}
+                  </summary>
+                  <ul className="mt-1.5 flex flex-col gap-0.5 font-mono">
+                    {poolUsedElsewhereList.map(u => (
+                      <li key={u.hinban}>
+                        {nameMode === 'kizai' && kizaiOf(u.hinban) ? kizaiOf(u.hinban) : u.hinban} → {u.dates.map(d => fmtMonthDay(d)).join(', ')}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
 
               {/* Search & Filter Toolbar */}
               <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 flex flex-col gap-2">
@@ -2823,6 +2945,10 @@ export default function FirstFactoryPage() {
                     <h3 className="text-sm font-bold text-[var(--text-primary)] tracking-tight">
                       {t('ff_priorityOrder')}
                     </h3>
+                    {/* Target date: the day this list is for */}
+                    <span className="rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/30 px-2 py-0.5 text-xs font-mono font-bold text-[var(--freya-blue)]">
+                      {selectedDateStr.replace(/-/g, '/')} ({language === 'ja' ? weekdayJa(selectedDateStr) : selectedDayOfWeekInfo.en})
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
@@ -2990,7 +3116,7 @@ export default function FirstFactoryPage() {
 
                     // Helper to render an individual roll card
                     const renderRollCard = (item, rollItemIndex) => {
-                      const disc = currentDayDiscrepancies.map[item.hinban];
+                      const disc = isOwnDay(item) ? currentDayDiscrepancies.map[item.hinban] : null;
                       const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                       const isQtyMismatch = disc && disc.type === 'qty_mismatch';
 
@@ -3044,6 +3170,7 @@ export default function FirstFactoryPage() {
                                   {item.hinban}
                                 </span>
                                 )}
+                                <SourceDateTag sourceDate={item.sourceDate} targetDate={selectedDateStr} />
                                 {isZeroOrMissing && (
                                   <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
@@ -3132,7 +3259,7 @@ export default function FirstFactoryPage() {
 
                     // If Collapsed: Render obvious stacked card with full start-to-end time
                     if (isCollapsed) {
-                      const disc = currentDayDiscrepancies.map[group.hinban];
+                      const disc = isOwnDay(group.items[0]?.item) ? currentDayDiscrepancies.map[group.hinban] : null;
                       const groupIsZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                       const groupIsQtyMismatch = disc && disc.type === 'qty_mismatch';
                       const matchedPool = data.find(d => d.hinban === group.hinban);
@@ -3186,9 +3313,17 @@ export default function FirstFactoryPage() {
                             <div className="flex items-center gap-4 w-full">
                               {/* Column 1: Hinban + Discrepancy Warnings */}
                               <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                {nameMode === 'kizai' && kizaiOf(group.hinban) ? (
+                                  <span className="flex flex-col min-w-0" title={`${kizaiOf(group.hinban)}\n${group.hinban}`}>
+                                    <span className="font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate">{kizaiOf(group.hinban)}</span>
+                                    <span className="font-mono text-[10px] text-[var(--text-muted)] truncate">{group.hinban}</span>
+                                  </span>
+                                ) : (
                                 <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={group.hinban}>
                                   {group.hinban}
                                 </span>
+                                )}
+                                <SourceDateTag sourceDate={group.items[0]?.item?.sourceDate} targetDate={selectedDateStr} />
                                 {groupIsZeroOrMissing && (
                                   <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
