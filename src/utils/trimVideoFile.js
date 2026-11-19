@@ -68,3 +68,52 @@ export async function trimVideoFile(file, { start, end, onProgress } = {}) {
     try { await ffmpeg.unmount(mountPoint); } catch { /* ignore */ }
   }
 }
+
+// Extracts the voice track as a small mono MP3 (16 kHz, 48 kbps: ~0.35 MB per minute) for speech-to-text.
+// Only the audio stream is decoded (-vn), so this stays fast even for long videos.
+export async function extractAudioFile(file, { onProgress } = {}) {
+  const ffmpeg = await getFfmpeg();
+  const inputExt = getExtension(file.name);
+  const mountPoint = "/audio-in";
+  const inputName = `input.${inputExt}`;
+  const outputName = "voice.mp3";
+  const handleProgress = ({ progress }) => {
+    if (Number.isFinite(progress)) onProgress?.(Math.max(0, Math.min(1, progress)));
+  };
+
+  ffmpeg.on("progress", handleProgress);
+  try {
+    try { await ffmpeg.createDir(mountPoint); } catch { /* already exists */ }
+    await ffmpeg.mount("WORKERFS", { files: [new File([file], inputName)] }, mountPoint);
+    const exitCode = await ffmpeg.exec([
+      "-i", `${mountPoint}/${inputName}`,
+      "-vn", "-ac", "1", "-ar", "16000",
+      "-c:a", "libmp3lame", "-b:a", "48k",
+      outputName,
+    ]);
+    if (exitCode !== 0) throw new Error("Could not read the audio of this video.");
+    const data = await ffmpeg.readFile(outputName);
+    if (!data?.length) throw new Error("This video has no audio track.");
+    return new File([data], "voice.mp3", { type: "audio/mpeg" });
+  } finally {
+    ffmpeg.off("progress", handleProgress);
+    try { await ffmpeg.deleteFile(outputName); } catch { /* ignore */ }
+    try { await ffmpeg.unmount(mountPoint); } catch { /* ignore */ }
+  }
+}
+
+// Reads a local video's duration (seconds) from its metadata without loading the whole file.
+export function readVideoDuration(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    const done = (fn) => { URL.revokeObjectURL(url); video.removeAttribute("src"); fn(); };
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      const duration = Number(video.duration);
+      done(() => (Number.isFinite(duration) && duration > 0 ? resolve(duration) : reject(new Error("Could not read the video length."))));
+    };
+    video.onerror = () => done(() => reject(new Error("This video format cannot be read by the browser.")));
+    video.src = url;
+  });
+}

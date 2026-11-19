@@ -4,6 +4,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import VideoManualStepPlayerModal from "../components/videoManual/VideoManualStepPlayerModal";
 import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
+import VideoManualAutoStepsModal from "../components/videoManual/VideoManualAutoStepsModal";
 import { buildRevisionSnapshot } from "../components/videoManual/videoManualEditorUtils";
 import {
   buildVideoManualDeploymentFileName,
@@ -67,6 +68,7 @@ function stepDuration(step) {
 function StepThumbnail({ step, onPlay }) {
   const first = stepVideoClips(step)[0];
   const src = first ? (step.assetSourceMap?.[first.asset.src] || first.asset.src) : "";
+  const posterTime = (Number(first?.asset?.trim) || 0) + 0.1; // auto steps share one video: show each step's own frame
   if (!src) {
     return (
       <div className="flex h-[72px] w-[128px] flex-shrink-0 items-center justify-center rounded-[6px] border border-dashed border-[var(--border)] text-[var(--text-muted)]">
@@ -76,7 +78,7 @@ function StepThumbnail({ step, onPlay }) {
   }
   return (
     <button type="button" onClick={onPlay} title="Play" className="group relative h-[72px] w-[128px] flex-shrink-0 overflow-hidden rounded-[6px] bg-black">
-      <video src={`${src}#t=0.1`} preload="metadata" muted playsInline className="pointer-events-none h-full w-full object-cover" />
+      <video src={`${src}#t=${posterTime.toFixed(2)}`} preload="metadata" muted playsInline className="pointer-events-none h-full w-full object-cover" />
       <span className="absolute inset-0 flex items-center justify-center bg-black/10 transition group-hover:bg-black/35">
         <span className="material-symbols-outlined flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-[22px] text-white">play_arrow</span>
       </span>
@@ -105,6 +107,7 @@ export default function VideoManualStepListPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [exportStatus, setExportStatus] = useState(null);
+  const [autoStepsOpen, setAutoStepsOpen] = useState(false);
   const titleRefs = useRef({});
 
   useEffect(() => {
@@ -321,6 +324,17 @@ export default function VideoManualStepListPage() {
     }
   }, [exportBusy, projectId, t, waitForRender]);
 
+  const handleAutoStepsCreated = useCallback(async () => {
+    setAutoStepsOpen(false);
+    try {
+      const fresh = await fetchVideoManualProject(projectId);
+      setProject(fresh);
+      setSteps(Array.isArray(fresh.steps) ? fresh.steps : []);
+    } catch (reloadError) {
+      setError(reloadError.message || "Failed to reload project.");
+    }
+  }, [projectId]);
+
   const handleUndeploy = useCallback(() => run(async () => {
     if (!window.confirm(t("Hide \"{name}\" from the factory side?", { name: project?.title || "" }))) return;
     await undeployVideoManualProject(projectId);
@@ -362,6 +376,11 @@ export default function VideoManualStepListPage() {
                 <Icon className={exportBusy ? "animate-spin" : ""}>{exportBusy ? "progress_activity" : "download"}</Icon>{exportBusy ? t("Exporting...") : t("Export video")}
               </button>
             </div>
+          ) : null}
+          {canEdit ? (
+            <button type="button" disabled={busy || loading || !project?.playlistId} onClick={() => setAutoStepsOpen(true)} className={buttonClass}>
+              <Icon>auto_awesome</Icon>{t("Create steps from video")}
+            </button>
           ) : null}
           {canEdit ? (
             <button type="button" disabled={busy || loading} onClick={() => handleAddStep()} className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[var(--freya-blue-hover)] disabled:opacity-50">
@@ -447,6 +466,15 @@ export default function VideoManualStepListPage() {
 
       {playStepId ? (
         <VideoManualStepPlayerModal steps={steps} projectId={projectId} startStepId={playStepId === "__all__" ? "" : playStepId} onClose={() => setPlayStepId("")} />
+      ) : null}
+
+      {autoStepsOpen ? (
+        <VideoManualAutoStepsModal
+          projectId={projectId}
+          playlistId={String(project?.playlistId || "")}
+          onClose={() => setAutoStepsOpen(false)}
+          onCreated={handleAutoStepsCreated}
+        />
       ) : null}
 
       <VideoManualExportStatusModal

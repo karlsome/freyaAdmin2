@@ -252,6 +252,21 @@ export function reorderVideoManualSteps(projectId, order) {
   return jsonRequest(`api/video-manuals-studio/projects/${projectId}/steps/order`, "PUT", { order });
 }
 
+// "Create steps from video": appends ready-made steps ({ title, edit, assetSourceMap, subtitles }) in one save.
+export function bulkCreateVideoManualSteps(projectId, steps) {
+  return jsonRequest(`api/video-manuals-studio/projects/${projectId}/steps/bulk`, "POST", { steps });
+}
+
+// Sends the voice track (small MP3 extracted in the browser) for speech-to-text.
+// Returns { text, words: [{ word, start, end }] } with times in seconds.
+export function transcribeVideoManualAudio(projectId, audioFile) {
+  return request(`api/video-manuals-studio/projects/${projectId}/transcribe`, {
+    method: "POST",
+    headers: { "Content-Type": audioFile.type || "audio/mpeg" },
+    body: audioFile,
+  });
+}
+
 export function convertVideoManualProjectToSteps(projectId, { title } = {}) {
   return jsonRequest(`api/video-manuals-studio/projects/${projectId}/convert-to-steps`, "POST", { title });
 }
