@@ -1058,6 +1058,15 @@ export async function fetchDailyReport(date, { refresh = false } = {}) {
   return res.json();
 }
 
+/** One page of compact findings for the bell popup (15 at a time). */
+export async function fetchDailyReportList(date, { offset = 0, limit = 15 } = {}) {
+  const params = new URLSearchParams({ list: "1", offset: String(offset), limit: String(limit) });
+  if (date) params.set("date", date);
+  const res = await fetch(`${BASE_URL}api/reports/daily?${params}`);
+  if (!res.ok) throw new Error(`Daily report list failed (${res.status})`);
+  return res.json();
+}
+
 /** Just the finding count for a day (top-bar bell). */
 export async function fetchDailyReportSummary(date) {
   const params = new URLSearchParams({ summary: "1" });

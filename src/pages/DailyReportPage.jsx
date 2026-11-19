@@ -70,6 +70,7 @@ export default function DailyReportPage() {
   const rawDate = searchParams.get("date");
   const date = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && rawDate <= today ? rawDate : yesterday();
   const factory = searchParams.get("factory") || "All";
+  const openParam = searchParams.get("open"); // a finding id, e.g. from the top-bar bell
 
   const setParam = useCallback(
     (key, value) => {
@@ -91,11 +92,13 @@ export default function DailyReportPage() {
       factory={factory}
       setDate={(d) => setParam("date", d)}
       setFactory={(f) => setParam("factory", f)}
+      initialOpenId={openParam}
+      clearOpenParam={() => setParam("open", null)}
     />
   );
 }
 
-function DailyReportView({ date, today, factory, setDate, setFactory }) {
+function DailyReportView({ date, today, factory, setDate, setFactory, initialOpenId, clearOpenParam }) {
   const { t, language } = useLanguage();
   const isJa = language === "ja";
   const isDark = useIsDarkMode();
@@ -105,7 +108,17 @@ function DailyReportView({ date, today, factory, setDate, setFactory }) {
   const [error, setError] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
   const [category, setCategory] = useState("all");
-  const [openId, setOpenId] = useState(null);
+  const [openId, setOpenId] = useState(initialOpenId || null);
+  // The bell can ask for another card while this page is already open.
+  const [seenOpenParam, setSeenOpenParam] = useState(initialOpenId);
+  if (initialOpenId !== seenOpenParam) {
+    setSeenOpenParam(initialOpenId);
+    if (initialOpenId) setOpenId(initialOpenId);
+  }
+  const closeDetail = useCallback(() => {
+    setOpenId(null);
+    clearOpenParam();
+  }, [clearOpenParam]);
   const [checked, setChecked] = useState(() => readChecked(date));
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
   const [leaderView, setLeaderView] = useState(null); // { name, factory }
@@ -353,7 +366,7 @@ function DailyReportView({ date, today, factory, setDate, setFactory }) {
           date={longDate(date, isJa)}
           checked={checked.has(openFinding.id)}
           onToggleCheck={() => toggleCheck(openFinding.id)}
-          onClose={() => setOpenId(null)}
+          onClose={closeDetail}
           onOpenRecord={(r) => openRecord(r)}
           onOpenLeader={(name, fac) => setLeaderView({ name, factory: fac })}
           escDisabled={Boolean(modalRecord || leaderView || stopCall)}
