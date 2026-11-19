@@ -4,6 +4,7 @@ import StatSummaryCard from "../components/StatSummaryCard";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import DataTable from "../components/DataTable";
 import StopCallLeaderboard, { aggregateLeaders } from "../components/StopCallLeaderboard";
+import { flattenStopCalls } from "../utils/stopCalls";
 import StopCallDetailModal from "../components/StopCallDetailModal";
 import EmptyState from "../components/EmptyState";
 import { fetchStopCallRecords, fetchStopCallSummary, fetchMasterFactories } from "../services/api";
@@ -66,26 +67,6 @@ function fmtWait(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
-
-function flattenStopCalls(records) {
-  const events = [];
-  for (const rec of records) {
-    if (!rec.StopCall?.records?.length) continue;
-    for (const sc of rec.StopCall.records) {
-      events.push({
-        ...sc,
-        date: rec.Date,
-        "設備": rec["設備"],
-        "背番号": rec["背番号"],
-        "品番": rec["品番"],
-        Worker_Name: rec.Worker_Name,
-        "工場": rec["工場"],
-        parentRecord: rec,
-      });
-    }
-  }
-  return events;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100];

@@ -55,7 +55,7 @@ function TrendChart({ points, unit, color, isDark }) {
   );
 }
 
-export default function ReportDetailView({ finding, text, isJa, date, checked, onToggleCheck, onClose, onOpenRecord, isDark, escDisabled = false }) {
+export default function ReportDetailView({ finding, text, isJa, date, checked, onToggleCheck, onClose, onOpenRecord, onOpenLeader, isDark, escDisabled = false }) {
   const cat = CATEGORY_META[finding.cat] || CATEGORY_META.data;
   const sev = SEVERITY_META[finding.sev] || SEVERITY_META.info;
   const points = finding.trend?.points || [];
@@ -65,7 +65,8 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
   const max = Math.max(...compare.flatMap((c) => [c.today || 0, c.normal || 0]), 0.0001);
   const rows = finding.rows || [];
   const columns = finding.columns || [];
-  const clickable = rows.some((r) => r.record);
+  const clickable = rows.some((r) => r.record || r.leader);
+  const openRow = (r) => (r.leader ? onOpenLeader?.(r.leader, finding.facs[0]) : r.record ? onOpenRecord(r.record) : null);
 
   useEffect(() => {
     if (escDisabled) return undefined; // a record modal is open on top; Esc belongs to it
@@ -166,7 +167,13 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
             <section className="freya-card p-5 space-y-3 min-w-0">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-h3 text-[var(--text-primary)]">{isJa ? "根拠となるレコード" : "Records behind this card"}</h3>
-                {clickable && <span className="text-[12px] text-[var(--text-muted)]">{isJa ? "行をクリックで詳細" : "Click a row to open the record"}</span>}
+                {clickable && (
+                  <span className="text-[12px] text-[var(--text-muted)]">
+                    {rows.some((r) => r.leader)
+                      ? isJa ? "行をクリックで対応の詳細（いつ・どこで）" : "Click a leader to see when and where they responded"
+                      : isJa ? "行をクリックで詳細" : "Click a row to open the record"}
+                  </span>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-[13px]">
@@ -183,12 +190,21 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
                     {rows.map((r, i) => (
                       <tr
                         key={i}
-                        onClick={r.record ? () => onOpenRecord(r.record) : undefined}
-                        className={r.record ? "cursor-pointer hover:bg-[var(--surface-hover)]" : ""}
+                        onClick={r.record || r.leader ? () => openRow(r) : undefined}
+                        onKeyDown={r.record || r.leader ? (e) => (e.key === "Enter" || e.key === " ") && openRow(r) : undefined}
+                        tabIndex={r.record || r.leader ? 0 : undefined}
+                        className={r.record || r.leader ? "cursor-pointer hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--freya-blue)]" : ""}
                       >
                         {r.cells.map((v, j) => (
                           <td key={j} className="freya-tabular px-2.5 py-2 border-b border-[var(--border)] whitespace-nowrap text-[var(--text-primary)]">
-                            {formatCell(columns[j], v)}
+                            {r.leader && j === 0 ? (
+                              <span className="inline-flex items-center gap-1 font-semibold text-[var(--freya-blue)]">
+                                {formatCell(columns[j], v)}
+                                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>chevron_right</span>
+                              </span>
+                            ) : (
+                              formatCell(columns[j], v)
+                            )}
                           </td>
                         ))}
                       </tr>

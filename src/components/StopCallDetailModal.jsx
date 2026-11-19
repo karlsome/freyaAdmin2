@@ -31,7 +31,7 @@ function RoleBadge({ role }) {
   );
 }
 
-export default function StopCallDetailModal({ open, onClose, record, stopCallEntry, allStopCalls }) {
+export default function StopCallDetailModal({ open, onClose, record, stopCallEntry, allStopCalls, zIndex }) {
   const { t, language } = useLanguage();
   const isJa = language === "ja";
 
@@ -63,6 +63,7 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
       eyebrow={record["工場"]}
       maxWidth="max-w-2xl"
       align="start"
+      zIndex={zIndex}
     >
       <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
         {/* Selected Stop Call */}

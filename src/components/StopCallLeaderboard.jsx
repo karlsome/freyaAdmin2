@@ -107,9 +107,9 @@ function DailyBar({ dailyCounts }) {
   );
 }
 
-function LeaderCard({ leader, rank, onClickRecord }) {
+function LeaderCard({ leader, rank, onClickRecord, defaultExpanded = false }) {
   const { t } = useLanguage();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState(null);
@@ -278,7 +278,7 @@ function LeaderCard({ leader, rank, onClickRecord }) {
   );
 }
 
-export default function StopCallLeaderboard({ leaders, onClickRecord }) {
+export default function StopCallLeaderboard({ leaders, onClickRecord, defaultExpanded = false }) {
   const { t } = useLanguage();
 
   if (!leaders || leaders.length === 0) {
@@ -298,6 +298,7 @@ export default function StopCallLeaderboard({ leaders, onClickRecord }) {
           leader={leader}
           rank={idx + 1}
           onClickRecord={onClickRecord}
+          defaultExpanded={defaultExpanded}
         />
       ))}
     </div>

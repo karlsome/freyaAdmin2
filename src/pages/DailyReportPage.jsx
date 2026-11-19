@@ -7,9 +7,12 @@ import EmptyState from "../components/EmptyState";
 import RecordDetailModal from "../components/RecordDetailModal";
 import ReportCard from "../components/dailyReport/ReportCard";
 import ReportDetailView from "../components/dailyReport/ReportDetailView";
+import LeaderCallsModal from "../components/dailyReport/LeaderCallsModal";
+import StopCallDetailModal from "../components/StopCallDetailModal";
 import { fetchDailyReport } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useRecordModal } from "../hooks/useRecordModal";
+import { announceDailyReportCount } from "../hooks/useDailyReportCount";
 import { CATEGORY_META, GROUPS, SEVERITY_META, describeFinding, fmtNum, fmtPct, processLabel } from "../utils/dailyReportText";
 import "../components/dailyReport/dailyReport.css";
 
@@ -105,12 +108,18 @@ function DailyReportView({ date, today, factory, setDate, setFactory }) {
   const [openId, setOpenId] = useState(null);
   const [checked, setChecked] = useState(() => readChecked(date));
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
+  const [leaderView, setLeaderView] = useState(null); // { name, factory }
+  const [stopCall, setStopCall] = useState(null); // event from flattenStopCalls
+  // Stable callbacks: ModalShell re-registers as the top modal (for Esc) when onClose changes.
+  const closeLeader = useCallback(() => setLeaderView(null), []);
+  const closeStopCall = useCallback(() => setStopCall(null), []);
 
   useEffect(() => {
     let alive = true;
     fetchDailyReport(date, { refresh: refreshTick > 0 })
       .then((data) => {
         if (!alive) return;
+        announceDailyReportCount(data.date, data.findings?.length || 0);
         setReport(data);
         setError("");
         setLoading(false);
@@ -346,7 +355,30 @@ function DailyReportView({ date, today, factory, setDate, setFactory }) {
           onToggleCheck={() => toggleCheck(openFinding.id)}
           onClose={() => setOpenId(null)}
           onOpenRecord={(r) => openRecord(r)}
-          escDisabled={Boolean(modalRecord)}
+          onOpenLeader={(name, fac) => setLeaderView({ name, factory: fac })}
+          escDisabled={Boolean(modalRecord || leaderView || stopCall)}
+        />
+      )}
+
+      {leaderView && (
+        <LeaderCallsModal
+          leaderName={leaderView.name}
+          factory={leaderView.factory}
+          date={date}
+          isJa={isJa}
+          onClose={closeLeader}
+          onOpenCall={setStopCall}
+        />
+      )}
+
+      {stopCall && (
+        <StopCallDetailModal
+          open
+          onClose={closeStopCall}
+          record={stopCall.parentRecord}
+          stopCallEntry={stopCall}
+          allStopCalls={stopCall.parentRecord?.StopCall?.records || []}
+          zIndex="z-[80]"
         />
       )}
 

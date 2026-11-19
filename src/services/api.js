@@ -1058,6 +1058,15 @@ export async function fetchDailyReport(date, { refresh = false } = {}) {
   return res.json();
 }
 
+/** Just the finding count for a day (top-bar bell). */
+export async function fetchDailyReportSummary(date) {
+  const params = new URLSearchParams({ summary: "1" });
+  if (date) params.set("date", date);
+  const res = await fetch(`${BASE_URL}api/reports/daily?${params}`);
+  if (!res.ok) throw new Error(`Daily report summary failed (${res.status})`);
+  return res.json();
+}
+
 /**
  * Fetches production data for a period (or single day → 3 sections: Daily/Weekly/Monthly).
  * Returns { isSingleDay, sections: { [label]: { Kensa, Press, SRS, Slit } } }

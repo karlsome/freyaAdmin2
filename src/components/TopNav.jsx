@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAuthDisplayName, getAuthInitials } from "../utils/auth";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
+import { useDailyReportCount } from "../hooks/useDailyReportCount";
 
 const LANGUAGES = [
   { code: "ja", label: "Japanese", nativeLabel: "日本語", flag: "🇯🇵" },
@@ -9,6 +11,8 @@ const LANGUAGES = [
 ];
 
 export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, onToggleTheme }) {
+  const navigate = useNavigate();
+  const reportCount = useDailyReportCount();
   const displayName = getAuthDisplayName(authUser);
   const initials = getAuthInitials(authUser);
   const usernameLine = authUser?.username ? `@${authUser.username}` : "";
@@ -158,9 +162,20 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
         </button>
 
         {/* Notifications */}
-        <button className="relative p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-all" type="button">
+        {/* Notifications = yesterday's Daily Report findings (same as its "All" tab) */}
+        <button
+          className="relative p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+          type="button"
+          onClick={() => navigate("/factory/reports")}
+          title={reportCount ? t("dailyReportBell", { n: reportCount }) : t("reports")}
+          aria-label={reportCount ? t("dailyReportBell", { n: reportCount }) : t("reports")}
+        >
           <span className="material-symbols-outlined">notifications</span>
-          <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-transparent"></span>
+          {reportCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[10px] font-bold leading-[18px] text-center tabular-nums shadow-sm">
+              {reportCount > 99 ? "99+" : reportCount}
+            </span>
+          )}
         </button>
 
         {/* User Profile Avatar with Dropdown */}
