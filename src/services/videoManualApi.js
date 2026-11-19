@@ -257,8 +257,25 @@ export function bulkCreateVideoManualSteps(projectId, steps) {
   return jsonRequest(`api/video-manuals-studio/projects/${projectId}/steps/bulk`, "POST", { steps });
 }
 
+// Auto steps draft of the current user for this project (MongoDB), so a reload can continue where it left off.
+// GET -> { draft: { file, asset, audioHash, cuts, updatedAt } | null, transcript: { text, words } | null }
+export function fetchVideoManualAutoStepsDraft(projectId) {
+  return request(`api/video-manuals-studio/projects/${projectId}/auto-steps-draft`);
+}
+
+// Merges the given fields ({ file, asset, audioHash, cuts }) into the draft.
+export function saveVideoManualAutoStepsDraft(projectId, fields) {
+  return jsonRequest(`api/video-manuals-studio/projects/${projectId}/auto-steps-draft`, "PUT", fields);
+}
+
+// Deletes the draft; recycleAsset also moves its uploaded video to the recycle bin when no step uses it.
+export function deleteVideoManualAutoStepsDraft(projectId, { recycleAsset = false } = {}) {
+  return request(`api/video-manuals-studio/projects/${projectId}/auto-steps-draft${recycleAsset ? "?recycleAsset=1" : ""}`, { method: "DELETE" });
+}
+
 // Sends the voice track (small MP3 extracted in the browser) for speech-to-text.
-// Returns { text, words: [{ word, start, end }] } with times in seconds.
+// Returns { text, words: [{ word, start, end }], audioHash, cached } with times in seconds.
+// The server caches by audio hash, so sending the same audio again does not call Gemini again.
 export function transcribeVideoManualAudio(projectId, audioFile) {
   return request(`api/video-manuals-studio/projects/${projectId}/transcribe`, {
     method: "POST",
