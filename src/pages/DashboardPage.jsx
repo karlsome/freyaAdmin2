@@ -373,6 +373,16 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
           </button>
           <button
             type="button"
+            id="dashboard-view-reports"
+            onClick={() => navigate("/factory/reports")}
+            className="h-9 px-3 rounded-[10px] border text-xs font-bold flex items-center gap-1.5 transition-colors bg-[var(--surface)] text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--surface-hover)]"
+            title={isJa ? "昨日のデイリーレポートを開く" : "Open yesterday's daily report"}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>summarize</span>
+            {isJa ? "レポートを見る" : "View reports"}
+          </button>
+          <button
+            type="button"
             onClick={() => setChatOpen((v) => !v)}
             className={`h-9 px-3 rounded-[10px] border text-xs font-bold flex items-center gap-1.5 transition-colors ${
               chatOpen

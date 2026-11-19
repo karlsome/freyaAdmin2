@@ -9,6 +9,7 @@ const navItems = [
   { icon: "factory",                  labelKey: "factories",           page: "factories",
     children: [
       { icon: "overview",             labelKey: "overview",            page: "factory/overview" },
+      { icon: "summarize",            labelKey: "reports",             page: "factory/reports" },
       { icon: "phone_missed",        labelKey: "stopCall",            page: "factory/stopCall" },
       { icon: "sensors",              labelKey: "sensors",             page: "sensors" },
       { icon: "developer_board",     labelKey: "devices",             page: "devices" },

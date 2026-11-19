@@ -1,0 +1,42 @@
+/* Daily Report — the few things the shared FREYA classes don't cover. */
+
+.dr-badge-info {
+  background-color: var(--surface-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.dr-badge-ongoing {
+  background-color: rgba(124, 58, 237, 0.08);
+  color: #6D28D9;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.dark .dr-badge-ongoing,
+[data-theme="dark"] .dr-badge-ongoing {
+  background-color: rgba(167, 139, 250, 0.12);
+  color: #C4B5FD;
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+.dr-card {
+  text-align: left;
+  cursor: pointer;
+}
+
+.dr-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.dr-card:focus-visible {
+  outline: 2px solid var(--freya-blue);
+  outline-offset: 2px;
+}
+
+.dr-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

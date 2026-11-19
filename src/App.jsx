@@ -27,6 +27,7 @@ import PrototypePage from "./pages/PrototypePage";
 import PrototypeRequestPage from "./pages/PrototypeRequestPage";
 import FirstFactoryPage from "./pages/FirstFactoryPage";
 import StopCallPage from "./pages/StopCallPage";
+import DailyReportPage from "./pages/DailyReportPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ScnaPage from "./pages/ScnaPage";
 import FinancialsPage from "./pages/FinancialsPage";
@@ -261,6 +262,7 @@ function App() {
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/devices" element={<DevicesPage />} />
               <Route path="/factory/overview" element={<FactoryDetailPage combined />} />
+              <Route path="/factory/reports" element={<DailyReportPage />} />
               <Route path="/factory/stopCall" element={<StopCallPage />} />
               <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
               <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />

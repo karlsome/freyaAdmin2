@@ -1046,6 +1046,19 @@ export async function fetchStopCallSummary({ dateFrom, dateTo, factory } = {}) {
 }
 
 /**
+ * Daily report: findings for one day vs each item's 30-day normal.
+ * date = "YYYY-MM-DD" (server defaults to yesterday, JST). refresh skips the 5-min server cache.
+ */
+export async function fetchDailyReport(date, { refresh = false } = {}) {
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (refresh) params.set("refresh", "1");
+  const res = await fetch(`${BASE_URL}api/reports/daily?${params}`);
+  if (!res.ok) throw new Error(`Daily report failed (${res.status})`);
+  return res.json();
+}
+
+/**
  * Fetches production data for a period (or single day → 3 sections: Daily/Weekly/Monthly).
  * Returns { isSingleDay, sections: { [label]: { Kensa, Press, SRS, Slit } } }
  */
