@@ -5,6 +5,7 @@ import { extractAudioFile, readVideoDuration } from "../../utils/trimVideoFile";
 import {
   bulkCreateVideoManualSteps,
   getVideoManualApiBaseUrl,
+  softDeleteVideoManualPlaylistAssets,
   transcribeVideoManualAudio,
   uploadVideoManualPlaylistAsset,
 } from "../../services/videoManualApi";
@@ -65,7 +66,30 @@ export default function VideoManualAutoStepsModal({ projectId, playlistId, onClo
   const [markerCount, setMarkerCount] = useState(0);
   const [timeDrafts, setTimeDrafts] = useState({});
   const audioRef = useRef(null);
-  const busy = stage === "saving"; // closing while processing is fine: an upload that finishes just stays in the asset library
+  const busy = stage === "saving";
+
+  // Closing without creating steps (Cancel, Esc, backdrop, navigating away) moves the uploaded video to the
+  // asset recycle bin, so abandoned attempts do not pile up. An upload still running when the window closes
+  // is moved there as soon as it finishes.
+  const closedRef = useRef(false);
+  const createdRef = useRef(false);
+  const uploadedAssetIdRef = useRef("");
+  const discardUpload = useCallback(() => {
+    const assetId = uploadedAssetIdRef.current;
+    if (!assetId || createdRef.current || !playlistId) return;
+    uploadedAssetIdRef.current = "";
+    softDeleteVideoManualPlaylistAssets(playlistId, [assetId]).catch((discardError) => {
+      console.warn("Could not move the unused auto-steps video to the recycle bin:", discardError);
+    });
+  }, [playlistId]);
+
+  useEffect(() => {
+    closedRef.current = false; // reset for React StrictMode's mount/unmount/mount in development
+    return () => {
+      closedRef.current = true;
+      discardUpload();
+    };
+  }, [discardUpload]);
 
   useEffect(() => {
     if (!file) return undefined;
@@ -126,6 +150,8 @@ export default function VideoManualAutoStepsModal({ projectId, playlistId, onClo
     const uploadTask = uploadVideoManualPlaylistAsset(playlistId, picked, {
       onProgress: (loaded, total) => setUpload((u) => ({ ...u, progress: total > 0 ? loaded / total : 0 })),
     }).then((result) => {
+      uploadedAssetIdRef.current = String(result?.assetId || "");
+      if (closedRef.current) { discardUpload(); return false; }
       setUpload({ progress: 1, done: true, failed: false, result });
       return true;
     }).catch((uploadError) => {
@@ -135,7 +161,7 @@ export default function VideoManualAutoStepsModal({ projectId, playlistId, onClo
     });
     const [uploaded, transcribed] = await Promise.all([uploadTask, runVoice(picked, videoDuration)]);
     if (uploaded && transcribed) setStage("review");
-  }, [playlistId, runVoice, t]);
+  }, [discardUpload, playlistId, runVoice, t]);
 
   const handleRetryVoice = useCallback(async () => {
     setError("");
@@ -190,6 +216,7 @@ export default function VideoManualAutoStepsModal({ projectId, playlistId, onClo
         subtitles: rangeCues[index],
       }));
       const created = await bulkCreateVideoManualSteps(projectId, steps);
+      createdRef.current = true; // the video is now used by the new steps: keep it
       onCreated?.(created);
     } catch (saveError) {
       setError(saveError.message || t("Could not create the steps."));
