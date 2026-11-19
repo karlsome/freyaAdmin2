@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
@@ -8,6 +8,8 @@ import RecordDetailModal from "../components/RecordDetailModal";
 import ReportCard from "../components/dailyReport/ReportCard";
 import ReportDetailView from "../components/dailyReport/ReportDetailView";
 import LeaderCallsModal from "../components/dailyReport/LeaderCallsModal";
+import BypassDetailModal from "../components/dailyReport/BypassDetailModal";
+import ReportRecordsModal from "../components/dailyReport/ReportRecordsModal";
 import StopCallDetailModal from "../components/StopCallDetailModal";
 import { fetchDailyReport } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -122,6 +124,17 @@ function DailyReportView({ date, today, factory, setDate, setFactory, initialOpe
   const [checked, setChecked] = useState(() => readChecked(date));
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
   const [leaderView, setLeaderView] = useState(null); // { name, factory }
+  const [bypassView, setBypassView] = useState(null); // checklistBypassDB doc
+  const [recordsView, setRecordsView] = useState(null); // { kind: "worker", name, factory } | { kind: "group", factory, proc }
+  // RecordDetailModal has no Esc handling of its own: while it is open, Esc must not close the list under it.
+  const modalRecordRef = useRef(null);
+  useEffect(() => {
+    modalRecordRef.current = modalRecord;
+  }, [modalRecord]);
+  const closeBypass = useCallback(() => setBypassView(null), []);
+  const closeRecordsView = useCallback(() => {
+    if (!modalRecordRef.current) setRecordsView(null);
+  }, []);
   const [stopCall, setStopCall] = useState(null); // event from flattenStopCalls
   // Stable callbacks: ModalShell re-registers as the top modal (for Esc) when onClose changes.
   const closeLeader = useCallback(() => setLeaderView(null), []);
@@ -369,9 +382,18 @@ function DailyReportView({ date, today, factory, setDate, setFactory, initialOpe
           onClose={closeDetail}
           onOpenRecord={(r) => openRecord(r)}
           onOpenLeader={(name, fac) => setLeaderView({ name, factory: fac })}
-          escDisabled={Boolean(modalRecord || leaderView || stopCall)}
+          onOpenBypass={setBypassView}
+          onOpenWorker={(w) => setRecordsView({ kind: "worker", ...w })}
+          onOpenGroup={(g) => setRecordsView({ kind: "group", ...g })}
+          escDisabled={Boolean(modalRecord || leaderView || stopCall || bypassView || recordsView)}
         />
       )}
+
+      {bypassView && (
+        <BypassDetailModal bypass={bypassView} isJa={isJa} onClose={closeBypass} onOpenLeader={(name, fac) => setLeaderView({ name, factory: fac })} />
+      )}
+
+      {recordsView && <ReportRecordsModal target={recordsView} date={date} isJa={isJa} onClose={closeRecordsView} onOpenRecord={(r) => openRecord(r)} />}
 
       {leaderView && (
         <LeaderCallsModal
@@ -396,8 +418,8 @@ function DailyReportView({ date, today, factory, setDate, setFactory, initialOpe
       )}
 
       {modalRecord && (
-        // z-[70]: above the full-screen card view (z-60).
-        <RecordDetailModal record={modalRecord} processName={modalProcess} onClose={closeRecord} zIndex="z-[70]" />
+        // z-[80]: above the full-screen card view (z-60) and the list modals (z-70).
+        <RecordDetailModal record={modalRecord} processName={modalProcess} onClose={closeRecord} zIndex="z-[80]" />
       )}
     </section>
   );

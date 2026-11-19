@@ -1058,6 +1058,17 @@ export async function fetchDailyReport(date, { refresh = false } = {}) {
   return res.json();
 }
 
+/** Records behind a Daily Report people/approvals row: { worker } (30 days) or { factory, proc } (that day). */
+export async function fetchReportRecords(date, { worker, factory, proc } = {}) {
+  const params = new URLSearchParams({ date });
+  if (worker) params.set("worker", worker);
+  if (factory) params.set("factory", factory);
+  if (proc) params.set("proc", proc);
+  const res = await fetch(`${BASE_URL}api/reports/records?${params}`);
+  if (!res.ok) throw new Error(`Report records failed (${res.status})`);
+  return res.json();
+}
+
 /** One page of compact findings for the bell popup (15 at a time). */
 export async function fetchDailyReportList(date, { offset = 0, limit = 15 } = {}) {
   const params = new URLSearchParams({ list: "1", offset: String(offset), limit: String(limit) });

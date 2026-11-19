@@ -55,7 +55,7 @@ function TrendChart({ points, unit, color, isDark }) {
   );
 }
 
-export default function ReportDetailView({ finding, text, isJa, date, checked, onToggleCheck, onClose, onOpenRecord, onOpenLeader, isDark, escDisabled = false }) {
+export default function ReportDetailView({ finding, text, isJa, date, checked, onToggleCheck, onClose, onOpenRecord, onOpenLeader, onOpenBypass, onOpenWorker, onOpenGroup, isDark, escDisabled = false }) {
   const cat = CATEGORY_META[finding.cat] || CATEGORY_META.data;
   const sev = SEVERITY_META[finding.sev] || SEVERITY_META.info;
   const points = finding.trend?.points || [];
@@ -65,8 +65,17 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
   const max = Math.max(...compare.flatMap((c) => [c.today || 0, c.normal || 0]), 0.0001);
   const rows = finding.rows || [];
   const columns = finding.columns || [];
-  const clickable = rows.some((r) => r.record || r.leader);
-  const openRow = (r) => (r.leader ? onOpenLeader?.(r.leader, finding.facs[0]) : r.record ? onOpenRecord(r.record) : null);
+  // Every row opens something: a leader's calls, a bypass, a worker's 30 days, an approvals group, or a record.
+  const canOpen = (r) => Boolean(r.leader || r.bypass || r.worker || r.group || r.record);
+  const clickable = rows.some(canOpen);
+  const openRow = (r) => {
+    if (r.leader) onOpenLeader?.(r.leader, finding.facs[0]);
+    else if (r.bypass) onOpenBypass?.(r.bypass);
+    else if (r.worker) onOpenWorker?.(r.worker);
+    else if (r.group) onOpenGroup?.(r.group);
+    else if (r.record) onOpenRecord(r.record);
+  };
+  const linkFirstCell = (r) => Boolean(r.leader || r.worker || r.group);
 
   useEffect(() => {
     if (escDisabled) return undefined; // a record modal is open on top; Esc belongs to it
@@ -171,7 +180,13 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
                   <span className="text-[12px] text-[var(--text-muted)]">
                     {rows.some((r) => r.leader)
                       ? isJa ? "行をクリックで対応の詳細（いつ・どこで）" : "Click a leader to see when and where they responded"
-                      : isJa ? "行をクリックで詳細" : "Click a row to open the record"}
+                      : rows.some((r) => r.worker)
+                        ? isJa ? "行をクリックで出勤とレコード（30日）" : "Click a worker to see their last 30 days"
+                        : rows.some((r) => r.group)
+                          ? isJa ? "行をクリックでレコードと承認状況" : "Click a row to see its records and approvals"
+                          : rows.some((r) => r.bypass)
+                            ? isJa ? "行をクリックでスキップの詳細" : "Click a row to see the bypass details"
+                            : isJa ? "行をクリックで詳細" : "Click a row to open the record"}
                   </span>
                 )}
               </div>
@@ -190,14 +205,14 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
                     {rows.map((r, i) => (
                       <tr
                         key={i}
-                        onClick={r.record || r.leader ? () => openRow(r) : undefined}
-                        onKeyDown={r.record || r.leader ? (e) => (e.key === "Enter" || e.key === " ") && openRow(r) : undefined}
-                        tabIndex={r.record || r.leader ? 0 : undefined}
-                        className={r.record || r.leader ? "cursor-pointer hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--freya-blue)]" : ""}
+                        onClick={canOpen(r) ? () => openRow(r) : undefined}
+                        onKeyDown={canOpen(r) ? (e) => (e.key === "Enter" || e.key === " ") && openRow(r) : undefined}
+                        tabIndex={canOpen(r) ? 0 : undefined}
+                        className={canOpen(r) ? "cursor-pointer hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--freya-blue)]" : ""}
                       >
                         {r.cells.map((v, j) => (
                           <td key={j} className="freya-tabular px-2.5 py-2 border-b border-[var(--border)] whitespace-nowrap text-[var(--text-primary)]">
-                            {r.leader && j === 0 ? (
+                            {linkFirstCell(r) && j === 0 ? (
                               <span className="inline-flex items-center gap-1 font-semibold text-[var(--freya-blue)]">
                                 {formatCell(columns[j], v)}
                                 <span className="material-symbols-outlined" style={{ fontSize: 15 }}>chevron_right</span>
