@@ -35,7 +35,7 @@ const DETAIL_FIELDS = [
   { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
 ];
 
-const EMPTY_DETAILS = { maker: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", comment: "" };
+const EMPTY_DETAILS = { maker: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
 
 function buildDetails(record) {
   return Object.fromEntries(Object.keys(EMPTY_DETAILS).map((k) => [k, record?.[k] != null ? String(record[k]) : ""]));
@@ -176,7 +176,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
       title={isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
       subtitle={isEdit
         ? (isJa ? "選択した刃物の情報を更新します。" : "Update the selected blade's details.")
-        : (isJa ? "bladeDBに新規刃物を登録します。" : "Create a new blade entry in bladeDB.")}
+        : (isJa ? "NCBladeDBに新規刃物を登録します。" : "Create a new blade entry in NCBladeDB.")}
       maxWidth="max-w-xl"
       footer={footer}
       footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
@@ -198,6 +198,13 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             autoFocus
             required
           />
+          {isEdit && record?.name && name.trim() !== record.name && (
+            <p className="mt-2 text-xs text-[var(--status-warning)]">
+              {isJa
+                ? `製品は刃物名で紐付いています。「${record.name}」を参照している製品は自動で更新されません。`
+                : `Products link to blades by name. Products that reference "${record.name}" will not be updated automatically.`}
+            </p>
+          )}
         </FormField>
 
         <FormField label={isJa ? "画像" : "Image"} variant="form">
@@ -266,10 +273,10 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
           ))}
         </div>
 
-        <FormField label={isJa ? "コメント" : "Comment"} variant="form">
+        <FormField label={isJa ? "説明・コメント" : "Description / Comment"} variant="form">
           <textarea
-            value={details.comment}
-            onChange={(e) => setDetails((d) => ({ ...d, comment: e.target.value }))}
+            value={details.description}
+            onChange={(e) => setDetails((d) => ({ ...d, description: e.target.value }))}
             rows={3}
             placeholder={isJa ? "メモ・備考" : "Notes"}
             className={`${inputCls} resize-y`}
@@ -336,7 +343,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
           updates: { name, imageURL: imageURL || "", ...details, updatedAt: new Date().toISOString(), updatedBy: username },
           username,
           role: authUser?.role,
-          tabKey: "bladeDB",
+          tabKey: "ncBladeDB",
         }).catch((err) => {
           // 304 = nothing changed; treat as success
           if (!String(err?.message || "").includes("304")) throw err;
@@ -346,7 +353,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
           data: { name, imageURL: imageURL || "", ...details, createdAt: new Date().toISOString(), createdBy: username },
           username,
           role: authUser?.role,
-          tabKey: "bladeDB",
+          tabKey: "ncBladeDB",
         });
       }
       onFlash?.({ type: "success", message: editing ? (isJa ? "刃物を更新しました。" : "Blade updated.") : (isJa ? "刃物を追加しました。" : "Blade added.") });
@@ -367,7 +374,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
     if (!window.confirm(isJa ? `「${label}」を削除しますか？ この操作は元に戻せません。` : `Delete "${label}"? This cannot be undone.`)) return;
     setSubmitting(true);
     try {
-      await deleteMasterRecord({ recordId: recordIdOf(editing), username, role: authUser?.role, tabKey: "bladeDB" });
+      await deleteMasterRecord({ recordId: recordIdOf(editing), username, role: authUser?.role, tabKey: "ncBladeDB" });
       let imageError = "";
       if (editing.imageURL) {
         try {
