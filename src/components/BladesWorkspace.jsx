@@ -40,6 +40,10 @@ function buildDetails(record) {
   return Object.fromEntries(Object.keys(EMPTY_DETAILS).map((k) => [k, record?.[k] != null ? String(record[k]) : ""]));
 }
 
+function deleteImageQuietly(url) {
+  if (url) deleteEquipmentEventImage(url).catch(() => {});
+}
+
 function recordIdOf(record) {
   return record?._id?.$oid ?? record?._id ?? null;
 }
@@ -54,9 +58,14 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
+  // Images uploaded while this modal is open. Any not kept by a successful save get deleted from Firebase.
+  const sessionUploadsRef = useRef([]);
+  const openRef = useRef(open);
 
   useEffect(() => {
+    openRef.current = open;
     if (!open) return;
+    sessionUploadsRef.current = [];
     setName(record?.name || "");
     setImageURL(record?.imageURL || "");
     setDetails(buildDetails(record));
@@ -72,6 +81,12 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     try {
       const base64 = await toBase64(file);
       const result = await uploadBladeImage({ base64, bladeName: name.trim(), username });
+      if (!openRef.current) {
+        // Modal was closed while the upload was in flight
+        deleteImageQuietly(result.imageURL);
+        return;
+      }
+      sessionUploadsRef.current.push(result.imageURL);
       setImageURL(result.imageURL);
     } catch (err) {
       const raw = err?.message || "";
@@ -85,11 +100,25 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!name.trim() || uploading) return;
+    if (!name.trim() || uploading || submitting) return;
     const trimmed = Object.fromEntries(Object.entries(details).map(([k, v]) => [k, v.trim()]));
-    onSubmit({ name: name.trim(), imageURL, ...trimmed });
+    const finalURL = imageURL;
+    const saved = await onSubmit({ name: name.trim(), imageURL: finalURL, ...trimmed });
+    if (!saved) return;
+    // Drop images uploaded this session that were replaced or removed, plus the old image if it changed.
+    const stale = sessionUploadsRef.current.filter((url) => url && url !== finalURL);
+    if (record?.imageURL && record.imageURL !== finalURL) stale.push(record.imageURL);
+    sessionUploadsRef.current = [];
+    stale.forEach(deleteImageQuietly);
+  }
+
+  function handleCancel() {
+    if (submitting) return;
+    sessionUploadsRef.current.forEach(deleteImageQuietly);
+    sessionUploadsRef.current = [];
+    onClose();
   }
 
   const isEdit = Boolean(record);
@@ -115,7 +144,8 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleCancel}
+          disabled={submitting}
           className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-all shadow-2xs"
         >
           {isJa ? "キャンセル" : "Cancel"}
@@ -135,7 +165,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
   return (
     <ModalShell
       open={open}
-      onClose={onClose}
+      onClose={handleCancel}
       eyebrow={isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
       title={isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
       subtitle={isEdit
@@ -166,6 +196,21 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
 
         <FormField label={isJa ? "画像" : "Image"} variant="form">
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+          <div className="flex flex-col items-start gap-3">
+          {imageURL && (
+            <div className="relative">
+              <img src={imageURL} alt="blade" className="h-40 w-40 rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] object-cover shadow-2xs" />
+              <button
+                type="button"
+                onClick={() => setImageURL("")}
+                disabled={uploading}
+                aria-label={isJa ? "画像を削除" : "Remove image"}
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white shadow-sm transition hover:bg-[var(--status-danger)]"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -184,19 +229,8 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
               </>
             )}
           </button>
-          {uploadError && <p className="mt-2 text-xs text-[var(--status-danger)]">{uploadError}</p>}
-          {imageURL && (
-            <div className="mt-3 group relative inline-block">
-              <img src={imageURL} alt="blade" className="h-32 w-32 rounded-[8px] object-cover border border-[var(--border)]" />
-              <button
-                type="button"
-                onClick={() => setImageURL("")}
-                className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-[var(--status-danger)] text-white group-hover:flex"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
-              </button>
-            </div>
-          )}
+          {uploadError && <p className="text-xs text-[var(--status-danger)]">{uploadError}</p>}
+          </div>
         </FormField>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -296,8 +330,10 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
       onFlash?.({ type: "success", message: editing ? (isJa ? "刃物を更新しました。" : "Blade updated.") : (isJa ? "刃物を追加しました。" : "Blade added.") });
       closeModal();
       setLocalRefresh((n) => n + 1);
+      return true;
     } catch (err) {
       onFlash?.({ type: "error", message: err?.message || (isJa ? "刃物の保存に失敗しました。" : "Failed to save blade.") });
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -310,8 +346,17 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
     setSubmitting(true);
     try {
       await deleteMasterRecord({ recordId: recordIdOf(editing), username, role: authUser?.role, tabKey: "bladeDB" });
-      if (editing.imageURL) deleteEquipmentEventImage(editing.imageURL).catch(() => {});
-      onFlash?.({ type: "success", message: isJa ? "刃物を削除しました。" : "Blade deleted." });
+      let imageError = "";
+      if (editing.imageURL) {
+        try {
+          await deleteEquipmentEventImage(editing.imageURL);
+        } catch (err) {
+          imageError = err?.message || "unknown error";
+        }
+      }
+      onFlash?.(imageError
+        ? { type: "error", message: isJa ? `刃物を削除しましたが、画像の削除に失敗しました: ${imageError}` : `Blade deleted, but its image could not be removed from storage: ${imageError}` }
+        : { type: "success", message: isJa ? "刃物を削除しました。" : "Blade deleted." });
       closeModal();
       setLocalRefresh((n) => n + 1);
     } catch (err) {
