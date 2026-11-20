@@ -262,8 +262,9 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
                   <img src={record.imageURL} alt={record.name || "blade"} className="h-48 w-48 object-cover" />
                 </button>
               ) : (
-                <div className="flex h-48 w-48 items-center justify-center rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]">
-                  <span className="material-symbols-outlined" style={{ fontSize: 32 }}>image</span>
+                <div className="flex h-48 w-48 flex-col items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 32 }}>hide_image</span>
+                  <span className="text-xs font-medium">{isJa ? "画像なし" : "No image"}</span>
                 </div>
               )}
             </FormField>
@@ -543,7 +544,10 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
                 {blade.imageURL ? (
                   <img src={blade.imageURL} alt={blade.name || "blade"} className="h-full w-full object-cover" loading="lazy" />
                 ) : (
-                  <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 32 }}>image</span>
+                  <div className="flex flex-col items-center gap-1 text-[var(--text-muted)]">
+                    <span className="material-symbols-outlined" style={{ fontSize: 28 }}>hide_image</span>
+                    <span className="text-[11px] font-medium">{isJa ? "画像なし" : "No image"}</span>
+                  </div>
                 )}
               </div>
               <div className="px-3 py-2">
