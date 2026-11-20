@@ -98,7 +98,21 @@ function recordIdOf(record) {
   return record?._id?.$oid ?? record?._id ?? null;
 }
 
-function BladeModal({ open, record, initialDraft, canEdit, submitting, username, onClose, onSubmit, onDelete }) {
+// Read-only blade info popup, used from other screens (e.g. product detail → Cutter / Tooling).
+export function BladeInfoModal({ blade, onClose, zIndex = "z-[110]" }) {
+  return (
+    <BladeModal
+      open={Boolean(blade)}
+      record={blade}
+      canEdit={false}
+      submitting={false}
+      onClose={onClose}
+      zIndex={zIndex}
+    />
+  );
+}
+
+function BladeModal({ open, record, initialDraft, canEdit, submitting, username, onClose, onSubmit, onDelete, zIndex }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -245,7 +259,7 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
   const viewFooter = (
     <div className="flex items-center justify-end gap-3">
       <button type="button" onClick={handleClose} className={secondaryBtnCls}>
-        {isJa ? "キャンセル" : "Cancel"}
+        {canEdit ? (isJa ? "キャンセル" : "Cancel") : (isJa ? "閉じる" : "Close")}
       </button>
       {canEdit && (
         <button type="button" onClick={() => setMode("edit")} className={primaryBtnCls}>
@@ -312,6 +326,7 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
           ? (isJa ? "選択した刃物の情報を更新します。" : "Update the selected blade's details.")
           : (isJa ? "NCBladeDBに新規刃物を登録します。" : "Create a new blade entry in NCBladeDB.")}
       maxWidth="max-w-xl"
+      zIndex={zIndex}
       footer={isView ? viewFooter : editFooter}
       footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
     >

@@ -6,6 +6,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import MaterialDetailModal from "./MaterialDetailModal";
 import MasterProductEditModal from "./MasterProductEditModal";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import { BladeInfoModal } from "./BladesWorkspace";
 import MasterNcProgramsSection from "./MasterNcProgramsSection";
 
 export default function MasterProductDetailModal({
@@ -118,6 +119,7 @@ export default function MasterProductDetailModal({
   }, [open, record, rawMaterialBackNo, rawMaterialHinban]);
 
   const [bladeInfo, setBladeInfo] = useState(null);
+  const [bladeModalOpen, setBladeModalOpen] = useState(false);
 
   useEffect(() => {
     if (open && record?.["刃物"]) {
@@ -130,6 +132,7 @@ export default function MasterProductDetailModal({
     } else {
       setBladeInfo(null);
     }
+    setBladeModalOpen(false);
   }, [open, record]);
 
   if (!open || !record) return null;
@@ -378,7 +381,18 @@ export default function MasterProductDetailModal({
                     return null;
                   })()}
 
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
+                  <div
+                    className={`flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0 ${
+                      bladeInfo ? "cursor-pointer text-left transition hover:border-[var(--freya-blue)]/50 hover:bg-[var(--freya-blue)]/5" : ""
+                    }`}
+                    {...(bladeInfo ? {
+                      role: "button",
+                      tabIndex: 0,
+                      title: isJa ? "刃物情報を表示" : "View blade info",
+                      onClick: () => setBladeModalOpen(true),
+                      onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBladeModalOpen(true); } },
+                    } : {})}
+                  >
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "刃物" : "Cutter / Tooling"}</span>
                     <div className="flex items-center gap-2 mt-0.5 min-w-0">
                       {bladeInfo?.imageURL && (
@@ -388,7 +402,10 @@ export default function MasterProductDetailModal({
                           className="w-5 h-5 object-contain rounded border border-outline-variant/30 bg-surface shrink-0"
                         />
                       )}
-                      <span className="font-medium text-sm text-on-surface truncate">{renderValue(record["刃物"])}</span>
+                      <span className={`font-medium text-sm truncate ${bladeInfo ? "text-[var(--freya-blue)]" : "text-on-surface"}`}>{renderValue(record["刃物"])}</span>
+                      {bladeInfo && (
+                        <span className="material-symbols-outlined ml-auto shrink-0 text-[var(--text-muted)]" style={{ fontSize: 16 }}>open_in_new</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
@@ -764,6 +781,11 @@ export default function MasterProductDetailModal({
           modalData={activeMaterialModal}
           onClose={() => setActiveMaterialModal(null)}
         />
+      )}
+
+      {/* Blade info popup (from Cutter / Tooling) */}
+      {bladeModalOpen && bladeInfo && (
+        <BladeInfoModal blade={bladeInfo} onClose={() => setBladeModalOpen(false)} />
       )}
 
       {/* Photo Preview Lightbox */}
