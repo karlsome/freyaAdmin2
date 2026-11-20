@@ -1098,7 +1098,19 @@ export default function MasterProductEditModal({
   if (!open) return null;
 
   const handleChange = (field, value) => {
-    setDraft((prev) => ({ ...prev, [field]: value }));
+    setDraft((prev) => {
+      const next = { ...prev, [field]: value };
+      // Price / Box = Price / Pc × Pack Qty (収容数), recalculated when either changes (still editable by hand)
+      if (field === "pricePerPc" || field === "収容数") {
+        const perPc = Number(next.pricePerPc);
+        const qty = Number(next["収容数"]);
+        if (String(next.pricePerPc ?? "").trim() !== "" && String(next["収容数"] ?? "").trim() !== ""
+          && Number.isFinite(perPc) && Number.isFinite(qty)) {
+          next.pricePerBox = String(Math.round(perPc * qty * 100) / 100);
+        }
+      }
+      return next;
+    });
     if (field === "品番" || field === "背番号") {
       setDupErrors((prev) => (prev[field] ? { ...prev, [field]: "" } : prev));
     }
@@ -1716,6 +1728,9 @@ export default function MasterProductEditModal({
               <div>
                 <label className="block text-[11px] font-bold text-on-surface mb-1">
                   {isJa ? "箱単価 (¥)" : "Price / Box (¥)"}
+                  <span className="ml-1.5 font-medium text-outline">
+                    {isJa ? "= 個単価 × 収容数" : "= Price/Pc × Pack Qty"}
+                  </span>
                 </label>
                 <input
                   type="number"
