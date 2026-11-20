@@ -26,6 +26,20 @@ function toBase64(file) {
   });
 }
 
+const DETAIL_FIELDS = [
+  { key: "maker", labelJa: "メーカー", labelEn: "Maker", type: "text", placeholderJa: "例: 山田刃物株式会社", placeholderEn: "e.g. Yamada Blade Co." },
+  { key: "contactNumber", labelJa: "連絡先電話番号", labelEn: "Contact Number", type: "tel", placeholderJa: "例: 03-1234-5678", placeholderEn: "e.g. 03-1234-5678" },
+  { key: "makerEmail", labelJa: "メーカーメール", labelEn: "Maker Email", type: "email", placeholderJa: "例: sales@maker.co.jp", placeholderEn: "e.g. sales@maker.co.jp" },
+  { key: "makerWechatId", labelJa: "メーカー WeChat ID", labelEn: "Maker WeChat ID", type: "text", placeholderJa: "WeChat ID", placeholderEn: "WeChat ID" },
+  { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
+];
+
+const EMPTY_DETAILS = { maker: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", comment: "" };
+
+function buildDetails(record) {
+  return Object.fromEntries(Object.keys(EMPTY_DETAILS).map((k) => [k, record?.[k] != null ? String(record[k]) : ""]));
+}
+
 function recordIdOf(record) {
   return record?._id?.$oid ?? record?._id ?? null;
 }
@@ -36,6 +50,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
 
   const [name, setName] = useState("");
   const [imageURL, setImageURL] = useState("");
+  const [details, setDetails] = useState(EMPTY_DETAILS);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
@@ -44,6 +59,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     if (!open) return;
     setName(record?.name || "");
     setImageURL(record?.imageURL || "");
+    setDetails(buildDetails(record));
     setUploadError("");
   }, [open, record]);
 
@@ -72,7 +88,8 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
   function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim() || uploading) return;
-    onSubmit({ name: name.trim(), imageURL });
+    const trimmed = Object.fromEntries(Object.entries(details).map(([k, v]) => [k, v.trim()]));
+    onSubmit({ name: name.trim(), imageURL, ...trimmed });
   }
 
   const isEdit = Boolean(record);
@@ -122,7 +139,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
       eyebrow={isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
       title={isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
       subtitle={isEdit
-        ? (isJa ? "選択した刃物の名前と画像を更新します。" : "Update the selected blade's name and image.")
+        ? (isJa ? "選択した刃物の情報を更新します。" : "Update the selected blade's details.")
         : (isJa ? "bladeDBに新規刃物を登録します。" : "Create a new blade entry in bladeDB.")}
       maxWidth="max-w-xl"
       footer={footer}
@@ -181,6 +198,30 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             </div>
           )}
         </FormField>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {DETAIL_FIELDS.map((f) => (
+            <FormField key={f.key} label={isJa ? f.labelJa : f.labelEn} variant="form">
+              <input
+                type={f.type}
+                value={details[f.key]}
+                onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
+                placeholder={isJa ? f.placeholderJa : f.placeholderEn}
+                className={inputCls}
+              />
+            </FormField>
+          ))}
+        </div>
+
+        <FormField label={isJa ? "コメント" : "Comment"} variant="form">
+          <textarea
+            value={details.comment}
+            onChange={(e) => setDetails((d) => ({ ...d, comment: e.target.value }))}
+            rows={3}
+            placeholder={isJa ? "メモ・備考" : "Notes"}
+            className={`${inputCls} resize-y`}
+          />
+        </FormField>
         </div>
       </form>
     </ModalShell>
@@ -230,13 +271,13 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
     setEditing(null);
   }
 
-  async function handleSave({ name, imageURL }) {
+  async function handleSave({ name, imageURL, ...details }) {
     setSubmitting(true);
     try {
       if (editing) {
         await updateMasterRecord({
           recordId: recordIdOf(editing),
-          updates: { name, imageURL: imageURL || "", updatedAt: new Date().toISOString(), updatedBy: username },
+          updates: { name, imageURL: imageURL || "", ...details, updatedAt: new Date().toISOString(), updatedBy: username },
           username,
           role: authUser?.role,
           tabKey: "bladeDB",
@@ -246,7 +287,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
         });
       } else {
         await createMasterRecord({
-          data: { name, imageURL: imageURL || "", createdAt: new Date().toISOString(), createdBy: username },
+          data: { name, imageURL: imageURL || "", ...details, createdAt: new Date().toISOString(), createdBy: username },
           username,
           role: authUser?.role,
           tabKey: "bladeDB",
@@ -340,7 +381,10 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
                   <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 32 }}>image</span>
                 )}
               </div>
-              <p className="truncate px-3 py-2 text-xs font-semibold text-[var(--text-primary)]">{blade.name || "—"}</p>
+              <div className="px-3 py-2">
+                <p className="truncate text-xs font-semibold text-[var(--text-primary)]">{blade.name || "—"}</p>
+                {blade.maker && <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted)]">{blade.maker}</p>}
+              </div>
             </button>
           ))}
         </div>
