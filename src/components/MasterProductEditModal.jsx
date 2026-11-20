@@ -1920,7 +1920,7 @@ export default function MasterProductEditModal({
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/20">
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant/30 bg-surface-variant/20">
           <button
             type="button"
             onClick={onClose}
