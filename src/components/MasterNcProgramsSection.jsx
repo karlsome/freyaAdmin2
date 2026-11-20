@@ -20,6 +20,7 @@ import {
   restoreNcProgram,
   uploadNcProgram,
 } from "../services/ncApi";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -65,6 +66,8 @@ async function downloadJson(program) {
 
 // The item detail modal sits at z-[100], above ScnaNcPreviewModal (z-50), so the preview has its own layer here.
 function PreviewModal({ preview, isJa, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="flex h-[88vh] w-full max-w-6xl flex-col rounded-2xl border border-outline-variant/30 bg-surface shadow-2xl">
@@ -123,6 +126,8 @@ function ProgramRow({ program, isJa, onPreview, children }) {
 
 // Preview of a freshly chosen file before it is saved
 function ConfirmUploadModal({ pending, isJa, busy, onCancel, onConfirm }) {
+  // Escape closes the top-most modal
+  useEscapeClose(() => { if (!busy) onCancel(); });
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="flex h-[85vh] w-full max-w-5xl flex-col rounded-2xl border border-outline-variant/30 bg-surface shadow-2xl">
@@ -157,6 +162,8 @@ function ConfirmUploadModal({ pending, isJa, busy, onCancel, onConfirm }) {
 }
 
 function HistoryModal({ slot, isJa, onClose, onRestored, onPreview }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);

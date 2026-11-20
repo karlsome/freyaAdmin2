@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchCheckFormTemplateById } from "../services/api";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -21,13 +22,8 @@ export default function TemplateQuickPeekModal({
   const [previewImage, setPreviewImage] = useState(null);
   const targetItemRef = useRef(null);
 
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  // Escape closes the top-most modal (the image preview on top closes itself first)
+  useEscapeClose(onClose);
 
   useEffect(() => {
     if (initialTemplate) {

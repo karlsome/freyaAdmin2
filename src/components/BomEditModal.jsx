@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { query, createMasterRecord, updateMasterRecord } from '../services/api';
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const HINBAN_PROJECTION = {
   "品番": 1,
@@ -465,6 +466,8 @@ function SearchableProcessSelect({
 }
 
 export default function BomEditModal({ existingBom, initialHinban = "", onClose, onSaved, onEditExisting, onFlash }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
 

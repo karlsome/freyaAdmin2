@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Conversion, Input, Output, BlobSource, BufferTarget, Mp4OutputFormat, ALL_FORMATS } from "mediabunny";
 import IconButton from "../IconButton";
 import { useLanguage } from "../../contexts/LanguageContext";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return "00:00.0";
@@ -72,6 +73,8 @@ export default function VideoTrimmerEditorModal({
   onSave,
   onSkip,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(open && videoFile));
   const { language } = useLanguage();
   const isJa = language === "ja";
 

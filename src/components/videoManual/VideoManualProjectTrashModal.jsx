@@ -7,6 +7,7 @@ import {
   permanentlyDeleteVideoManualProject,
   restoreVideoManualProject,
 } from "../../services/videoManualApi";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 function formatDeletedAt(value) {
   const date = value ? new Date(value) : null;
@@ -34,11 +35,8 @@ export default function VideoManualProjectTrashModal({ playlistId, canRestore, c
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !busyId) onClose(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [busyId, onClose]);
+  // Escape closes the top-most modal (ignored while busy)
+  useEscapeClose(() => { if (!busyId) onClose(); });
 
   async function handleRestore(item) {
     setBusyId(String(item._id));

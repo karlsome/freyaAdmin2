@@ -22,6 +22,7 @@ import {
   normalizeCuts,
   parseClock,
 } from "./autoStepsUtils";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const CUTS_SAVE_DELAY_MS = 800;
 
@@ -120,11 +121,8 @@ export default function VideoManualAutoStepsModal({ projectId, playlistId, onClo
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !busy) onClose(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [busy, onClose]);
+  // Escape closes the top-most modal (ignored while busy)
+  useEscapeClose(() => { if (!busy) onClose(); });
 
   // Edited cuts are saved to the draft shortly after each change.
   useEffect(() => {

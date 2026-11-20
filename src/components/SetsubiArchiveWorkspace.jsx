@@ -8,8 +8,11 @@ import {
   restoreEquipmentRecord,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onCancel);
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -36,6 +39,8 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 }
 
 export default function SetsubiArchiveWorkspace({ onFlash, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
 

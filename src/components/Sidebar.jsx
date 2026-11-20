@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
 import freyaLogo from "../assets/freya-systems-logo.png";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const navItems = [
   { icon: "dashboard",                labelKey: "dashboard",           page: "dashboard" },
@@ -128,16 +129,8 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
 
   const { t, language, changeLanguage } = useLanguage();
 
-  useEffect(() => {
-    if (!mobileOpen) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose?.();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [mobileOpen, onClose]);
+  // Escape closes the mobile drawer (shared stack with the modals)
+  useEscapeClose(onClose, mobileOpen);
 
   function toggleOpen(page) {
     setOpenItems((prev) => {

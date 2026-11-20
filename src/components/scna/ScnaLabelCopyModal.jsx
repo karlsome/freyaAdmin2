@@ -3,6 +3,7 @@ import { useState } from "react";
 import { duplicateScnaLabelLayout } from "../../services/scnaApi";
 import { readStoredAuthUser } from "../../utils/auth";
 import { LABEL_PROCESSES, LABEL_PROCESS_NAMES, layoutProcesses } from "./scnaLabelUtils";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const inputCls = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-xs";
 const btnCls = "rounded-[6px] border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] disabled:opacity-40";
@@ -10,6 +11,8 @@ const primaryBtn = "rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs fon
 
 // Copy a layout into other processes. The copy is an independent layout: editing it later never changes the original.
 export default function ScnaLabelCopyModal({ doc, process, t, onClose, onCopied, onFlash }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const isJa = t("a", "b") === "b";
   const inLayout = layoutProcesses(doc);
   const [targets, setTargets] = useState([]);

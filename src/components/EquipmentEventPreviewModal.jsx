@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function isVideoUrl(url) {
   return /\.(mp4|mov|webm)$/i.test(url.split("?")[0]);
@@ -12,6 +13,8 @@ function isImageUrl(url) {
 }
 
 export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onExpand }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(event));
   const { language, t } = useLanguage();
   const [previewState, setPreviewState] = useState(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);

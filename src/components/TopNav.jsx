@@ -3,6 +3,7 @@ import { getAuthDisplayName, getAuthInitials } from "../utils/auth";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
 import NotificationBell from "./NotificationBell";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const LANGUAGES = [
   { code: "ja", label: "Japanese", nativeLabel: "日本語", flag: "🇯🇵" },
@@ -37,18 +38,11 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
     }
   }, [langDropdownOpen, userDropdownOpen]);
 
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        setLangDropdownOpen(false);
-        setUserDropdownOpen(false);
-      }
-    }
-    if (langDropdownOpen || userDropdownOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [langDropdownOpen, userDropdownOpen]);
+  // Escape closes an open dropdown (shared stack with the modals)
+  useEscapeClose(() => {
+    setLangDropdownOpen(false);
+    setUserDropdownOpen(false);
+  }, langDropdownOpen || userDropdownOpen);
 
   return (
     <header className="topnav-glass fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between px-4 font-headline antialiased sm:px-6 md:pl-24 md:pr-8">

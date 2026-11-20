@@ -4,6 +4,7 @@ import { assignScnaLabelLayoutItems, fetchScnaLabelItems } from "../../services/
 import ScnaLabelAssignModal from "./ScnaLabelAssignModal";
 import { itemsForProcess } from "./scnaLabelUtils";
 import { LayoutPreview } from "./ScnaLabelThumb";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const inputCls = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs";
 const btnCls = "rounded-[6px] border border-[var(--border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] disabled:opacity-40";
@@ -14,6 +15,8 @@ const fmtDate = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
 
 // One layout in detail: preview, facts, and the items assigned to it (paginated).
 export default function ScnaLabelLayoutDetailModal({ doc, layouts, process, startAssign, t, onClose, onEdit, onChanged, onFlash }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

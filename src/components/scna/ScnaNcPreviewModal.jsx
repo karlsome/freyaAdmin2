@@ -1,19 +1,14 @@
 import { createPortal } from "react-dom";
-import { useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import ScnaNcProgramPreview from "./ScnaNcProgramPreview";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 export default function ScnaNcPreviewModal({ title, subtitle, points, loading, onClose }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
 
   return createPortal(
     <div

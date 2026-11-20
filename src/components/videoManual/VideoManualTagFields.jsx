@@ -103,7 +103,7 @@ function TagSelect({ label, icon, options, value, onChange }) {
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setOpen((current) => !current); }
-          if (event.key === "Escape" && open) { event.stopPropagation(); setOpen(false); }
+          if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); }
         }}
         className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[6px] border bg-[var(--surface-subtle)] px-2 py-1.5 outline-none transition-colors ${open ? "border-[var(--freya-blue)] ring-1 ring-[var(--freya-blue)]" : "border-[var(--border)] hover:border-[var(--border-strong)]"}`}
       >

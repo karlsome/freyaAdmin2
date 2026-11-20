@@ -26,6 +26,7 @@ import {
   buildAnalyticsFilterClauses,
 } from "../components/analytics/analyticsFilterUtils";
 import { fetchDistinctValues } from "../services/api";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function formatNumber(val) {
   if (val === undefined || val === null || Number.isNaN(Number(val))) return "0";
@@ -264,6 +265,8 @@ function MaterialLotCard({ lot, onOpenHistory, onPreview, isJa }) {
 }
 
 function LotUsageHistoryModal({ lot, onClose, onPreview, onOpenRecord, isJa }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(lot));
   if (!lot) return null;
 
   const material = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
@@ -774,22 +777,7 @@ export default function AnalyticsPage() {
     openRecord(record, "Press");
   };
 
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        if (photoPreview) {
-          setPhotoPreview(null);
-        } else if (modalRecord) {
-          closeRecord();
-        } else if (historyModalLot) {
-          setHistoryModalLot(null);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [photoPreview, modalRecord, historyModalLot, closeRecord]);
+  // Escape: each modal (lot history, record detail, photo preview) closes itself, top-most first
 
   // Lock body scroll when any modal is open
   useEffect(() => {

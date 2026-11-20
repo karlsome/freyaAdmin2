@@ -5,6 +5,7 @@ import LiquidSegmentedControl from "./LiquidSegmentedControl";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMasterImage } from "../services/api";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 /**
  * FirstFactoryDetailModal
@@ -40,20 +41,8 @@ export default function FirstFactoryDetailModal({
     }
   }, [r]);
 
-  // Handle ESC key to close
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        if (photoPreview) {
-          setPhotoPreview(null);
-        } else {
-          onClose();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, photoPreview]);
+  // Escape closes the top-most modal (the photo preview on top closes itself first)
+  useEscapeClose(onClose, Boolean(r));
 
   if (!r) return null;
 

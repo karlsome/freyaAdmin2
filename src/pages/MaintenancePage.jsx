@@ -13,6 +13,7 @@ import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormDetailModal from "../components/CheckFormDetailModal";
 import PageHeader from "../components/PageHeader";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const STATUS_CONFIG = {
   active: {
@@ -927,6 +928,8 @@ export default function MaintenancePage() {
 }
 
 function DeactivateConfirmModal({ form, machineNames = [], onClose, onConfirm, language }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const isJa = language === "ja";
   const formName = isJa
     ? (form.name_ja || form.name || form.name_en)

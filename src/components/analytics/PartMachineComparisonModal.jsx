@@ -6,6 +6,7 @@ import { fetchEquipmentData, fetchPartCrossMachineComparison, fetchMasterImage }
 import { calculateEquipmentAnalytics, getFactoryBadgeStyle } from "./equipmentAnalyticsUtils";
 import RecordDetailModal from "../RecordDetailModal";
 import SensorDevicePhotoPreviewModal from "../SensorDevicePhotoPreviewModal";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 function getMonthEndDate(ym) {
   const [y, m] = ym.split("-").map(Number);
@@ -70,23 +71,8 @@ export default function PartMachineComparisonModal({
   const chartCanvasRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
-  // Handle ESC key
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        if (photoPreview) {
-          setPhotoPreview(null);
-        } else if (selectedRecordForDetail) {
-          setSelectedRecordForDetail(null);
-        } else {
-          onClose();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, photoPreview, selectedRecordForDetail]);
+  // Escape closes the top-most modal (photo preview / record detail on top close themselves first)
+  useEscapeClose(onClose, isOpen);
 
   // Load product image from masterDB if exactly 1 part
   useEffect(() => {

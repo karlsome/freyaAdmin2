@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BASE_URL } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function isVideoUrl(url) {
   return /\.(mp4|mov)$/i.test(url.split("?")[0]);
@@ -100,12 +101,6 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
     if (!activeImage?.url) return undefined;
 
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-
       if (!hasMultipleImages) return;
 
       if (event.key === "ArrowLeft" && canGoPrevious) {
@@ -119,7 +114,10 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeImage?.url, canGoNext, canGoPrevious, hasMultipleImages, onClose, onNavigate]);
+  }, [activeImage?.url, canGoNext, canGoPrevious, hasMultipleImages, onNavigate]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(activeImage?.url));
 
   if (!activeImage?.url) return null;
 

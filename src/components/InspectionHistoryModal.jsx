@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { fetchCheckFormTemplates, fetchSetsubiDBRecords, fetchCheckFormRecords } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function normalizeId(id) {
   if (!id) return "";
@@ -132,6 +133,8 @@ function Cell({ status, onClick, hasNG }) {
 }
 
 function RecordDetailModal({ record, form, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const fields = (form?.fields ?? []).filter(f => f.type !== "name");
@@ -253,6 +256,8 @@ function RecordDetailModal({ record, form, onClose }) {
 const RANGES = [30, 60];
 
 export default function InspectionHistoryModal({ onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [templates, setTemplates] = useState([]);

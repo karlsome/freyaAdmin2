@@ -13,6 +13,7 @@ import CollapsibleSection from "./CollapsibleSection";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import RecordEditModal from "./RecordEditModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
@@ -637,6 +638,8 @@ function KensaTraceSection({ record }) {
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
 //   onUpdated   — optional callback triggered after successful edit
 export default function RecordDetailModal({ record, processName, onClose, onLotClick, onUpdated, zIndex }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
 

@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 export default function PlannerModalShell({
   open,
@@ -14,16 +14,8 @@ export default function PlannerModalShell({
   const { language } = useLanguage();
   const isJa = language === "ja";
 
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose?.();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   if (!open) return null;
 

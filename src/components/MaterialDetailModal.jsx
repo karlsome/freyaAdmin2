@@ -4,15 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import { query } from "../services/api";
 import { useLanguage } from '../contexts/LanguageContext';
 import SensorDevicePhotoPreviewModal from './SensorDevicePhotoPreviewModal';
+import useEscapeClose from "../hooks/useEscapeClose";
 
 export default function MaterialDetailModal({ modalData, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(modalData));
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [nestedMaterialData, setNestedMaterialData] = useState(null);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setNestedMaterialData(null), Boolean(nestedMaterialData));
   const [loadingNested, setLoadingNested] = useState(false);
   const [bomData, setBomData] = useState(modalData?.['BOM'] || null);
   const [previewImage, setPreviewImage] = useState(null);
   const [bomNotFoundHinban, setBomNotFoundHinban] = useState(null);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setBomNotFoundHinban(null), Boolean(bomNotFoundHinban));
 
   const mainImageUrl = modalData?.['品目マスタ']?.['imageURL'] || modalData?.['imageURL'] || modalData?.imageURL;
 

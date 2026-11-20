@@ -17,6 +17,7 @@ import {
 } from "../../utils/planner";
 import { useLanguage } from "../../contexts/LanguageContext";
 import SensorDevicePhotoPreviewModal from "../SensorDevicePhotoPreviewModal";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const SLOT_WIDTH = 56;
 const LABEL_WIDTH = 132;
@@ -73,6 +74,8 @@ export default function PlannerTimelineView({
   onInProgressClick,
 }) {
   const [infoPopover, setInfoPopover] = useState(null);
+  // Escape closes the info popover
+  useEscapeClose(() => setInfoPopover(null), Boolean(infoPopover));
   const draggingIdRef = useRef(null);
   const dragOffsetRef = useRef(0); // slots between the tile head and the cell the user grabbed
   const [blockedSlot, setBlockedSlot] = useState(null); // `${equipment}|${slot}` the dragged tile cannot go to
@@ -238,6 +241,7 @@ export default function PlannerTimelineView({
                   setHitIndex(next);
                   scrollToHit(next);
                 } else if (event.key === "Escape") {
+                  event.preventDefault(); // clears the search; does not close the modal
                   setSearchText("");
                 }
               }}

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -26,19 +27,13 @@ export default function NodaModalFrame({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose?.();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   if (!open) return null;
 

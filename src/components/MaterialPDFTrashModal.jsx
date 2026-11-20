@@ -8,6 +8,7 @@ import {
   getMaterialPDFItemId,
   getTrashAgeSummary,
 } from "../utils/materialPDFs";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -36,23 +37,20 @@ export default function MaterialPDFTrashModal({
   useEffect(() => {
     if (!open) return undefined;
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
     function handleMouseDown(event) {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         onClose();
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleMouseDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleMouseDown);
     };
   }, [open, onClose]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   if (!open) return null;
 

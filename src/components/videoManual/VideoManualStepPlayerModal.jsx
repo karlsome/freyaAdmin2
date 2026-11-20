@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchVideoManualProjectTranslation } from "../../services/videoManualApi";
 import { getStepClips } from "./videoManualPlaybackUtils";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 // Video-manual only (separate from the app's own language setting). Labels are shown in their own language.
 const PLAYER_LANGUAGES = [
@@ -138,11 +139,8 @@ export default function VideoManualStepPlayerModal({ steps, projectId = "", star
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const onKey = (event) => { if (event.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
 
   const handleTimeUpdate = () => {
     const video = videoRef.current;

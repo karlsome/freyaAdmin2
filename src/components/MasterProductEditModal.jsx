@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { query } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function SearchableDropdown({
   label,
@@ -950,6 +951,8 @@ export default function MasterProductEditModal({
   onSubmit,
   onUploadImage,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
   const { t, language } = useLanguage();
   const isJa = language === "ja";
   const fileInputRef = useRef(null);

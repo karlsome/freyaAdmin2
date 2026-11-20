@@ -95,7 +95,7 @@ function SuggestInput({ type = "text", value, options, onChange, className }) {
         value={value}
         onChange={onChange}
         onFocus={() => setOpen(true)}
-        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+        onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setOpen(false); } }}
         className={`w-full ${className}`}
       />
       {open && filteredOptions.length > 0 && (

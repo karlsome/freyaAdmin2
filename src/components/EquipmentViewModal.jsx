@@ -3,8 +3,11 @@ import { createPortal } from "react-dom";
 import ModalShell from "./ModalShell";
 import { fetchEquipmentHistory } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function ImageLightbox({ url, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(url));
   if (!url) return null;
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
@@ -87,6 +90,8 @@ function EventCard({ event, isJa }) {
  *   onClose    — () => void
  */
 export default function EquipmentViewModal({ open, equipment, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(open && equipment));
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [history, setHistory] = useState([]);

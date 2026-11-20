@@ -5,6 +5,7 @@ import { fetchDailyReportList } from "../services/api";
 import { useDailyReportCount, yesterdayLocal } from "../hooks/useDailyReportCount";
 import { CATEGORY_META, SEVERITY_META, describeFinding } from "../utils/dailyReportText";
 import "./dailyReport/dailyReport.css";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const PAGE_SIZE = 15;
 
@@ -52,16 +53,14 @@ export default function NotificationBell() {
     const onDown = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
-    const onKey = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  // Escape closes the dropdown (shared stack with the modals)
+  useEscapeClose(() => setOpen(false), open);
 
   const goTo = (path) => {
     setOpen(false);

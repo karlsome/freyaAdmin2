@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -42,13 +43,8 @@ export default function DeviceNamingModal({
     }
   }, [open, initialName, initialOffset, initialImageURLs]);
 
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   if (!open) return null;
 

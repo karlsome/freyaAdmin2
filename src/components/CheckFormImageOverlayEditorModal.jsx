@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Arrow, Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText, Transformer } from "react-konva";
 import IconButton from "./IconButton";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const TOOL_OPTIONS = [
   { value: "select", label: "Select", label_ja: "選択", icon: "arrow_selector_tool" },
@@ -464,10 +465,6 @@ export default function CheckFormImageOverlayEditorModal({
     if (!open) return undefined;
 
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-
       if ((event.key === "Delete" || event.key === "Backspace") && selectedId) {
         event.preventDefault();
         setHistoryState((current) => {
@@ -483,7 +480,10 @@ export default function CheckFormImageOverlayEditorModal({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose, selectedId]);
+  }, [open, selectedId]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   useEffect(() => {
     const selectedAnnotation = annotations.find((annotation) => annotation.id === selectedId);

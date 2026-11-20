@@ -13,6 +13,7 @@ import {
   uploadEquipmentEventImage,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const EVENT_CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
 
@@ -34,6 +35,8 @@ import SetsubiRecordModal from "./SetsubiRecordModal";
 // ── Shared sub-components ────────────────────────────────────────────────────
 
 function SuccessModal({ message, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(message));
   const { language } = useLanguage();
   const isJa = language === "ja";
   if (!message) return null;
@@ -61,6 +64,8 @@ function SuccessModal({ message, onClose }) {
 }
 
 function MediaLightbox({ url, onClose }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(url));
   if (!url) return null;
   const isVideo = isVideoUrl(url);
   return createPortal(
@@ -87,6 +92,8 @@ function MediaLightbox({ url, onClose }) {
 // ── Event detail / edit popup ────────────────────────────────────────────────
 
 function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, onDeleted }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -610,6 +617,8 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
 
   // Recycle bin modal
   const [binOpen, setBinOpen] = useState(false);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setBinOpen(false), binOpen);
   const [binRefresh, setBinRefresh] = useState(0);
 
   // View toggle + all-records list

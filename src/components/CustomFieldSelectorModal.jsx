@@ -2,10 +2,13 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { fetchCustomFields } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const IGNORED_KEYS = ["_id", "createdAt", "updatedAt", "__v", "id"];
 
 export default function CustomFieldSelectorModal({ onClose, onSelectField }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
 

@@ -4,6 +4,7 @@ import ChartJS from "./chartSetup";
 import { exportEquipmentToCsv } from "./equipmentAnalyticsUtils";
 import RecordDetailModal from "../RecordDetailModal";
 import MachineMoMComparisonView from "./MachineMoMComparisonView";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 export default function MachineDetailModal({
   machine,
@@ -30,20 +31,8 @@ export default function MachineDetailModal({
   // Record Details Modal state
   const [selectedRecordForDetail, setSelectedRecordForDetail] = useState(null);
 
-  // Handle ESC key to close
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        if (selectedRecordForDetail) {
-          setSelectedRecordForDetail(null);
-        } else {
-          onClose();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, selectedRecordForDetail]);
+  // Escape closes the top-most modal (the record detail on top closes itself first)
+  useEscapeClose(onClose);
 
   const handleOpenRecordDetail = (r) => {
     if (!r) return;

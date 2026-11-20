@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import ChartJS from "../analytics/chartSetup";
 import { CATEGORY_META, SEVERITY_META, columnLabel, fmtUnit, formatCell, md } from "../../utils/dailyReportText";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 // Canvas needs real colours, not CSS variables.
 const SEV_HEX = { high: "#DC2626", medium: "#D97706", info: "#64748B", ongoing: "#7C3AED", good: "#16A34A" };
@@ -77,14 +78,8 @@ export default function ReportDetailView({ finding, text, isJa, date, checked, o
   };
   const linkFirstCell = (r) => Boolean(r.leader || r.worker || r.group);
 
-  useEffect(() => {
-    if (escDisabled) return undefined; // a record modal is open on top; Esc belongs to it
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, escDisabled]);
+  // Escape closes the top-most modal (not while a record modal is open on top)
+  useEscapeClose(onClose, !escDisabled);
 
   // Portal to <body> so it covers the top bar and sidebar too.
   return createPortal(

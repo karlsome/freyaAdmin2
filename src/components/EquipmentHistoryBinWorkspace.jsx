@@ -8,8 +8,11 @@ import {
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 import SetsubiArchiveWorkspace from "./SetsubiArchiveWorkspace";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function ConfirmModal({ message, onConfirm, onCancel, isJa }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onCancel);
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-2xl">

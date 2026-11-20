@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import { BASE_URL } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const FACTORY_CAMS = {
   '小瀬': [
@@ -17,6 +18,8 @@ const FACTORY_CAMS = {
 };
 
 export default function CameraModal({ onClose, factory = '小瀬', stream }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const camLabels = FACTORY_CAMS[factory] ?? FACTORY_CAMS['小瀬'];

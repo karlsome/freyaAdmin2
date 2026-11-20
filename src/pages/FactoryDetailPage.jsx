@@ -24,6 +24,7 @@ import ProductionFilterBar from "../components/ProductionFilterBar";
 import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 // HH:MM in JST from an epoch / date. The stored actualStartTime/actualEndTime text was written in
 // UTC by older servers (09:32 JST -> "00:32"), so prefer the timestamps.
@@ -68,6 +69,8 @@ const SECTION_LABELS_JA = {
 
 // ─── MfgLotModal ─────────────────────────────────────────────────────────────
 function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [lotInput, setLotInput]       = useState(initialLot);

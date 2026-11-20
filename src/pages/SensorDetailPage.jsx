@@ -9,6 +9,7 @@ import DeviceNamingModal from "../components/DeviceNamingModal";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { getAuthUser } from "../utils/masterDB";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
 const SENSOR_DEVICE_OFFLINE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -294,6 +295,8 @@ function SensorCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function YearSelectionModal({ isOpen, onClose, onApply, initialSelectedYears }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, isOpen);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [selected, setSelected] = useState(initialSelectedYears);

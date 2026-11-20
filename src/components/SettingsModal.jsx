@@ -1,7 +1,7 @@
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const LANGUAGES = [
   { code: "en", label: "English", nativeLabel: "English", flag: "🇺🇸" },
@@ -11,14 +11,8 @@ const LANGUAGES = [
 export default function SettingsModal({ isOpen, onClose }) {
   const { t, language, changeLanguage } = useLanguage();
 
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    function handleKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, isOpen);
 
   if (!isOpen) return null;
 

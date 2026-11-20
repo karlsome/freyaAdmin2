@@ -3,6 +3,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { filterSelectableProducts } from "../utils/productPDFs";
 import EmptyState from "./EmptyState";
 import IconButton from "./IconButton";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 export default function ProductPDFProductSelectorModal({
   open,
@@ -28,23 +29,20 @@ export default function ProductPDFProductSelectorModal({
   useEffect(() => {
     if (!open) return undefined;
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
     function handleMouseDown(event) {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         onClose();
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleMouseDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleMouseDown);
     };
   }, [open, onClose]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   if (!open) return null;
 

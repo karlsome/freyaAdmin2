@@ -8,6 +8,7 @@ import {
   tagVideoManualProjects,
 } from "../../services/videoManualApi";
 import VideoManualTagFields from "./VideoManualTagFields";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 /** Tag one project (edit its tags) or a whole selection (add / remove tags) with 工場 and 設備 values. */
 export default function VideoManualTagsModal({ ids = [], label = "", project = null, playlistId, onClose, onDone }) {
@@ -21,11 +22,8 @@ export default function VideoManualTagsModal({ ids = [], label = "", project = n
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose, saving]);
+  // Escape closes the top-most modal (ignored while saving)
+  useEscapeClose(() => { if (!saving) onClose(); });
 
   useEffect(() => {
     let cancelled = false;

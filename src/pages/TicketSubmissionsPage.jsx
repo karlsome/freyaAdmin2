@@ -27,6 +27,7 @@ import {
   TICKET_SUBMISSION_IMAGE_OPTIONS,
   TICKET_SUBMISSION_PAGE_SIZE_OPTIONS,
 } from "../utils/ticketSubmissions";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const EMPTY_PAGINATION = {
   currentPage: 1,
@@ -448,16 +449,8 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
 }
 
 function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFiltered }) {
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
 
   return (
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150" onClick={onClose}>
@@ -707,16 +700,8 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
       }));
   }, [activeFieldLabel, isTicketOptional, ticket?.imageURLs]);
 
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape" && !previewImage?.images?.length) {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, previewImage?.images?.length]);
+  // Escape closes the top-most modal (the image preview on top closes itself first)
+  useEscapeClose(onClose);
 
   function openPreviewImage(index) {
     if (!previewImages[index]?.url) return;
@@ -1113,6 +1098,8 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 }
 
 function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
+  // Escape closes the top-most modal
+  useEscapeClose(() => { if (!busy) onClose(); });
   const { language, t } = useLanguage();
   const activeFieldLabel = language === "en"
     ? (ticket?.fieldLabel_en || ticket?.fieldLabel)

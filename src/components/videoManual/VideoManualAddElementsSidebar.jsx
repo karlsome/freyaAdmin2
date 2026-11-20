@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import VideoManualClipPropertiesPanel from "./VideoManualClipPropertiesPanel";
 import VideoManualKeyframePanel from "./VideoManualKeyframePanel";
 import { getClipCategory } from "./videoManualEditorUtils";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const ADD_CATEGORIES = [
   { id: "text", label: "Text", icon: "text_fields" },
@@ -165,17 +166,14 @@ export default function VideoManualAddElementsSidebar({
       onClose();
     }
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
     document.addEventListener("pointerdown", handlePointerDown, true);
-    document.addEventListener("keydown", handleKeyDown, true);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [isOpen, onClose]);
+
+  // Escape closes the drawer (shared stack with the modals)
+  useEscapeClose(onClose, isOpen);
 
   const renderPanel = () => {
     if (showingProperties) {

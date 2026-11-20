@@ -18,6 +18,7 @@ import {
 import ScnaLabelExplorer from "./ScnaLabelExplorer";
 import { LABEL_PROCESSES, LABEL_PROCESS_NAMES, layoutProcesses } from "./scnaLabelUtils";
 import { readStoredAuthUser } from "../../utils/auth";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 // Layout JSON contract (read by print_DBprinter.py): units are mm, origin top-left.
 //   { widthMm, heightMm, elements: [{ id, type, x, y, w, h, ... }] }
@@ -430,6 +431,8 @@ function ScnaLabelEditor({ onFlash, initialDoc, defaultProcess, onBack, requestT
   const [catalog, setCatalog] = useState({ fields: [], names: [] });
   const [fieldSearch, setFieldSearch] = useState("");
   const [namesOpen, setNamesOpen] = useState(false);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setNamesOpen(false), namesOpen);
   const [nameDraft, setNameDraft] = useState({});
   const [savingNames, setSavingNames] = useState(false);
   const [guides, setGuides] = useState([]); // [{ orientation: 'v'|'h', pos }] in px
@@ -702,18 +705,18 @@ function ScnaLabelEditor({ onFlash, initialDoc, defaultProcess, onBack, requestT
     };
   }, []);
 
-  // ── right-click menu: close on outside click / Escape ──
+  // ── right-click menu: Escape closes it (shared stack with the modals) ──
+  useEscapeClose(() => setMenu(null), Boolean(menu));
+
+  // ── right-click menu: close on outside click ──
   useEffect(() => {
     if (!menu) return undefined;
     const close = () => setMenu(null);
     function onDown(e) { if (!menuRef.current?.contains(e.target)) close(); }
-    function onKey(e) { if (e.key === "Escape") close(); }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
     window.addEventListener("blur", close);
     return () => {
       document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
       window.removeEventListener("blur", close);
     };
   }, [menu]);

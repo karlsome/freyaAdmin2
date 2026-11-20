@@ -10,6 +10,7 @@ import ScnaLabelLayoutDetailModal from "./ScnaLabelLayoutDetailModal";
 import ScnaLabelCopyModal from "./ScnaLabelCopyModal";
 import { itemsForProcess } from "./scnaLabelUtils";
 import { LayoutPreview } from "./ScnaLabelThumb";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const inputCls = "rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-xs";
 const btnCls = "rounded-[6px] border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] disabled:opacity-40";
@@ -31,6 +32,8 @@ export default function ScnaLabelExplorer({ layouts, process, initialLayoutId, t
   const [detail, setDetail] = useState(null); // { id, assign }
   const [findOpen, setFindOpen] = useState(false);
   const [menuFor, setMenuFor] = useState(null);
+  // Escape closes the open ⋯ menu
+  useEscapeClose(() => setMenuFor(null), menuFor != null);
   const [copyDoc, setCopyDoc] = useState(null);
   const [rawItems, setRawItems] = useState([]);
 

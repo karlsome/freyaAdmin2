@@ -39,6 +39,7 @@ import {
   patchVideoManualProject,
   setVideoManualProjectTags,
 } from "../services/videoManualApi";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
 const SELECTED_PLAYLIST_STORAGE_KEY = "videoManual.selectedPlaylistId";
@@ -150,20 +151,20 @@ function InfoPopover({ anchorRef, onClose, children, width = 260, height = 190 }
       if (popoverRef.current?.contains(event.target) || anchor.contains(event.target)) return;
       onClose();
     };
-    const handleKey = (event) => { if (event.key === "Escape") onClose(); };
 
     place();
     window.addEventListener("resize", place);
     window.addEventListener("scroll", onClose, true);
     document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKey);
     return () => {
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", onClose, true);
       document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKey);
     };
   }, [anchorRef, height, onClose, width]);
+
+  // Escape closes the popover (it sits on top like a modal)
+  useEscapeClose(onClose);
 
   if (!position) return null;
   return createPortal(
@@ -554,11 +555,8 @@ function EditProjectModal({ project, playlistId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose, saving]);
+  // Escape closes the top-most modal (ignored while saving)
+  useEscapeClose(() => { if (!saving) onClose(); });
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -685,11 +683,8 @@ function EditPlaylistModal({ playlist, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose, saving]);
+  // Escape closes the top-most modal (ignored while saving)
+  useEscapeClose(() => { if (!saving) onClose(); });
 
   async function handleSubmit(event) {
     event.preventDefault();

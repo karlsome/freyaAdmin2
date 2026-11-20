@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 /**
  * Factory name in the dashboard header doubles as a picker.
@@ -11,14 +12,14 @@ export default function FactoryPicker({ factory, factories, onChange, isJa }) {
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  // Escape closes the dropdown (shared stack with the modals)
+  useEscapeClose(() => setOpen(false), open);
 
   const list = factories.some((f) => f.factory === factory)
     ? factories

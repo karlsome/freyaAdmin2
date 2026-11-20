@@ -5,6 +5,7 @@ import FieldOptionPickerModal from "./FieldOptionPickerModal";
 import { uploadMaintenanceImage, uploadMaterialLabelImage } from "../services/api";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -237,19 +238,8 @@ export default function RecordEditModal({
     setNote("");
   }, [computeDraft, open, record, schemaContext]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        if (pickerState.open || fieldPickerState.open) return;
-        onClose?.();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [fieldPickerState.open, onClose, open, pickerState.open]);
+  // Escape closes the top-most modal (an open picker on top closes itself first)
+  useEscapeClose(onClose, open);
 
   const sections = useMemo(() => {
     if (!draft) return [];

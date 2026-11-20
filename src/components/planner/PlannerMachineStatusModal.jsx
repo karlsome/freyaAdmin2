@@ -5,6 +5,7 @@ import {
   getEquipmentUnavailableInfo,
   isEquipmentUnavailable,
 } from "../../utils/planner";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const PRESET_REASONS = [
   { key: "mechanical", labelJa: "機械故障", labelEn: "Mechanical Failure", icon: "settings" },
@@ -22,12 +23,16 @@ export default function PlannerMachineStatusModal({
   onClose,
   onUpdateStatus,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
   const { language } = useLanguage();
   const isJa = language === "ja";
 
   const [search, setSearch] = useState("");
   const [filterTab, setFilterTab] = useState("all"); // 'all' | 'operational' | 'broken'
   const [reportingTarget, setReportingTarget] = useState(null); // equipmentName currently being edited
+  // Escape first cancels an open status report, then closes the modal
+  useEscapeClose(() => setReportingTarget(null), Boolean(open && reportingTarget));
   const [reportingReason, setReportingReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 

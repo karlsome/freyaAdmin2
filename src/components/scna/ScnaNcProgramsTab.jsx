@@ -491,7 +491,7 @@ export default function ScnaNcProgramsTab({ onFlash }) {
                               autoFocus
                               value={renameValue}
                               onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === "Enter") handleRename(program); if (e.key === "Escape") setRenamingId(null); }}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleRename(program); if (e.key === "Escape") { e.preventDefault(); setRenamingId(null); } }}
                               className="flex-1 rounded-[6px] border border-[var(--border)] px-2 py-1 text-xs"
                             />
                             <button type="button" onClick={() => handleRename(program)} className="text-xs font-semibold text-[var(--freya-blue)]">{isJa ? "保存" : "Save"}</button>

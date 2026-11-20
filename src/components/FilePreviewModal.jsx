@@ -1,7 +1,7 @@
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function isVideoUrl(url) {
   return /\.(mp4|mov)$/i.test(url.split("?")[0]);
@@ -16,16 +16,8 @@ export default function FilePreviewModal({ url, name, onClose }) {
   const isJa = language === "ja";
   const fileURL = String(url || "").trim();
 
-  useEffect(() => {
-    if (!fileURL) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [fileURL, onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(fileURL));
 
   if (!fileURL) return null;
 

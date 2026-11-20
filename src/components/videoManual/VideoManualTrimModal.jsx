@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { trimVideoFile } from "../../utils/trimVideoFile";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const MIN_TRIM_SECONDS = 0.5;
 
@@ -40,11 +41,8 @@ export default function VideoManualTrimModal({ file, onConfirm, onCancel }) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !trimming) onCancel(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onCancel, trimming]);
+  // Escape closes the top-most modal (ignored while trimming)
+  useEscapeClose(() => { if (!trimming) onCancel(); });
 
   const keptSeconds = Math.max(0, range.end - range.start);
   const isFullRange = duration > 0 && range.start <= 0.05 && range.end >= duration - 0.05;

@@ -25,6 +25,7 @@ import {
   createChecklistSubmissionFilterRow,
   matchesChecklistSubmissionAdvancedFilters,
 } from "../utils/checklistSubmissions";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function normalizeId(id) {
   if (!id) return "";
@@ -800,16 +801,8 @@ function ScheduleLaneLegendCell({ schedules, compact = false }) {
 function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSelect, schedule, submissions }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
 
   const scheduleLabel = SCHEDULE_META[schedule]?.label ?? formatScheduleLabel(schedule);
 
@@ -1363,6 +1356,8 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, t
 }
 
 function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, onOpenQuickPeek = null, record, templatesById = null }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isJa = language === "ja";

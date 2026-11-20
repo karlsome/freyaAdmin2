@@ -7,6 +7,7 @@ import {
   getAssetLibraryTypeLabel,
   normalizePlaylistAssetType,
 } from "./videoManualEditorUtils";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 function Icon({ children, className = "text-[20px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
@@ -18,13 +19,8 @@ function VideoPreviewModal({ asset, onClose }) {
   const name = asset?.name || asset?.fileName || t("Asset");
   const videoUrl = asset?.originalUrl || asset?.downloadUrl || asset?.url || asset?.previewUrl || "";
 
-  useEffect(() => {
-    const handler = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -205,6 +201,8 @@ export default function VideoManualAssetLibraryModal({
   onRestoreAssets,
   onPermanentDelete,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
   const { t } = useLanguage();
   const fileInputRef = useRef(null);
   const [editMode, setEditMode] = useState(false);

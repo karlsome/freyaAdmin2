@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 export default function MachineSelectorModal({
   isOpen,
@@ -28,15 +29,8 @@ export default function MachineSelectorModal({
     }
   }, [isOpen, selectedEquipment]);
 
-  // Handle ESC key
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeyDown(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, isOpen);
 
   const factories = useMemo(() => {
     return Object.keys(equipmentByFactory).sort();

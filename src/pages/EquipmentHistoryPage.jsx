@@ -22,6 +22,7 @@ import VideoTrimmerEditorModal from "../components/media/VideoTrimmerEditorModal
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterTabNav from "../components/MasterTabNav";
 import DataTable from "../components/DataTable";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -288,6 +289,8 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
 // ── Event Modal (Add / Edit) ──────────────────────────────────────────────────
 
 function EventModal({ event, history, factories, allEquipment, workerNames, username, submitting, onClose, onSubmit }) {
+  // Escape closes the top-most modal
+  useEscapeClose(() => { if (!submitting) onClose(); });
   const isEdit = Boolean(event);
   const draftKey = "equipment_event_draft";
 

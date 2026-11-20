@@ -2,12 +2,15 @@ import { createPortal } from "react-dom";
 import { useMemo, useState } from "react";
 import { LayoutPreview } from "./ScnaLabelThumb";
 import { effectiveLayouts } from "./scnaLabelUtils";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const inputCls = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs";
 const MAX_RESULTS = 30;
 
 // Type a 品番 / 背番号 and see which layouts that item prints with.
 export default function ScnaLabelItemSearchModal({ items, layouts, t, onClose, onOpenLayout }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const [query, setQuery] = useState("");
 
   const results = useMemo(() => {

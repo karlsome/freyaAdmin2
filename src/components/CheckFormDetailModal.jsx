@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { fetchNodaUserFullName } from "../services/nodaApi";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const STATUS_STYLES = {
   active: "bg-primary/10 text-primary",
@@ -202,6 +203,8 @@ export default function CheckFormDetailModal({
   onEdit,
   onClone,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
 

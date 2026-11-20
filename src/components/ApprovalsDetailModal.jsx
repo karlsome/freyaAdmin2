@@ -4,6 +4,7 @@ import { fetchApprovalMasterReference } from "../services/approvalsApi";
 import IconButton from "./IconButton";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const PhotoPreviewContext = createContext(() => {});
 import {
@@ -275,24 +276,21 @@ export default function ApprovalsDetailModal({
   useEffect(() => {
     if (!open) return undefined;
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose?.();
-    }
-
     function handleMouseDown(event) {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         onClose?.();
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleMouseDown);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleMouseDown);
     };
   }, [open, onClose]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
 
   useEffect(() => {
     let cancelled = false;

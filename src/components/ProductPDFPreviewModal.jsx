@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { formatProductPDFTitle } from "../utils/productPDFs";
 import IconButton from "./IconButton";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 export default function ProductPDFPreviewModal({ item, onClose }) {
   const { language } = useLanguage();
@@ -11,23 +12,20 @@ export default function ProductPDFPreviewModal({ item, onClose }) {
   useEffect(() => {
     if (!item) return undefined;
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
     function handleMouseDown(event) {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         onClose();
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleMouseDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleMouseDown);
     };
   }, [item, onClose]);
+
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(item));
 
   if (!item) return null;
 

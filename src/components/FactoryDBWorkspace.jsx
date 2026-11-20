@@ -9,6 +9,7 @@ import {
   updateMasterRecord,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function formatCoordinates(coordinates) {
   if (!coordinates || typeof coordinates !== "object") return "—";
@@ -46,6 +47,8 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [deleteBusyId, setDeleteBusyId] = useState(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setSuccessModalOpen(false), successModalOpen);
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {

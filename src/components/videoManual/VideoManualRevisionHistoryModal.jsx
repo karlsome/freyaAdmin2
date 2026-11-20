@@ -1,4 +1,5 @@
 import { useLanguage } from "../../contexts/LanguageContext";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 function Icon({ children, className = "text-[20px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
@@ -49,6 +50,8 @@ export default function VideoManualRevisionHistoryModal({
   onUndeploy,
   onBackToCurrent,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, open);
   const { t } = useLanguage();
 
   if (!open) return null;

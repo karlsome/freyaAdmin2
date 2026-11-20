@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchExportTemplates, saveExportTemplate } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const EXCLUDED_EXPORT_KEYS = new Set([
   "_id",
@@ -100,6 +101,8 @@ function flattenObject(obj, prefix = '') {
 }
 
 export default function ExportOptionsModal({ data, onClose, processName = "Export" }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [templates, setTemplates] = useState([]);

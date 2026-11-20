@@ -16,6 +16,7 @@ import FilePreviewModal from "./FilePreviewModal";
 import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
 import { getAuthUser } from "../utils/masterDB";
 import { useLanguage } from "../contexts/LanguageContext";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -348,6 +349,8 @@ export default function CheckFormBuilderModal({
   onSaved,
   presetSchedule = "",
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [viewportSize, setViewportSize] = useState(() => getBuilderViewportSize());
@@ -1100,6 +1103,8 @@ function OverlayDialog({
   descriptionClassName = "text-outline",
   closeButtonClassName = "bg-surface-container text-on-surface hover:bg-surface-container-high",
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   return createPortal(
     <div className={`fixed inset-0 ${zIndexClass} ${overlayClassName}`} onMouseDown={onClose}>
       <div className="flex min-h-full items-center justify-center p-4 sm:p-6">

@@ -10,6 +10,7 @@ import { BASE_URL } from '../services/api';
 import { readStoredAuthUser, getAuthDisplayName } from '../utils/auth';
 import { openFirstFactorySchedulePrintWindow } from '../utils/firstFactoryPdfExport';
 import * as xlsx from 'xlsx';
+import useEscapeClose from "../hooks/useEscapeClose";
 
 // 11/20 from 2026-11-20
 const fmtMonthDay = (dateStr) => (dateStr ? `${Number(dateStr.slice(5, 7))}/${Number(dateStr.slice(8, 10))}` : '');
@@ -153,6 +154,11 @@ export default function FirstFactoryPage() {
   const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
   const [setupComments, setSetupComments] = useState({});
   const [commentModalItem, setCommentModalItem] = useState(null);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setIsSyncModalOpen(false), isSyncModalOpen);
+  useEscapeClose(() => setIsImpactModalOpen(false), isImpactModalOpen);
+  useEscapeClose(() => setIsDiscrepancyModalOpen(false), isDiscrepancyModalOpen);
+  useEscapeClose(() => setCommentModalItem(null), Boolean(commentModalItem));
   const [tempCommentText, setTempCommentText] = useState('');
 
   // Helper to extract Kataban (型番) from material/BOM master

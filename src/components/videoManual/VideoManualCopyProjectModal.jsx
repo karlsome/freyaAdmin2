@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useLanguage } from "../../contexts/LanguageContext";
 import { bulkVideoManualProjects, duplicateVideoManualProject, moveVideoManualProject } from "../../services/videoManualApi";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 /** Pick a playlist and copy or move one project (or a whole selection) into it. */
 export default function VideoManualCopyProjectModal({ mode = "copy", ids = [], label = "", playlists, currentPlaylistId, onClose, onDone }) {
@@ -12,11 +13,8 @@ export default function VideoManualCopyProjectModal({ mode = "copy", ids = [], l
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const handleKey = (event) => { if (event.key === "Escape" && !saving) onClose(); };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose, saving]);
+  // Escape closes the top-most modal (ignored while saving)
+  useEscapeClose(() => { if (!saving) onClose(); });
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();

@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { assignScnaLabelLayoutItems, fetchScnaLabelItems } from "../../services/scnaApi";
+import useEscapeClose from "../../hooks/useEscapeClose";
 
 const inputCls = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs";
 const btnCls = "rounded-[6px] border border-[var(--border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] disabled:opacity-40";
@@ -11,6 +12,8 @@ const FILTERS = ["all", "unassigned", "mine", "other"];
 
 // Pick which SCNA masterDB items print with this layout in one process. Saves masterDB.labelLayoutByProcess.<process>.
 export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, process, t, onClose, onSaved, onFlash }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

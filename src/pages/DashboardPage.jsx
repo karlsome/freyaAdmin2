@@ -30,6 +30,7 @@ import { attentionUnits, buildUnits } from "../components/panels/twinUnits";
 import { AI_CARD_TO_WIDGET, LAYOUT_MODES, RIGHT_EDGE_SLOTS, WIDGETS } from "../components/panels/widgetRegistry";
 import "../components/twin/twin.css";
 import "../components/panels/panels.css";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 const DEFAULT_STREAM = "tapo_cam";
 
@@ -183,11 +184,8 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
   const isKensaSelected = Boolean(selectedId) && SCNA_KENSA_IDS.includes(selectedId) && factory === "SCNA";
   const selectedPartner = selected?.pair?.together ? machinesById[selected.pair.partner] : null;
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") setSelectedId(null); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  // Escape closes the machine drawer (shared stack with the modals)
+  useEscapeClose(() => setSelectedId(null), Boolean(selectedId));
 
   useEffect(() => () => clearTimeout(highlightTimer.current), []);
 

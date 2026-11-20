@@ -8,6 +8,7 @@ import MasterProductEditModal from "./MasterProductEditModal";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { BladeInfoModal } from "./BladesWorkspace";
 import MasterNcProgramsSection from "./MasterNcProgramsSection";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 export default function MasterProductDetailModal({
   record,
@@ -18,12 +19,16 @@ export default function MasterProductDetailModal({
   onSave,
   onUploadImage,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(open && record));
   const { t, language } = useLanguage();
   const isJa = language === "ja";
   const navigate = useNavigate();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [bomNotFoundHinban, setBomNotFoundHinban] = useState(null);
+  // Escape closes the top-most modal
+  useEscapeClose(() => setBomNotFoundHinban(null), Boolean(bomNotFoundHinban));
   const [isCheckingBom, setIsCheckingBom] = useState(false);
   const fileInputRef = useRef(null);
 

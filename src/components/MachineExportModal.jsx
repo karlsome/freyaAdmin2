@@ -8,6 +8,7 @@ import {
   openDigitalChecklistPrintWindow,
   downloadMachineChecklistCSV,
 } from "../utils/machineChecklistExport";
+import useEscapeClose from "../hooks/useEscapeClose";
 
 export default function MachineExportModal({
   machine,
@@ -18,6 +19,8 @@ export default function MachineExportModal({
   equipmentMap = null,
   onClose,
 }) {
+  // Escape closes the top-most modal
+  useEscapeClose(onClose, Boolean(machine));
   const { language } = useLanguage();
   const isJa = language === "ja";
 
