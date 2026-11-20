@@ -963,6 +963,25 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, t
     return Boolean(ticket) && isTicketFixed(ticket);
   };
 
+  // Who closed the defect ticket(s), for "Ticket closed — name"
+  const getTicketCloserName = (ticket) => String(ticket?.closedBy || ticket?.closedByUsername || "").trim();
+  const getDefectCloserName = (defect) => {
+    const tickets = ticketsByRecordId?.get(defect._recordId) || [];
+    const ticket = tickets.find((t) => doesTicketMatchField(t, getFieldTicketHint(defect)) && isTicketFixed(t));
+    return getTicketCloserName(ticket);
+  };
+  const closerNames = useMemo(() => {
+    const names = new Set();
+    for (const sub of allSubmissions) {
+      if (!submissionHasDefect(sub)) continue;
+      const tickets = ticketsByRecordId?.get(normalizeId(sub?.record?._id ?? sub?.record?.recordId)) || [];
+      for (const t of tickets) {
+        if (!t.isOptional && isTicketFixed(t) && getTicketCloserName(t)) names.add(getTicketCloserName(t));
+      }
+    }
+    return [...names];
+  }, [allSubmissions, ticketsByRecordId]);
+
   // Extract primary submission (NG first, or latest)
   const primarySubmission = useMemo(() => {
     if (hasNG) {
@@ -1171,6 +1190,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, t
                         const defectReasonText = defect.reason || defect.defectDetails || (isJa ? "規格外・異常の報告あり" : "Defect reported");
                         const targetId = defect.fieldId || defect.id || defect.label || defect.fieldLabel;
                         const fixed = isDefectAnswerFixed(defect);
+                        const closerName = fixed ? getDefectCloserName(defect) : "";
 
                         return (
                           <div
@@ -1184,6 +1204,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, t
                                   <span className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-px text-[9.5px] font-bold text-emerald-700 dark:text-emerald-300">
                                     <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
                                     {isJa ? "クローズ済" : "Closed"}
+                                    {closerName && <span className="font-semibold">— {closerName}</span>}
                                   </span>
                                 )}
                               </p>
@@ -1219,6 +1240,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, t
                     <p className="font-semibold pl-5 flex items-center gap-1">
                       <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check</span>
                       {isJa ? "チケットクローズ済" : "Ticket closed"}
+                      {closerNames.length > 0 && ` — ${closerNames.join(", ")}`}
                     </p>
                   )}
                 </div>
