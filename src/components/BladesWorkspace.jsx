@@ -29,13 +29,14 @@ function toBase64(file) {
 
 const DETAIL_FIELDS = [
   { key: "maker", labelJa: "メーカー", labelEn: "Maker", type: "text", placeholderJa: "例: 山田刃物株式会社", placeholderEn: "e.g. Yamada Blade Co." },
+  { key: "contactName", labelJa: "担当者名", labelEn: "Contact Name", type: "text", placeholderJa: "例: 山田 太郎", placeholderEn: "e.g. Taro Yamada" },
   { key: "contactNumber", labelJa: "連絡先電話番号", labelEn: "Contact Number", type: "tel", placeholderJa: "例: 03-1234-5678", placeholderEn: "e.g. 03-1234-5678" },
   { key: "makerEmail", labelJa: "メーカーメール", labelEn: "Maker Email", type: "email", placeholderJa: "例: sales@maker.co.jp", placeholderEn: "e.g. sales@maker.co.jp" },
   { key: "makerWechatId", labelJa: "メーカー WeChat ID", labelEn: "Maker WeChat ID", type: "text", placeholderJa: "WeChat ID", placeholderEn: "WeChat ID" },
   { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
 ];
 
-const EMPTY_DETAILS = { maker: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
+const EMPTY_DETAILS = { maker: "", contactName: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
 
 function buildDetails(record) {
   return Object.fromEntries(Object.keys(EMPTY_DETAILS).map((k) => [k, record?.[k] != null ? String(record[k]) : ""]));
