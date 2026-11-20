@@ -34,10 +34,8 @@ const DETAIL_FIELDS = [
   { key: "makerEmail", labelJa: "メーカーメール", labelEn: "Maker Email", type: "email", placeholderJa: "例: sales@maker.co.jp", placeholderEn: "e.g. sales@maker.co.jp" },
   { key: "makerWechatId", labelJa: "メーカー WeChat ID", labelEn: "Maker WeChat ID", type: "text", placeholderJa: "WeChat ID", placeholderEn: "WeChat ID" },
   { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
+  { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", type: "number", placeholderJa: "例: 1200", placeholderEn: "e.g. 1200" },
 ];
-
-// Shown last, after Description / Comment.
-const PRICE_FIELD = { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", placeholderJa: "例: 1200", placeholderEn: "e.g. 1200" };
 
 function formatPrice(value) {
   if (value == null || value === "" || !Number.isFinite(Number(value))) return value;
@@ -348,13 +346,15 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             <div className="grid gap-5 sm:grid-cols-2">
               <ViewValue label={isJa ? "刃物名" : "Blade Name"} value={record?.name} />
               {DETAIL_FIELDS.map((f) => (
-                <ViewValue key={f.key} label={isJa ? f.labelJa : f.labelEn} value={record?.[f.key]} />
+                <ViewValue
+                  key={f.key}
+                  label={isJa ? f.labelJa : f.labelEn}
+                  value={f.key === "price" ? formatPrice(record?.price) : record?.[f.key]}
+                />
               ))}
             </div>
 
             <ViewValue label={isJa ? "説明・コメント" : "Description / Comment"} value={record?.description} multiline />
-
-            <ViewValue label={isJa ? PRICE_FIELD.labelJa : PRICE_FIELD.labelEn} value={formatPrice(record?.price)} />
           </div>
         </div>
       ) : (
@@ -435,6 +435,9 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             <FormField key={f.key} label={isJa ? f.labelJa : f.labelEn} variant="form">
               <input
                 type={f.type}
+                inputMode={f.type === "number" ? "decimal" : undefined}
+                min={f.type === "number" ? 0 : undefined}
+                step={f.type === "number" ? "any" : undefined}
                 value={details[f.key]}
                 onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={isJa ? f.placeholderJa : f.placeholderEn}
@@ -453,21 +456,6 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             className={`${inputCls} resize-y`}
           />
         </FormField>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={isJa ? PRICE_FIELD.labelJa : PRICE_FIELD.labelEn} variant="form">
-            <input
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="any"
-              value={details.price}
-              onChange={(e) => setDetails((d) => ({ ...d, price: e.target.value }))}
-              placeholder={isJa ? PRICE_FIELD.placeholderJa : PRICE_FIELD.placeholderEn}
-              className={inputCls}
-            />
-          </FormField>
-        </div>
         </div>
       </form>
       )}
