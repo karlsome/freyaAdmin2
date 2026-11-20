@@ -6,9 +6,34 @@ import ModalShell from "./ModalShell";
 import { SearchableSelect, SearchableHinbanSelect } from "./AdvancedFilterSection";
 import { useLanguage } from "../contexts/LanguageContext";
 
+// Fields edited as plain numbers (no dropdown of existing values); saved as numbers.
+const NUMERIC_FIELDS = new Set(["pcPerCycle", "pricePerPc", "pricePerBox", "送りピッチ"]);
+
+// Keep only digits and one decimal point while typing.
+function sanitizeNumericInput(value) {
+  const cleaned = String(value).replace(/[^0-9.]/g, "");
+  const dot = cleaned.indexOf(".");
+  return dot === -1 ? cleaned : cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, "");
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return NaN;
+  return Number(value);
+}
+
+// Price / Box = Price / Pc × 収容数, per record (same rule as the backend batch update).
+// Only applies when pricePerPc or 収容数 changes and pricePerBox is not set explicitly.
+function withDerivedPricePerBox(record, changes) {
+  if ("pricePerBox" in changes || !("pricePerPc" in changes || "収容数" in changes)) return changes;
+  const perPc = toNumber("pricePerPc" in changes ? changes.pricePerPc : record.pricePerPc);
+  const qty = toNumber("収容数" in changes ? changes["収容数"] : record["収容数"]);
+  if (!Number.isFinite(perPc) || !Number.isFinite(qty)) return changes;
+  return { ...changes, pricePerBox: Math.round(perPc * qty * 100) / 100 };
+}
+
 function PreviewCard({ record, changes, previewFields, tabKey, isJa }) {
   const identity = getMasterRecordIdentity(record, tabKey);
-  const changedFields = Object.entries(changes);
+  const changedFields = Object.entries(withDerivedPricePerBox(record, changes));
 
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-surface p-4 shadow-sm transition-all hover:border-primary/30">
@@ -109,12 +134,18 @@ export default function MasterBatchEditModal({
   );
   const previewFields = useMemo(() => getMasterPreviewFields(tabKey), [tabKey]);
   const [selectedField, setSelectedField] = useState("");
+  const [fieldSearch, setFieldSearch] = useState("");
   const [draftValue, setDraftValue] = useState("");
   const [changes, setChanges] = useState({});
   const [options, setOptions] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
   const activeField = fields.find((field) => field.field === selectedField) || null;
+  const isNumericField = Boolean(activeField && NUMERIC_FIELDS.has(activeField.field));
+  const fieldNeedle = fieldSearch.trim().toLowerCase();
+  const visibleFields = fieldNeedle
+    ? fields.filter((field) => `${field.label} ${field.field}`.toLowerCase().includes(fieldNeedle))
+    : fields;
 
   if (!open) return null;
 
@@ -123,7 +154,7 @@ export default function MasterBatchEditModal({
     setSelectedField(fieldName);
     setDraftValue(String(changes[fieldName] ?? ""));
 
-    if (!field || !["text", "textarea"].includes(field.type)) {
+    if (!field || NUMERIC_FIELDS.has(fieldName) || !["text", "textarea"].includes(field.type)) {
       setOptions([]);
       setLoadingOptions(false);
       return;
@@ -206,8 +237,37 @@ export default function MasterBatchEditModal({
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
                   {isJa ? "編集可能な項目" : "Available Fields"}
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {fields.map((field) => (
+                <div className="relative mt-3">
+                  <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 16 }}>
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    value={fieldSearch}
+                    onChange={(event) => setFieldSearch(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape" && fieldSearch) { event.preventDefault(); setFieldSearch(""); }
+                      if (event.key === "Enter" && visibleFields.length === 1) handleFieldSelect(visibleFields[0].field);
+                    }}
+                    placeholder={isJa ? "項目を検索..." : "Search fields..."}
+                    className="w-full rounded-xl border border-outline-variant/30 bg-surface-container py-1.5 pl-8 pr-7 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                  />
+                  {fieldSearch ? (
+                    <button
+                      type="button"
+                      onClick={() => setFieldSearch("")}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-outline hover:text-on-surface"
+                      aria-label={isJa ? "検索をクリア" : "Clear search"}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                    </button>
+                  ) : null}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {visibleFields.length === 0 ? (
+                    <p className="text-xs text-outline">{isJa ? "一致する項目はありません" : "No matching fields"}</p>
+                  ) : null}
+                  {visibleFields.map((field) => (
                     <button
                       key={field.field}
                       type="button"
@@ -239,7 +299,25 @@ export default function MasterBatchEditModal({
 
                 {activeField ? (
                   <div className="mt-4 space-y-3">
-                    {activeField.type === "textarea" ? (
+                    {isNumericField ? (
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={draftValue}
+                          onChange={(event) => setDraftValue(sanitizeNumericInput(event.target.value))}
+                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 font-mono text-sm text-on-surface outline-none transition focus:border-primary/40"
+                          placeholder={isJa ? "数値を入力" : "Enter a number"}
+                        />
+                        {activeField.field === "pricePerPc" ? (
+                          <p className="text-[11px] leading-snug text-outline">
+                            {isJa
+                              ? "pricePerBox は各レコードの 収容数 から自動計算されます（個単価 × 収容数）。"
+                              : "pricePerBox is calculated for each record from its own 収容数 (Price/Pc × 収容数)."}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : activeField.type === "textarea" ? (
                       <textarea
                         rows={4}
                         value={draftValue}
@@ -279,9 +357,15 @@ export default function MasterBatchEditModal({
                       type="button"
                       onClick={() => {
                         if (!activeField || draftValue === "") return;
-                        setChanges((current) => ({ ...current, [activeField.field]: draftValue }));
+                        let value = draftValue;
+                        if (isNumericField) {
+                          value = Number(draftValue);
+                          if (!Number.isFinite(value)) return;
+                        }
+                        setChanges((current) => ({ ...current, [activeField.field]: value }));
                       }}
-                      className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+                      disabled={draftValue === "" || (isNumericField && !Number.isFinite(Number(draftValue)))}
+                      className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isJa ? "変更を追加" : "Add Change"}
                     </button>
@@ -313,6 +397,16 @@ export default function MasterBatchEditModal({
                 </div>
 
                 <div className="mt-4 space-y-2">
+                  {("pricePerPc" in changes || "収容数" in changes) && !("pricePerBox" in changes) ? (
+                    <div className="flex items-start gap-1.5 rounded-xl bg-primary/5 px-3 py-2 text-[11px] leading-snug text-primary">
+                      <span className="material-symbols-outlined shrink-0" style={{ fontSize: 14 }}>calculate</span>
+                      <span>
+                        {isJa
+                          ? "pricePerBox も各レコードで自動計算されます（個単価 × 収容数）。"
+                          : "pricePerBox is also updated per record (Price/Pc × 収容数)."}
+                      </span>
+                    </div>
+                  ) : null}
                   {Object.keys(changes).length ? Object.entries(changes).map(([field, value]) => (
                     <div key={field} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
                       <div>
