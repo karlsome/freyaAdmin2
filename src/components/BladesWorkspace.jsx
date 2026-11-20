@@ -28,6 +28,7 @@ function toBase64(file) {
 }
 
 const DETAIL_FIELDS = [
+  { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", type: "number", placeholderJa: "例: 1200", placeholderEn: "e.g. 1200" },
   { key: "maker", labelJa: "メーカー", labelEn: "Maker", type: "text", placeholderJa: "例: 山田刃物株式会社", placeholderEn: "e.g. Yamada Blade Co." },
   { key: "contactName", labelJa: "担当者名", labelEn: "Contact Name", type: "text", placeholderJa: "例: 山田 太郎", placeholderEn: "e.g. Taro Yamada" },
   { key: "contactNumber", labelJa: "連絡先電話番号", labelEn: "Contact Number", type: "tel", placeholderJa: "例: 03-1234-5678", placeholderEn: "e.g. 03-1234-5678" },
@@ -36,13 +37,46 @@ const DETAIL_FIELDS = [
   { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
 ];
 
-const EMPTY_DETAILS = { maker: "", contactName: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
+const EMPTY_DETAILS = { price: "", maker: "", contactName: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
 
 function buildDetails(record) {
   return Object.fromEntries(Object.keys(EMPTY_DETAILS).map((k) => [k, record?.[k] != null ? String(record[k]) : ""]));
 }
 
 function noop() {}
+
+// ── Unsaved-upload draft (browser storage) ──────────────────────────────────
+// When an image is uploaded but the blade is not saved yet, the form is kept in localStorage.
+// After a reload the card offers to resume the draft or discard it (discard deletes the
+// uploaded images from Firebase), so uploads are never silently orphaned.
+const DRAFT_KEY = "freya.ncBladeDraft.v1";
+
+function readDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    return Array.isArray(draft?.sessionUploads) && draft.sessionUploads.length > 0 ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(draft) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // storage unavailable (private mode etc.) — nothing to persist
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 function ViewValue({ label, value, multiline = false }) {
   const text = value != null && String(value).trim() !== "" ? String(value) : "";
@@ -63,7 +97,7 @@ function recordIdOf(record) {
   return record?._id?.$oid ?? record?._id ?? null;
 }
 
-function BladeModal({ open, record, canEdit, submitting, username, onClose, onSubmit, onDelete }) {
+function BladeModal({ open, record, initialDraft, canEdit, submitting, username, onClose, onSubmit, onDelete }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -78,15 +112,40 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
   // Images uploaded while this modal is open. Any not kept by a successful save get deleted from Firebase.
   const sessionUploadsRef = useRef([]);
   const openRef = useRef(open);
+  const [uploadsTick, setUploadsTick] = useState(0);
 
   useEffect(() => {
     openRef.current = open;
     if (!open) return;
-    sessionUploadsRef.current = [];
     setPreview(null);
-    setMode(record ? "view" : "edit");
-    resetDraft(record);
-  }, [open, record]);
+    if (initialDraft) {
+      sessionUploadsRef.current = [...initialDraft.sessionUploads];
+      setMode("edit");
+      setName(initialDraft.name || "");
+      setImageURL(initialDraft.imageURL || "");
+      setDetails({ ...EMPTY_DETAILS, ...(initialDraft.details || {}) });
+      setUploadError("");
+    } else {
+      sessionUploadsRef.current = [];
+      setMode(record ? "view" : "edit");
+      resetDraft(record);
+    }
+    setUploadsTick((n) => n + 1);
+  }, [open, record, initialDraft]);
+
+  // Keep the browser draft in sync while there are unsaved uploads.
+  useEffect(() => {
+    if (!open || mode !== "edit" || sessionUploadsRef.current.length === 0) return;
+    writeDraft({
+      recordId: recordIdOf(record),
+      recordName: record?.name || "",
+      name,
+      imageURL,
+      details,
+      sessionUploads: sessionUploadsRef.current,
+      savedAt: new Date().toISOString(),
+    });
+  }, [open, mode, record, name, imageURL, details, uploadsTick]);
 
   function resetDraft(source) {
     setName(source?.name || "");
@@ -98,6 +157,7 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
   function discardSessionUploads() {
     sessionUploadsRef.current.forEach(deleteImageQuietly);
     sessionUploadsRef.current = [];
+    clearDraft();
   }
 
   function openPreview(url) {
@@ -124,7 +184,8 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
         deleteImageQuietly(result.imageURL);
         return;
       }
-      sessionUploadsRef.current.push(result.imageURL);
+      sessionUploadsRef.current = [...sessionUploadsRef.current, result.imageURL];
+      setUploadsTick((n) => n + 1);
       setImageURL(result.imageURL);
     } catch (err) {
       const raw = err?.message || "";
@@ -141,7 +202,10 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
   async function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim() || uploading || submitting) return;
-    const trimmed = Object.fromEntries(Object.entries(details).map(([k, v]) => [k, v.trim()]));
+    const trimmed = Object.fromEntries(Object.entries(details).map(([k, v]) => [k, String(v).trim()]));
+    // Store price as a number; empty or invalid input is saved as "".
+    const priceNum = Number(trimmed.price);
+    trimmed.price = trimmed.price !== "" && Number.isFinite(priceNum) ? priceNum : "";
     const finalURL = imageURL;
     const saved = await onSubmit({ name: name.trim(), imageURL: finalURL, ...trimmed });
     if (!saved) return;
@@ -149,6 +213,7 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
     const stale = sessionUploadsRef.current.filter((url) => url && url !== finalURL);
     if (record?.imageURL && record.imageURL !== finalURL) stale.push(record.imageURL);
     sessionUploadsRef.current = [];
+    clearDraft();
     stale.forEach(deleteImageQuietly);
   }
 
@@ -199,7 +264,10 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
         {isEdit && onDelete ? (
           <button
             type="button"
-            onClick={onDelete}
+            onClick={async () => {
+              // Images uploaded during this edit are not the record's image, so remove them too.
+              if (await onDelete()) discardSessionUploads();
+            }}
             disabled={submitting}
             className="inline-flex items-center gap-1.5 rounded-[6px] bg-red-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-red-700 active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -273,7 +341,13 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
             <div className="grid gap-5 sm:grid-cols-2">
               <ViewValue label={isJa ? "刃物名" : "Blade Name"} value={record?.name} />
               {DETAIL_FIELDS.map((f) => (
-                <ViewValue key={f.key} label={isJa ? f.labelJa : f.labelEn} value={record?.[f.key]} />
+                <ViewValue
+                  key={f.key}
+                  label={isJa ? f.labelJa : f.labelEn}
+                  value={f.key === "price" && record?.price != null && record.price !== "" && Number.isFinite(Number(record?.price))
+                    ? Number(record.price).toLocaleString()
+                    : record?.[f.key]}
+                />
               ))}
             </div>
 
@@ -358,6 +432,9 @@ function BladeModal({ open, record, canEdit, submitting, username, onClose, onSu
             <FormField key={f.key} label={isJa ? f.labelJa : f.labelEn} variant="form">
               <input
                 type={f.type}
+                inputMode={f.type === "number" ? "decimal" : undefined}
+                min={f.type === "number" ? 0 : undefined}
+                step={f.type === "number" ? "any" : undefined}
                 value={details[f.key]}
                 onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={isJa ? f.placeholderJa : f.placeholderEn}
@@ -402,6 +479,8 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState(() => readDraft());
+  const [resumeDraft, setResumeDraft] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -414,19 +493,43 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
     return () => { active = false; };
   }, [refreshToken, localRefresh, isJa]);
 
+  // Starting a different blade would overwrite the stored draft, so discard its uploads first.
+  function dropPendingDraft() {
+    if (!pendingDraft) return;
+    pendingDraft.sessionUploads.forEach(deleteImageQuietly);
+    clearDraft();
+    setPendingDraft(null);
+  }
+
   function openCreate() {
+    dropPendingDraft();
+    setResumeDraft(null);
     setEditing(null);
     setModalOpen(true);
   }
 
   function openEdit(record) {
+    dropPendingDraft();
+    setResumeDraft(null);
     setEditing(record);
+    setModalOpen(true);
+  }
+
+  function resumePendingDraft() {
+    if (!pendingDraft) return;
+    const record = pendingDraft.recordId
+      ? blades.find((b) => String(recordIdOf(b)) === String(pendingDraft.recordId)) || null
+      : null;
+    setEditing(record);
+    setResumeDraft(pendingDraft);
+    setPendingDraft(null);
     setModalOpen(true);
   }
 
   function closeModal() {
     setModalOpen(false);
     setEditing(null);
+    setResumeDraft(null);
   }
 
   async function handleSave({ name, imageURL, ...details }) {
@@ -464,9 +567,9 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
   }
 
   async function handleDelete() {
-    if (!editing) return;
+    if (!editing) return false;
     const label = editing.name || recordIdOf(editing);
-    if (!window.confirm(isJa ? `「${label}」を削除しますか？ この操作は元に戻せません。` : `Delete "${label}"? This cannot be undone.`)) return;
+    if (!window.confirm(isJa ? `「${label}」を削除しますか？ この操作は元に戻せません。` : `Delete "${label}"? This cannot be undone.`)) return false;
     setSubmitting(true);
     try {
       await deleteMasterRecord({ recordId: recordIdOf(editing), username, role: authUser?.role, tabKey: "ncBladeDB" });
@@ -483,8 +586,10 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
         : { type: "success", message: isJa ? "刃物を削除しました。" : "Blade deleted." });
       closeModal();
       setLocalRefresh((n) => n + 1);
+      return true;
     } catch (err) {
       onFlash?.({ type: "error", message: err?.message || (isJa ? "刃物の削除に失敗しました。" : "Failed to delete blade.") });
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -517,6 +622,44 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
           )}
         </div>
       </div>
+
+      {pendingDraft && !modalOpen && (
+        <div className="mb-4 flex flex-col gap-3 rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-amber-600 dark:text-amber-400" style={{ fontSize: 18 }}>draft</span>
+            <div className="text-xs text-[var(--text-primary)]">
+              <p className="font-semibold">
+                {isJa ? "保存されていない刃物の下書きがあります" : "You have an unsaved blade draft"}
+                {(pendingDraft.name || pendingDraft.recordName) && `: ${pendingDraft.name || pendingDraft.recordName}`}
+              </p>
+              <p className="mt-0.5 text-[var(--text-muted)]">
+                {isJa
+                  ? "アップロード済みの画像が保存待ちです。再開するか、破棄して画像を削除してください。別の刃物を開くと破棄されます。"
+                  : "Uploaded images are waiting to be saved. Resume it, or discard it to delete the images. Opening another blade discards it."}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={dropPendingDraft}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-[var(--surface-hover)] transition shadow-2xs"
+            >
+              {isJa ? "破棄" : "Discard"}
+            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={resumePendingDraft}
+                disabled={loading}
+                className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition shadow-xs disabled:opacity-50"
+              >
+                {isJa ? "再開" : "Resume"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center py-12 text-xs font-medium text-[var(--text-muted)]">
@@ -563,6 +706,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
       <BladeModal
         open={modalOpen}
         record={editing}
+        initialDraft={resumeDraft}
         canEdit={canEdit}
         submitting={submitting}
         username={username}
