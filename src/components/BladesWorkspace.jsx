@@ -669,7 +669,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
         </div>
       )}
       {!loading && !error && blades.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,160px))] gap-3">
           {blades.map((blade, i) => (
             <button
               key={recordIdOf(blade) ?? i}
