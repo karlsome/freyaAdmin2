@@ -119,13 +119,24 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow={isJa ? "刃物" : "Blades"}
-      title={isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
+      eyebrow={isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
+      title={isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
+      subtitle={isEdit
+        ? (isJa ? "選択した刃物の名前と画像を更新します。" : "Update the selected blade's name and image.")
+        : (isJa ? "bladeDBに新規刃物を登録します。" : "Create a new blade entry in bladeDB.")}
+      maxWidth="max-w-xl"
+      align="start"
       footer={footer}
-      maxWidth="max-w-lg"
+      footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
     >
-      <form id={FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <FormField label={isJa ? "刃物名" : "Blade Name"} variant="form">
+      <form
+        id={FORM_ID}
+        onSubmit={handleSubmit}
+        className="overflow-y-auto px-6 py-5 scrollbar-hide"
+        style={{ maxHeight: "calc(92vh - 180px)" }}
+      >
+        <div className="grid gap-3">
+        <FormField label={isJa ? "刃物名" : "Blade Name"} variant="form" required>
           <input
             type="text"
             value={name}
@@ -133,6 +144,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             placeholder={isJa ? "例: トムソン刃 23.6mm" : "e.g. Thomson blade 23.6mm"}
             className={inputCls}
             autoFocus
+            required
           />
         </FormField>
 
@@ -170,6 +182,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             </div>
           )}
         </FormField>
+        </div>
       </form>
     </ModalShell>
   );
