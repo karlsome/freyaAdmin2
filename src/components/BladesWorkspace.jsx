@@ -125,7 +125,6 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
         ? (isJa ? "選択した刃物の名前と画像を更新します。" : "Update the selected blade's name and image.")
         : (isJa ? "bladeDBに新規刃物を登録します。" : "Create a new blade entry in bladeDB.")}
       maxWidth="max-w-xl"
-      align="start"
       footer={footer}
       footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
     >
