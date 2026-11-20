@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import ModalShell from "./ModalShell";
 import FormField from "./FormField";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import {
   createMasterRecord,
   deleteEquipmentEventImage,
@@ -40,6 +41,8 @@ function buildDetails(record) {
   return Object.fromEntries(Object.keys(EMPTY_DETAILS).map((k) => [k, record?.[k] != null ? String(record[k]) : ""]));
 }
 
+function noop() {}
+
 function deleteImageQuietly(url) {
   if (url) deleteEquipmentEventImage(url).catch(() => {});
 }
@@ -55,6 +58,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
   const [name, setName] = useState("");
   const [imageURL, setImageURL] = useState("");
   const [details, setDetails] = useState(EMPTY_DETAILS);
+  const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
@@ -66,6 +70,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     openRef.current = open;
     if (!open) return;
     sessionUploadsRef.current = [];
+    setPreview(null);
     setName(record?.name || "");
     setImageURL(record?.imageURL || "");
     setDetails(buildDetails(record));
@@ -165,7 +170,8 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
   return (
     <ModalShell
       open={open}
-      onClose={handleCancel}
+      // While the preview is open, Escape should only close the preview, not this form.
+      onClose={preview ? noop : handleCancel}
       eyebrow={isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
       title={isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
       subtitle={isEdit
@@ -199,7 +205,20 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
           <div className="flex flex-col items-start gap-3">
           {imageURL && (
             <div className="relative">
-              <img src={imageURL} alt="blade" className="h-40 w-40 rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] object-cover shadow-2xs" />
+              <button
+                type="button"
+                onClick={() => setPreview({
+                  displayName: name.trim() || (isJa ? "刃物画像" : "Blade Image"),
+                  eyebrow: isJa ? "刃物画像" : "Blade Image",
+                  subtitle: details.maker.trim(),
+                  images: [{ url: imageURL, label: name.trim() || "blade" }],
+                  activeIndex: 0,
+                })}
+                aria-label={isJa ? "画像をプレビュー" : "Preview image"}
+                className="block cursor-zoom-in overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] shadow-2xs transition hover:border-[var(--freya-blue)]/60"
+              >
+                <img src={imageURL} alt="blade" className="h-40 w-40 object-cover" />
+              </button>
               <button
                 type="button"
                 onClick={() => setImageURL("")}
@@ -258,6 +277,9 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
         </FormField>
         </div>
       </form>
+      {preview && (
+        <SensorDevicePhotoPreviewModal preview={preview} onClose={() => setPreview(null)} />
+      )}
     </ModalShell>
   );
 }
