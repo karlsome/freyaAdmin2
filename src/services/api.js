@@ -240,6 +240,16 @@ export async function uploadEquipmentEventImage({ file, base64, factoryName, equ
   return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
 }
 
+// ─── Blades (Sasaki_Coating_MasterDB → bladeDB) ──────────────────────────────
+export async function fetchBladeRecords() {
+  return query("Sasaki_Coating_MasterDB", "bladeDB", {}, { sort: { name: 1 } });
+}
+
+// Reuses the equipment upload route (same Firebase bucket); files land under equipmentEvents/blades/<name>/.
+export async function uploadBladeImage({ base64, bladeName, username }) {
+  return uploadEquipmentEventImage({ base64, factoryName: "blades", equipmentName: bladeName || "blade", username });
+}
+
 export async function deleteEquipmentEventImage(imageURL) {
   return _postJson("api/delete-equipment-event-image", { imageURL });
 }
@@ -1255,6 +1265,9 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   }
   if (tabKey === "equipmentHistoryDB") {
     return { collectionName: "equipmentHistoryDB", baseQuery: {} };
+  }
+  if (tabKey === "bladeDB") {
+    return { collectionName: "bladeDB", baseQuery: {} };
   }
   return { collectionName: "masterDB", baseQuery: {} };
 }

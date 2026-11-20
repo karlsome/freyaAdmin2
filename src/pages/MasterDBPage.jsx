@@ -48,6 +48,7 @@ const MaterialPDFsWorkspace = lazy(() => import("../components/MaterialPDFsWorks
 const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
 const FactoryDBWorkspace = lazy(() => import("../components/FactoryDBWorkspace"));
 const SetsubiDBWorkspace = lazy(() => import("../components/SetsubiDBWorkspace"));
+const BladesWorkspace = lazy(() => import("../components/BladesWorkspace"));
 const PceFilesWorkspace = lazy(() => import("../components/PceFilesWorkspace"));
 const BomWorkspace = lazy(() => import("../components/BomWorkspace"));
 
@@ -755,7 +756,10 @@ export default function MasterDBPage() {
               onFlash={setFlash}
             />
           ) : (
-            <SetsubiDBWorkspace refreshToken={refreshNonce} />
+            <>
+              <SetsubiDBWorkspace refreshToken={refreshNonce} />
+              <BladesWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+            </>
           )}
         </Suspense>
       ) : (
