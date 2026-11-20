@@ -28,7 +28,6 @@ function toBase64(file) {
 }
 
 const DETAIL_FIELDS = [
-  { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", type: "number", placeholderJa: "例: 1200", placeholderEn: "e.g. 1200" },
   { key: "maker", labelJa: "メーカー", labelEn: "Maker", type: "text", placeholderJa: "例: 山田刃物株式会社", placeholderEn: "e.g. Yamada Blade Co." },
   { key: "contactName", labelJa: "担当者名", labelEn: "Contact Name", type: "text", placeholderJa: "例: 山田 太郎", placeholderEn: "e.g. Taro Yamada" },
   { key: "contactNumber", labelJa: "連絡先電話番号", labelEn: "Contact Number", type: "tel", placeholderJa: "例: 03-1234-5678", placeholderEn: "e.g. 03-1234-5678" },
@@ -36,6 +35,14 @@ const DETAIL_FIELDS = [
   { key: "makerWechatId", labelJa: "メーカー WeChat ID", labelEn: "Maker WeChat ID", type: "text", placeholderJa: "WeChat ID", placeholderEn: "WeChat ID" },
   { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
 ];
+
+// Shown last, after Description / Comment.
+const PRICE_FIELD = { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", placeholderJa: "例: 1200", placeholderEn: "e.g. 1200" };
+
+function formatPrice(value) {
+  if (value == null || value === "" || !Number.isFinite(Number(value))) return value;
+  return Number(value).toLocaleString();
+}
 
 const EMPTY_DETAILS = { price: "", maker: "", contactName: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
 
@@ -341,17 +348,13 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             <div className="grid gap-5 sm:grid-cols-2">
               <ViewValue label={isJa ? "刃物名" : "Blade Name"} value={record?.name} />
               {DETAIL_FIELDS.map((f) => (
-                <ViewValue
-                  key={f.key}
-                  label={isJa ? f.labelJa : f.labelEn}
-                  value={f.key === "price" && record?.price != null && record.price !== "" && Number.isFinite(Number(record?.price))
-                    ? Number(record.price).toLocaleString()
-                    : record?.[f.key]}
-                />
+                <ViewValue key={f.key} label={isJa ? f.labelJa : f.labelEn} value={record?.[f.key]} />
               ))}
             </div>
 
             <ViewValue label={isJa ? "説明・コメント" : "Description / Comment"} value={record?.description} multiline />
+
+            <ViewValue label={isJa ? PRICE_FIELD.labelJa : PRICE_FIELD.labelEn} value={formatPrice(record?.price)} />
           </div>
         </div>
       ) : (
@@ -432,9 +435,6 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             <FormField key={f.key} label={isJa ? f.labelJa : f.labelEn} variant="form">
               <input
                 type={f.type}
-                inputMode={f.type === "number" ? "decimal" : undefined}
-                min={f.type === "number" ? 0 : undefined}
-                step={f.type === "number" ? "any" : undefined}
                 value={details[f.key]}
                 onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={isJa ? f.placeholderJa : f.placeholderEn}
@@ -453,6 +453,21 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             className={`${inputCls} resize-y`}
           />
         </FormField>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label={isJa ? PRICE_FIELD.labelJa : PRICE_FIELD.labelEn} variant="form">
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="any"
+              value={details.price}
+              onChange={(e) => setDetails((d) => ({ ...d, price: e.target.value }))}
+              placeholder={isJa ? PRICE_FIELD.placeholderJa : PRICE_FIELD.placeholderEn}
+              className={inputCls}
+            />
+          </FormField>
+        </div>
         </div>
       </form>
       )}
