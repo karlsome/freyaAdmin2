@@ -34,13 +34,9 @@ const DETAIL_FIELDS = [
   { key: "makerEmail", labelJa: "メーカーメール", labelEn: "Maker Email", type: "email", placeholderJa: "例: sales@maker.co.jp", placeholderEn: "e.g. sales@maker.co.jp" },
   { key: "makerWechatId", labelJa: "メーカー WeChat ID", labelEn: "Maker WeChat ID", type: "text", placeholderJa: "WeChat ID", placeholderEn: "WeChat ID" },
   { key: "makerLineId", labelJa: "メーカー LINE ID", labelEn: "Maker LINE ID", type: "text", placeholderJa: "LINE ID", placeholderEn: "LINE ID" },
-  { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", type: "number", placeholderJa: "例: 1200", placeholderEn: "e.g. 1200" },
+  { key: "price", labelJa: "刃物価格", labelEn: "Blade Price", type: "text", placeholderJa: "例: ¥1,200 / $7.50", placeholderEn: "e.g. $7.50 / ¥1,200" },
 ];
 
-function formatPrice(value) {
-  if (value == null || value === "" || !Number.isFinite(Number(value))) return value;
-  return Number(value).toLocaleString();
-}
 
 const EMPTY_DETAILS = { price: "", maker: "", contactName: "", contactNumber: "", makerEmail: "", makerWechatId: "", makerLineId: "", description: "" };
 
@@ -208,9 +204,6 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
     e.preventDefault();
     if (!name.trim() || uploading || submitting) return;
     const trimmed = Object.fromEntries(Object.entries(details).map(([k, v]) => [k, String(v).trim()]));
-    // Store price as a number; empty or invalid input is saved as "".
-    const priceNum = Number(trimmed.price);
-    trimmed.price = trimmed.price !== "" && Number.isFinite(priceNum) ? priceNum : "";
     const finalURL = imageURL;
     const saved = await onSubmit({ name: name.trim(), imageURL: finalURL, ...trimmed });
     if (!saved) return;
@@ -349,7 +342,7 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
                 <ViewValue
                   key={f.key}
                   label={isJa ? f.labelJa : f.labelEn}
-                  value={f.key === "price" ? formatPrice(record?.price) : record?.[f.key]}
+                  value={record?.[f.key]}
                 />
               ))}
             </div>
@@ -435,9 +428,6 @@ function BladeModal({ open, record, initialDraft, canEdit, submitting, username,
             <FormField key={f.key} label={isJa ? f.labelJa : f.labelEn} variant="form">
               <input
                 type={f.type}
-                inputMode={f.type === "number" ? "decimal" : undefined}
-                min={f.type === "number" ? 0 : undefined}
-                step={f.type === "number" ? "any" : undefined}
                 value={details[f.key]}
                 onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={isJa ? f.placeholderJa : f.placeholderEn}
