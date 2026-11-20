@@ -403,7 +403,33 @@ function sortSubmissionEntries(submissions = []) {
   });
 }
 
-function getMachineTodayStatusPriority(machine, today, visibleTemplates, recordsByFormId, equipmentMap) {
+function isDefectAnswer(ans) {
+  return Boolean(ans?.hasNG || ans?.isDefect || String(ans?.ticketType).toLowerCase() === "defect" || String(ans?.value).toUpperCase() === "NG");
+}
+
+function isOptionalAnswer(ans) {
+  return Boolean(ans?.ticketType === "optional" || ans?.isOptional || (ans?.ticketCreated && !ans?.hasNG));
+}
+
+function submissionHasDefect(sub) {
+  return Boolean(sub?.record?.hasNG) || (sub?.record?.answers || []).some(isDefectAnswer);
+}
+
+function isTicketFixed(ticket) {
+  const status = normalizeTicketStatusValue(ticket?.status);
+  return status === "closed" || status === "fixed" || status === "resolved";
+}
+
+// An NG submission counts as fixed once every defect ticket on it is closed
+function isSubmissionDefectFixed(sub, ticketsByRecordId) {
+  const recordId = normalizeId(sub?.record?._id ?? sub?.record?.recordId);
+  const tickets = (recordId && ticketsByRecordId?.get(recordId)) || [];
+  const defectTickets = tickets.filter((t) => !t.isOptional);
+  const relevant = defectTickets.length > 0 ? defectTickets : tickets;
+  return relevant.length > 0 && relevant.every(isTicketFixed);
+}
+
+function getMachineTodayStatusPriority(machine, today, visibleTemplates, recordsByFormId, equipmentMap, ticketsByRecordId = null) {
   const entries = getScheduleEntries(machine, today, visibleTemplates, recordsByFormId, { equipmentMap });
   const submissions = entries.flatMap((e) => e.submissions || []);
 
@@ -415,21 +441,13 @@ function getMachineTodayStatusPriority(machine, today, visibleTemplates, records
   let hasOptional = false;
 
   for (const sub of submissions) {
-    if (sub.record?.hasNG) {
+    if (submissionHasDefect(sub) && !isSubmissionDefectFixed(sub, ticketsByRecordId)) {
       hasNG = true;
       break;
     }
-    const answers = sub.record?.answers || [];
-    for (const ans of answers) {
-      if (ans.hasNG || ans.isDefect || String(ans.ticketType).toLowerCase() === "defect" || String(ans.value).toUpperCase() === "NG") {
-        hasNG = true;
-        break;
-      }
-      if (ans.ticketType === "optional" || ans.isOptional || (ans.ticketCreated && !ans.hasNG)) {
-        hasOptional = true;
-      }
+    if ((sub.record?.answers || []).some(isOptionalAnswer)) {
+      hasOptional = true;
     }
-    if (hasNG) break;
   }
 
   if (hasNG) return 1; // Defect (Highest priority, shown first)
@@ -892,7 +910,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
 
 
 
-function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, onSelectRecord, onExportMachine, onOpenQuickPeek, language }) {
+function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, ticketsByRecordId = null, onSelectRecord, onExportMachine, onOpenQuickPeek, language }) {
   const isJa = language === "ja";
   const today = useMemo(() => {
     const d = new Date();
@@ -917,10 +935,11 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
 
     for (const sub of allSubmissions) {
       const answers = sub?.record?.answers || [];
+      const recordId = normalizeId(sub?.record?._id ?? sub?.record?.recordId);
       for (const ans of answers) {
-        if (ans.hasNG || ans.isDefect || String(ans.ticketType).toLowerCase() === "defect" || String(ans.value).toUpperCase() === "NG") {
-          defects.push(ans);
-        } else if (ans.ticketType === "optional" || ans.isOptional || (ans.ticketCreated && !ans.hasNG)) {
+        if (isDefectAnswer(ans)) {
+          defects.push({ ...ans, _recordId: recordId });
+        } else if (isOptionalAnswer(ans)) {
           optionals.push(ans);
         }
       }
@@ -929,6 +948,20 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
     const ngFlag = defects.length > 0 || allSubmissions.some((sub) => sub.record?.hasNG);
     return { defectAnswers: defects, optionalAnswers: optionals, hasNG: ngFlag };
   }, [allSubmissions]);
+
+  // Every NG submission's defect tickets are closed: show the card green as "Closed"
+  const defectsFixed = useMemo(() => {
+    const ngSubs = allSubmissions.filter(submissionHasDefect);
+    return ngSubs.length > 0 && ngSubs.every((sub) => isSubmissionDefectFixed(sub, ticketsByRecordId));
+  }, [allSubmissions, ticketsByRecordId]);
+  const showNG = hasNG && !defectsFixed;
+
+  const isDefectAnswerFixed = (defect) => {
+    if (defectsFixed) return true;
+    const tickets = ticketsByRecordId?.get(defect._recordId) || [];
+    const ticket = tickets.find((t) => doesTicketMatchField(t, getFieldTicketHint(defect)));
+    return Boolean(ticket) && isTicketFixed(ticket);
+  };
 
   // Extract primary submission (NG first, or latest)
   const primarySubmission = useMemo(() => {
@@ -998,7 +1031,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
       className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border transition-all duration-200 text-left p-5 ${
         hasSubmissions ? "cursor-pointer" : "cursor-default"
       } ${
-        hasNG
+        showNG
           ? "border-rose-500/40 bg-rose-500/5 hover:border-rose-500/60 hover:bg-rose-500/10 shadow-sm"
           : hasSubmissions
             ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 hover:bg-emerald-500/10 shadow-sm"
@@ -1014,10 +1047,15 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
           </span>
 
           {/* Status Badge */}
-          {hasNG ? (
+          {showNG ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 dark:text-rose-300">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>warning</span>
               {isJa ? "NG指摘あり (要対応)" : "Defect Reported"}
+            </span>
+          ) : defectsFixed ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>task_alt</span>
+              {isJa ? "クローズ済" : "Closed"}
             </span>
           ) : hasSubmissions ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
@@ -1036,7 +1074,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
-              hasNG ? "bg-rose-500/15 text-rose-600 dark:text-rose-400" : hasSubmissions ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary/10 text-primary"
+              showNG ? "bg-rose-500/15 text-rose-600 dark:text-rose-400" : hasSubmissions ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary/10 text-primary"
             }`}>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>precision_manufacturing</span>
             </div>
@@ -1094,12 +1132,17 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
               {/* Ticket Breakdown Pill Row if any tickets exist */}
               {(defectAnswers.length > 0 || optionalAnswers.length > 0) && (
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {defectAnswers.length > 0 && (
+                  {defectAnswers.length > 0 && (defectsFixed ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                      <span>✅</span>
+                      <span>{isJa ? `不具合 ${defectAnswers.length}件 クローズ済` : `${defectAnswers.length} Defect${defectAnswers.length > 1 ? "s" : ""} Closed`}</span>
+                    </span>
+                  ) : (
                     <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:text-rose-300">
                       <span>⚠️</span>
                       <span>{isJa ? `不具合 ${defectAnswers.length}件` : `${defectAnswers.length} Defect${defectAnswers.length > 1 ? "s" : ""}`}</span>
                     </span>
-                  )}
+                  ))}
                   {optionalAnswers.length > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
                       <span>💬</span>
@@ -1111,10 +1154,14 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
 
               {/* Defect Callout Box with individual ℹ️ buttons per defect step */}
               {hasNG ? (
-                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-800 dark:text-rose-300 space-y-2">
+                <div className={`rounded-xl border p-2.5 text-xs space-y-2 ${defectsFixed
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-300"}`}>
                   <p className="font-bold flex items-center gap-1">
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>report_problem</span>
-                    {isJa ? (defectAnswers.length > 1 ? `NG指摘項目 (${defectAnswers.length}件):` : "NG指摘項目:") : "Defects Reported:"}
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{defectsFixed ? "task_alt" : "report_problem"}</span>
+                    {defectsFixed
+                      ? (isJa ? (defectAnswers.length > 1 ? `NG指摘項目 (${defectAnswers.length}件) — クローズ済:` : "NG指摘項目 — クローズ済:") : "Defects Closed:")
+                      : (isJa ? (defectAnswers.length > 1 ? `NG指摘項目 (${defectAnswers.length}件):` : "NG指摘項目:") : "Defects Reported:")}
                   </p>
 
                   {defectAnswers.length > 0 ? (
@@ -1123,17 +1170,24 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
                         const defectLabel = defect.label || defect.fieldLabel || `指摘 #${dIdx + 1}`;
                         const defectReasonText = defect.reason || defect.defectDetails || (isJa ? "規格外・異常の報告あり" : "Defect reported");
                         const targetId = defect.fieldId || defect.id || defect.label || defect.fieldLabel;
+                        const fixed = isDefectAnswerFixed(defect);
 
                         return (
                           <div
                             key={dIdx}
-                            className="flex items-center justify-between gap-2 rounded-lg border border-rose-500/20 bg-surface/80 p-2 shadow-xs"
+                            className={`flex items-center justify-between gap-2 rounded-lg border bg-surface/80 p-2 shadow-xs ${fixed ? "border-emerald-500/25" : "border-rose-500/20"}`}
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-bold text-[11.5px] text-on-surface">
-                                #{dIdx + 1} {defectLabel}
+                              <p className="flex items-center gap-1.5 font-bold text-[11.5px] text-on-surface">
+                                <span className="truncate">#{dIdx + 1} {defectLabel}</span>
+                                {fixed && (
+                                  <span className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-px text-[9.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
+                                    {isJa ? "クローズ済" : "Closed"}
+                                  </span>
+                                )}
                               </p>
-                              <p className="truncate text-[10.5px] font-medium text-rose-700 dark:text-rose-300 mt-0.5">
+                              <p className={`truncate text-[10.5px] font-medium mt-0.5 ${fixed ? "text-emerald-700/80 dark:text-emerald-300/80" : "text-rose-700 dark:text-rose-300"}`}>
                                 {defectReasonText}
                               </p>
                             </div>
@@ -1146,7 +1200,9 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
                                 onOpenQuickPeek?.(primaryTemplate, targetId, machine.name);
                               }}
                               title={isJa ? `「${defectLabel}」の点検基準・定義をクイック確認` : `Quick peek checklist step for ${defectLabel}`}
-                              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/30 hover:scale-105 transition active:scale-95 shadow-xs"
+                              className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg hover:scale-105 transition active:scale-95 shadow-xs ${fixed
+                                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30"
+                                : "bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/30"}`}
                             >
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>info</span>
                             </button>
@@ -1157,6 +1213,12 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
                   ) : (
                     <p className="font-medium leading-relaxed pl-5 line-clamp-2">
                       {ngReason || (isJa ? "規格外または異常の報告があります" : "Out of range value or defect reported")}
+                    </p>
+                  )}
+                  {defectsFixed && defectAnswers.length === 0 && (
+                    <p className="font-semibold pl-5 flex items-center gap-1">
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check</span>
+                      {isJa ? "チケットクローズ済" : "Ticket closed"}
                     </p>
                   )}
                 </div>
@@ -1250,7 +1312,11 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
 
       {/* Card Footer Action */}
       <div className="mt-4 pt-3 border-t border-separator/30 flex items-center justify-between text-xs">
-        {hasNG ? (
+        {defectsFixed ? (
+          <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-400 group-hover:underline">
+            {isJa ? "処置内容を確認" : "View Fix Details"} ➔
+          </span>
+        ) : hasNG ? (
           <span className="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400 group-hover:underline">
             {isJa
               ? (optionalAnswers.length > 0 ? `不具合(${defectAnswers.length || 1})・連絡事項(${optionalAnswers.length})を確認` : "NGチケット・処置内容を確認")
@@ -2473,6 +2539,43 @@ export default function ChecklistSubmissionsPage() {
     return map;
   }, [templates]);
 
+  // NG tickets of today's NG submissions, so a fixed defect can show green on the Today cards
+  const todayNgRecordIds = useMemo(() => {
+    const todayStart = toDayStart(new Date());
+    return records
+      .filter((record) => isSameCalendarDay(record.completedAt, todayStart) && submissionHasDefect({ record }))
+      .map((record) => normalizeId(record._id ?? record.recordId))
+      .filter(Boolean)
+      .sort();
+  }, [records]);
+  const todayNgRecordIdsKey = todayNgRecordIds.join(",");
+  const [todayTicketsByRecordId, setTodayTicketsByRecordId] = useState(() => new Map());
+
+  useEffect(() => {
+    // Re-check after the record modal closes, since a ticket may have been fixed there
+    if (selectedCell) return undefined;
+    if (todayNgRecordIds.length === 0) {
+      setTodayTicketsByRecordId(new Map());
+      return undefined;
+    }
+    let active = true;
+    fetchNgReportsByRecordIds(todayNgRecordIds)
+      .then((tickets) => {
+        if (!active) return;
+        const map = new Map();
+        for (const ticket of Array.isArray(tickets) ? tickets : []) {
+          if (!ticket.recordId) continue;
+          const list = map.get(ticket.recordId) ?? [];
+          list.push(ticket);
+          map.set(ticket.recordId, list);
+        }
+        setTodayTicketsByRecordId(map);
+      })
+      .catch((err) => console.error("Failed to load today NG tickets:", err));
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayNgRecordIdsKey, selectedCell]);
+
   const recordsByFormId = useMemo(() => {
     const map = new Map();
     for (const record of records) {
@@ -2878,8 +2981,8 @@ export default function ChecklistSubmissionsPage() {
     const result = [];
     for (const [factory, macList] of map.entries()) {
       const sortedMachines = [...macList].sort((a, b) => {
-        const priorityA = getMachineTodayStatusPriority(a, today, visibleTemplates, recordsByFormId, equipmentMap);
-        const priorityB = getMachineTodayStatusPriority(b, today, visibleTemplates, recordsByFormId, equipmentMap);
+        const priorityA = getMachineTodayStatusPriority(a, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId);
+        const priorityB = getMachineTodayStatusPriority(b, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId);
         if (priorityA !== priorityB) {
           return priorityA - priorityB; // Defect (1) -> Optional (2) -> Pending (3) -> OK (4)
         }
@@ -2888,10 +2991,10 @@ export default function ChecklistSubmissionsPage() {
 
       const stats = {
         total: sortedMachines.length,
-        defectCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 1).length,
-        optionalCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 2).length,
-        pendingCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 3).length,
-        completedCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 4).length,
+        defectCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId) === 1).length,
+        optionalCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId) === 2).length,
+        pendingCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId) === 3).length,
+        completedCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId) === 4).length,
       };
 
       result.push({
@@ -2913,7 +3016,7 @@ export default function ChecklistSubmissionsPage() {
     });
 
     return result;
-  }, [filteredMachines, today, visibleTemplates, recordsByFormId, equipmentMap]);
+  }, [filteredMachines, today, visibleTemplates, recordsByFormId, equipmentMap, todayTicketsByRecordId]);
 
   function jumpToToday() {
     if (!scrollRef.current) return;
@@ -3327,6 +3430,7 @@ export default function ChecklistSubmissionsPage() {
                           templates={visibleTemplates}
                           recordsByFormId={recordsByFormId}
                           equipmentMap={equipmentMap}
+                          ticketsByRecordId={todayTicketsByRecordId}
                           onSelectRecord={setSelectedCell}
                           onExportMachine={setExportingMachine}
                           onOpenQuickPeek={handleOpenQuickPeek}
