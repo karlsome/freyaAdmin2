@@ -43,6 +43,17 @@ function buildDetails(record) {
 
 function noop() {}
 
+function ViewValue({ label, value, multiline = false }) {
+  const text = value != null && String(value).trim() !== "" ? String(value) : "";
+  return (
+    <FormField label={label} variant="form">
+      <p className={`text-sm text-[var(--text-primary)] ${multiline ? "whitespace-pre-wrap" : "break-words"} ${text ? "" : "text-[var(--text-muted)]"}`}>
+        {text || "—"}
+      </p>
+    </FormField>
+  );
+}
+
 function deleteImageQuietly(url) {
   if (url) deleteEquipmentEventImage(url).catch(() => {});
 }
@@ -51,7 +62,7 @@ function recordIdOf(record) {
   return record?._id?.$oid ?? record?._id ?? null;
 }
 
-function BladeModal({ open, record, submitting, username, onClose, onSubmit, onDelete }) {
+function BladeModal({ open, record, canEdit, submitting, username, onClose, onSubmit, onDelete }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -59,6 +70,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
   const [imageURL, setImageURL] = useState("");
   const [details, setDetails] = useState(EMPTY_DETAILS);
   const [preview, setPreview] = useState(null);
+  const [mode, setMode] = useState("view"); // "view" | "edit"
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
@@ -71,11 +83,31 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     if (!open) return;
     sessionUploadsRef.current = [];
     setPreview(null);
-    setName(record?.name || "");
-    setImageURL(record?.imageURL || "");
-    setDetails(buildDetails(record));
-    setUploadError("");
+    setMode(record ? "view" : "edit");
+    resetDraft(record);
   }, [open, record]);
+
+  function resetDraft(source) {
+    setName(source?.name || "");
+    setImageURL(source?.imageURL || "");
+    setDetails(buildDetails(source));
+    setUploadError("");
+  }
+
+  function discardSessionUploads() {
+    sessionUploadsRef.current.forEach(deleteImageQuietly);
+    sessionUploadsRef.current = [];
+  }
+
+  function openPreview(url) {
+    setPreview({
+      displayName: name.trim() || (isJa ? "刃物画像" : "Blade Image"),
+      eyebrow: isJa ? "刃物画像" : "Blade Image",
+      subtitle: details.maker.trim(),
+      images: [{ url, label: name.trim() || "blade" }],
+      activeIndex: 0,
+    });
+  }
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0];
@@ -119,16 +151,48 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     stale.forEach(deleteImageQuietly);
   }
 
-  function handleCancel() {
+  // Close the whole modal (X / Escape / Cancel in view or create mode).
+  function handleClose() {
     if (submitting) return;
-    sessionUploadsRef.current.forEach(deleteImageQuietly);
-    sessionUploadsRef.current = [];
+    discardSessionUploads();
     onClose();
   }
 
-  const isEdit = Boolean(record);
+  // Cancel while editing an existing blade: throw away changes and go back to the view.
+  function handleCancelEdit() {
+    if (submitting) return;
+    if (!record) {
+      handleClose();
+      return;
+    }
+    discardSessionUploads();
+    resetDraft(record);
+    setMode("view");
+  }
 
-  const footer = (
+  const isEdit = Boolean(record);
+  const isView = isEdit && mode === "view";
+
+  const secondaryBtnCls =
+    "rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-all shadow-2xs disabled:cursor-not-allowed disabled:opacity-50";
+  const primaryBtnCls =
+    "inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50";
+
+  const viewFooter = (
+    <div className="flex items-center justify-end gap-3">
+      <button type="button" onClick={handleClose} className={secondaryBtnCls}>
+        {isJa ? "キャンセル" : "Cancel"}
+      </button>
+      {canEdit && (
+        <button type="button" onClick={() => setMode("edit")} className={primaryBtnCls}>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+          {isJa ? "編集" : "Edit"}
+        </button>
+      )}
+    </div>
+  );
+
+  const editFooter = (
     <div className="flex items-center justify-between gap-3">
       <div>
         {isEdit && onDelete ? (
@@ -136,8 +200,9 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             type="button"
             onClick={onDelete}
             disabled={submitting}
-            className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 active:scale-[0.98] transition-all shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-[6px] bg-red-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-red-700 active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             {isJa ? "削除" : "Delete"}
           </button>
         ) : (
@@ -149,9 +214,9 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={handleCancel}
+          onClick={handleCancelEdit}
           disabled={submitting}
-          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-all shadow-2xs"
+          className={secondaryBtnCls}
         >
           {isJa ? "キャンセル" : "Cancel"}
         </button>
@@ -159,7 +224,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
           type="submit"
           form={FORM_ID}
           disabled={submitting || uploading || !name.trim()}
-          className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
+          className={primaryBtnCls}
         >
           {submitting ? (isJa ? "保存中…" : "Saving…") : (isJa ? "保存" : "Save")}
         </button>
@@ -171,16 +236,49 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
     <ModalShell
       open={open}
       // While the preview is open, Escape should only close the preview, not this form.
-      onClose={preview ? noop : handleCancel}
-      eyebrow={isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
-      title={isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
-      subtitle={isEdit
-        ? (isJa ? "選択した刃物の情報を更新します。" : "Update the selected blade's details.")
-        : (isJa ? "NCBladeDBに新規刃物を登録します。" : "Create a new blade entry in NCBladeDB.")}
+      onClose={preview ? noop : handleClose}
+      eyebrow={isView ? (isJa ? "刃物" : "Blade") : isEdit ? (isJa ? "刃物を編集" : "Edit Blade") : (isJa ? "刃物を追加" : "Add Blade")}
+      title={isView ? (record?.name || "—") : isEdit ? (isJa ? "刃物レコードの編集" : "Edit Blade Record") : (isJa ? "刃物レコードの追加" : "Add Blade Record")}
+      subtitle={isView
+        ? (record?.maker || "")
+        : isEdit
+          ? (isJa ? "選択した刃物の情報を更新します。" : "Update the selected blade's details.")
+          : (isJa ? "NCBladeDBに新規刃物を登録します。" : "Create a new blade entry in NCBladeDB.")}
       maxWidth="max-w-xl"
-      footer={footer}
+      footer={isView ? viewFooter : editFooter}
       footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
     >
+      {isView ? (
+        <div className="overflow-y-auto px-6 py-5 scrollbar-hide" style={{ maxHeight: "calc(92vh - 180px)" }}>
+          <div className="grid gap-5">
+            <FormField label={isJa ? "画像" : "Image"} variant="form">
+              {record?.imageURL ? (
+                <button
+                  type="button"
+                  onClick={() => openPreview(record.imageURL)}
+                  aria-label={isJa ? "画像をプレビュー" : "Preview image"}
+                  className="block cursor-zoom-in overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] shadow-2xs transition hover:border-[var(--freya-blue)]/60"
+                >
+                  <img src={record.imageURL} alt={record.name || "blade"} className="h-48 w-48 object-cover" />
+                </button>
+              ) : (
+                <div className="flex h-48 w-48 items-center justify-center rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 32 }}>image</span>
+                </div>
+              )}
+            </FormField>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ViewValue label={isJa ? "刃物名" : "Blade Name"} value={record?.name} />
+              {DETAIL_FIELDS.map((f) => (
+                <ViewValue key={f.key} label={isJa ? f.labelJa : f.labelEn} value={record?.[f.key]} />
+              ))}
+            </div>
+
+            <ViewValue label={isJa ? "説明・コメント" : "Description / Comment"} value={record?.description} multiline />
+          </div>
+        </div>
+      ) : (
       <form
         id={FORM_ID}
         onSubmit={handleSubmit}
@@ -199,7 +297,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             required
           />
           {isEdit && record?.name && name.trim() !== record.name && (
-            <p className="mt-2 text-xs text-[var(--status-warning)]">
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
               {isJa
                 ? `製品は刃物名で紐付いています。「${record.name}」を参照している製品は自動で更新されません。`
                 : `Products link to blades by name. Products that reference "${record.name}" will not be updated automatically.`}
@@ -214,13 +312,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setPreview({
-                  displayName: name.trim() || (isJa ? "刃物画像" : "Blade Image"),
-                  eyebrow: isJa ? "刃物画像" : "Blade Image",
-                  subtitle: details.maker.trim(),
-                  images: [{ url: imageURL, label: name.trim() || "blade" }],
-                  activeIndex: 0,
-                })}
+                onClick={() => openPreview(imageURL)}
                 aria-label={isJa ? "画像をプレビュー" : "Preview image"}
                 className="block cursor-zoom-in overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] shadow-2xs transition hover:border-[var(--freya-blue)]/60"
               >
@@ -231,7 +323,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
                 onClick={() => setImageURL("")}
                 disabled={uploading}
                 aria-label={isJa ? "画像を削除" : "Remove image"}
-                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white shadow-sm transition hover:bg-[var(--status-danger)]"
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white shadow-sm transition hover:bg-red-600"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
               </button>
@@ -255,7 +347,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
               </>
             )}
           </button>
-          {uploadError && <p className="text-xs text-[var(--status-danger)]">{uploadError}</p>}
+          {uploadError && <p className="text-xs text-red-600 dark:text-red-400">{uploadError}</p>}
           </div>
         </FormField>
 
@@ -284,6 +376,7 @@ function BladeModal({ open, record, submitting, username, onClose, onSubmit, onD
         </FormField>
         </div>
       </form>
+      )}
       {preview && (
         <SensorDevicePhotoPreviewModal preview={preview} onClose={() => setPreview(null)} />
       )}
@@ -430,7 +523,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
         </div>
       )}
       {!loading && error && (
-        <div className="rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-5 py-4 text-xs font-medium text-[var(--status-danger)]">{error}</div>
+        <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-5 py-4 text-xs font-medium text-red-600 dark:text-red-400">{error}</div>
       )}
       {!loading && !error && blades.length === 0 && (
         <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-8 text-center text-xs text-[var(--text-muted)]">
@@ -443,10 +536,8 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
             <button
               key={recordIdOf(blade) ?? i}
               type="button"
-              onClick={canEdit ? () => openEdit(blade) : undefined}
-              className={`overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-left shadow-2xs transition ${
-                canEdit ? "hover:border-[var(--freya-blue)]/50 hover:bg-[var(--surface-hover)]/50" : "cursor-default"
-              }`}
+              onClick={() => openEdit(blade)}
+              className="overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-left shadow-2xs transition hover:border-[var(--freya-blue)]/50 hover:bg-[var(--surface-hover)]/50"
             >
               <div className="flex aspect-square items-center justify-center bg-[var(--surface-subtle)]">
                 {blade.imageURL ? (
@@ -467,6 +558,7 @@ export default function BladesWorkspace({ refreshToken, onFlash }) {
       <BladeModal
         open={modalOpen}
         record={editing}
+        canEdit={canEdit}
         submitting={submitting}
         username={username}
         onClose={closeModal}
